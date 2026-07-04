@@ -97,11 +97,11 @@ export default function CartDrawer() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center border border-brand-cream-dark rounded-md bg-brand-cream/15">
-                          <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1 px-2 text-brand-dark hover:text-brand-brown transition-colors"><Minus className="w-3 h-3" /></button>
+                          <button onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)} className="p-1 px-2 text-brand-dark hover:text-brand-brown transition-colors"><Minus className="w-3 h-3" /></button>
                           <span className="font-sans text-xs font-bold px-2 text-brand-dark select-none">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1 px-2 text-brand-dark hover:text-brand-brown transition-colors"><Plus className="w-3 h-3" /></button>
+                          <button onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)} className="p-1 px-2 text-brand-dark hover:text-brand-brown transition-colors"><Plus className="w-3 h-3" /></button>
                         </div>
-                        <button onClick={() => removeFromCart(item.id)} className="text-brand-dark/45 hover:text-red-500 p-1.5 transition-colors" title="Remove item"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => removeFromCart(item.id, item.selectedSize)} className="text-brand-dark/45 hover:text-red-500 p-1.5 transition-colors" title="Remove item"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>
                   </div>

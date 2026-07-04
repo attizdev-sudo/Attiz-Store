@@ -11,8 +11,8 @@ interface CartContextValue {
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   addToCart: (product: CartItem) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  removeFromCart: (productId: string) => void;
+  updateQuantity: (productId: string, selectedSize: string | undefined, quantity: number) => void;
+  removeFromCart: (productId: string, selectedSize: string | undefined) => void;
   clearCart: () => void;
   checkout: (shippingDetails: ShippingDetails) => Promise<{ success: boolean; message: string }>;
 }
@@ -58,15 +58,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setIsCartOpen(true);
   };
 
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) { removeFromCart(productId); return; }
+  const updateQuantity = (productId: string, selectedSize: string | undefined, quantity: number) => {
+    if (quantity <= 0) { removeFromCart(productId, selectedSize); return; }
     setCartItems((prev) =>
-      prev.map((item) => (item.id === productId ? { ...item, quantity } : item))
+      prev.map((item) =>
+        item.id === productId && item.selectedSize === selectedSize
+          ? { ...item, quantity }
+          : item
+      )
     );
   };
 
-  const removeFromCart = (productId: string) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== productId));
+  const removeFromCart = (productId: string, selectedSize: string | undefined) => {
+    setCartItems((prev) =>
+      prev.filter((item) => !(item.id === productId && item.selectedSize === selectedSize))
+    );
   };
 
   const clearCart = () => setCartItems([]);

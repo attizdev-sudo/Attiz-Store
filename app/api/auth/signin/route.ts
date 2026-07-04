@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase, hashPassword } from '@/lib/db';
+import { signSession } from '@/lib/session';
 
 /** POST /api/auth/signin */
 export async function POST(request: Request) {
@@ -40,5 +41,13 @@ export async function POST(request: Request) {
     role: match.role || 'customer',
   };
 
-  return NextResponse.json({ user });
+  const signedSession = await signSession({ role: user.role, id: user.id });
+  const response = NextResponse.json({ user });
+  response.headers.append(
+    'Set-Cookie',
+    `attiz_session=${signedSession}; Path=/; SameSite=Strict; Max-Age=86400`
+  );
+
+  return response;
 }
+

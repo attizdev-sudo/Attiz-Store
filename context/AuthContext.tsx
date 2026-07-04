@@ -12,11 +12,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-function setSessionCookie(user: SessionUser) {
-  const value = btoa(JSON.stringify({ role: user.role, id: user.id }));
-  document.cookie = `attiz_session=${value}; path=/; SameSite=Strict; max-age=86400`;
-}
-
 function clearSessionCookie() {
   document.cookie = 'attiz_session=; path=/; max-age=0; SameSite=Strict';
 }
@@ -26,6 +21,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
+      const hasCookie = document.cookie.split(';').some((c) => c.trim().startsWith('attiz_session='));
+      if (!hasCookie) {
+        localStorage.removeItem('auth_session');
+        setUser(null);
+        return;
+      }
       const saved = localStorage.getItem('auth_session');
       if (saved) setUser(JSON.parse(saved));
     } catch { /* ignore */ }
@@ -34,12 +35,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (user) {
       localStorage.setItem('auth_session', JSON.stringify(user));
-      setSessionCookie(user);
     } else {
       localStorage.removeItem('auth_session');
       clearSessionCookie();
     }
   }, [user]);
+
 
   const signin = async (phoneOrEmail: string, password: string) => {
     try {

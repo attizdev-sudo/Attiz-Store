@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { verifySession } from '@/lib/session';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const sessionCookie = request.cookies.get('attiz_session')?.value;
 
@@ -10,12 +11,8 @@ export function middleware(request: NextRequest) {
     if (!sessionCookie) {
       return NextResponse.redirect(new URL('/auth', request.url));
     }
-    try {
-      const session = JSON.parse(atob(sessionCookie));
-      if (session?.role !== 'admin') {
-        return NextResponse.redirect(new URL('/', request.url));
-      }
-    } catch {
+    const session = await verifySession(sessionCookie);
+    if (!session || session.role !== 'admin') {
       return NextResponse.redirect(new URL('/auth', request.url));
     }
   }
@@ -23,6 +20,10 @@ export function middleware(request: NextRequest) {
   // ── Protect /orders ───────────────────────────────────────────────────────
   if (pathname.startsWith('/orders')) {
     if (!sessionCookie) {
+      return NextResponse.redirect(new URL('/auth', request.url));
+    }
+    const session = await verifySession(sessionCookie);
+    if (!session) {
       return NextResponse.redirect(new URL('/auth', request.url));
     }
   }
@@ -33,3 +34,4 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/admin/:path*', '/orders/:path*'],
 };
+

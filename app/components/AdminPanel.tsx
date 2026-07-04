@@ -39,6 +39,11 @@ export default function AdminPanel() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'orders' | 'banners'>('products');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
@@ -314,6 +319,15 @@ export default function AdminPanel() {
 
   const inputCls = 'px-3 py-2 text-xs border border-brand-cream-dark rounded bg-white outline-none focus:border-brand-brown font-sans';
   const labelCls = 'text-[9px] font-bold text-brand-dark/50 uppercase tracking-wider';
+
+  // Return a loading spinner during SSR / initial hydration mount lag
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-brand-cream/10 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-brand-brown border-t-transparent animate-spin" />
+      </div>
+    );
+  }
 
   // Admin Login Guard (backup — middleware handles server-side protection)
   if (!user || user.role !== 'admin') {
