@@ -83,7 +83,7 @@ export default function OrdersPage() {
                     {order.items?.map((item) => (
                       <div key={item.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0 gap-4">
                         <div className="flex items-center space-x-4">
-                          <div className="relative w-12 h-14 bg-brand-cream rounded-md overflow-hidden flex-shrink-0 border border-brand-cream-dark">
+                          <div className="relative w-12 h-14 bg-brand-cream rounded-md overflow-hidden shrink-0 border border-brand-cream-dark">
                             <Image src={item.image} alt={item.title} fill className="object-cover" sizes="48px" />
                           </div>
                           <div>
@@ -101,7 +101,7 @@ export default function OrdersPage() {
                       <span className="block font-sans text-[9px] font-bold text-brand-dark/45 tracking-widest uppercase mb-1">Shipping Address</span>
                       <p className="font-sans text-brand-dark/75 tracking-wider leading-relaxed">{order.shipping_address}</p>
                     </div>
-                    <div className="text-right flex-shrink-0">
+                    <div className="text-right shrink-0">
                       <span className="block font-sans text-[9px] font-bold text-brand-dark/45 tracking-widest uppercase">Total Price</span>
                       <span className="font-sans text-base font-extrabold text-brand-brown mt-0.5 block">Rs. {order.total_price.toFixed(2)}</span>
                     </div>

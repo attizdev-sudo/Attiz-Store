@@ -5,7 +5,7 @@ export default function QuoteSection() {
     <section className="py-16 bg-white flex justify-center items-center">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 w-full">
         <div className="relative rounded-2xl overflow-hidden border border-brand-cream-dark shadow-sm grid grid-cols-1 md:grid-cols-12 bg-white">
-          <div className="md:col-span-3 bg-brand-cream flex items-center justify-center p-6 border-b md:border-b-0 md:border-r border-brand-cream-dark min-h-[4rem]">
+          <div className="md:col-span-3 bg-brand-cream flex items-center justify-center p-6 border-b md:border-b-0 md:border-r border-brand-cream-dark min-h-16">
             <div className="w-1.5 h-16 bg-brand-brown rounded-full hidden md:block" />
           </div>
           <div className="md:col-span-9 bg-brand-cream/30 p-8 sm:p-12 relative flex flex-col justify-center text-center md:text-left">

@@ -100,12 +100,12 @@ export default function ProductDetails() {
 
           {/* Left: Image Gallery */}
           <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4">
-            <div className="flex md:flex-col flex-row gap-3 md:w-24 w-full flex-shrink-0">
+            <div className="flex md:flex-col flex-row gap-3 md:w-24 w-full shrink-0">
               {thumbnails.map((thumb, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveThumbIdx(idx)}
-                  className={`relative w-20 aspect-[3/4] border rounded-md overflow-hidden bg-brand-cream hover:opacity-100 transition-all cursor-pointer ${activeThumbIdx === idx ? 'border-brand-brown opacity-100 shadow-sm' : 'border-brand-cream-dark opacity-60'}`}
+                  className={`relative w-20 aspect-3/4 border rounded-md overflow-hidden bg-brand-cream hover:opacity-100 transition-all cursor-pointer ${activeThumbIdx === idx ? 'border-brand-brown opacity-100 shadow-sm' : 'border-brand-cream-dark opacity-60'}`}
                 >
                   <Image src={thumb} alt={`thumbnail ${idx + 1}`} fill className="object-cover" sizes="80px" />
                 </button>
@@ -113,7 +113,7 @@ export default function ProductDetails() {
             </div>
 
             <div
-              className="flex-1 aspect-[3/4] bg-brand-cream rounded-xl overflow-hidden border border-brand-cream-dark shadow-sm relative group cursor-zoom-in"
+              className="flex-1 aspect-3/4 bg-brand-cream rounded-xl overflow-hidden border border-brand-cream-dark shadow-sm relative group cursor-zoom-in"
               onMouseMove={handleMouseMove}
               onMouseEnter={() => setIsZoomed(true)}
               onMouseLeave={() => { setIsZoomed(false); setZoomPos({ x: 50, y: 50 }); }}
@@ -177,7 +177,7 @@ export default function ProductDetails() {
               <span className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase mb-2">Quantity Selector</span>
               <div className={`flex items-center border rounded-md bg-white w-28 ${isOutOfStock ? 'border-gray-200 opacity-50' : 'border-brand-cream-dark'}`}>
                 <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => Math.max(1, prev - 1))} className={`p-2 px-3 text-brand-dark hover:text-brand-brown transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Minus className="w-3.5 h-3.5" /></button>
-                <span className="font-sans text-xs font-bold px-3 text-brand-dark select-none flex-grow text-center">{isOutOfStock ? 0 : quantity}</span>
+                <span className="font-sans text-xs font-bold px-3 text-brand-dark select-none grow text-center">{isOutOfStock ? 0 : quantity}</span>
                 <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => prev < (product.stock || 0) ? prev + 1 : prev)} className={`p-2 px-3 text-brand-dark hover:text-brand-brown transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Plus className="w-3.5 h-3.5" /></button>
               </div>
               {!isOutOfStock && quantity >= (product.stock || 0) && (
@@ -238,8 +238,8 @@ export default function ProductDetails() {
               {[5, 4, 3, 2, 1].map((stars) => (
                 <div key={stars} className="flex items-center text-xs text-brand-dark/65 font-medium">
                   <span className="w-3 select-none">{stars}</span>
-                  <Star className="w-3.5 h-3.5 text-yellow-500 fill-current ml-0.5 mr-2 flex-shrink-0" />
-                  <div className="flex-grow h-2 bg-brand-cream rounded-full overflow-hidden">
+                  <Star className="w-3.5 h-3.5 text-yellow-500 fill-current ml-0.5 mr-2 shrink-0" />
+                  <div className="grow h-2 bg-brand-cream rounded-full overflow-hidden">
                     <div className="h-full bg-[#1F6F74] transition-all duration-500" style={{ width: `${stars === 5 ? 100 : 0}%` }} />
                   </div>
                   <span className="w-8 text-right text-[10px] text-brand-dark/45 font-bold ml-3">{stars === 5 ? 3 : 0}</span>
@@ -275,10 +275,10 @@ export default function ProductDetails() {
               {relatedProducts.map((prod) => (
                 <div key={prod.id} className="group flex flex-col cursor-pointer bg-white overflow-hidden border border-brand-cream-dark rounded-lg hover:shadow-md transition-shadow duration-300">
                   <Link href={`/product/${prod.id}`} className="flex flex-col h-full">
-                    <div className="relative aspect-[3/4] bg-brand-cream overflow-hidden">
+                    <div className="relative aspect-3/4 bg-brand-cream overflow-hidden">
                       <Image src={prod.image} alt={prod.title} fill className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" sizes="(max-width: 640px) 100vw, 25vw" />
                     </div>
-                    <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left flex-grow justify-between border-t border-brand-cream-dark/50">
+                    <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left grow justify-between border-t border-brand-cream-dark/50">
                       <h4 className="font-sans text-[11px] sm:text-xs font-semibold tracking-wider text-brand-dark hover:text-brand-brown transition-colors duration-300 line-clamp-1">{prod.title}</h4>
                       <span className="font-sans text-xs font-bold text-brand-brown mt-2">Rs. {parseFloat(String(prod.price)).toFixed(2)}</span>
                     </div>
@@ -295,7 +295,7 @@ export default function ProductDetails() {
             <div className="relative bg-white border border-brand-cream-dark rounded-xl max-w-xl w-full p-6 shadow-2xl">
               <button onClick={() => setIsSizeChartOpen(false)} className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-brand-cream flex items-center justify-center shadow-sm text-brand-dark hover:text-brand-brown cursor-pointer font-bold text-xs">✕</button>
               <h3 className="font-serif text-xs font-bold text-brand-dark uppercase tracking-[0.2em] mb-4">Size Chart & Measurements</h3>
-              <div className="relative aspect-[4/3] bg-brand-cream rounded-lg overflow-hidden border border-brand-cream-dark">
+              <div className="relative aspect-4/3 bg-brand-cream rounded-lg overflow-hidden border border-brand-cream-dark">
                 <Image
                   src={product.size_chart || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800'}
                   alt="Size Chart"

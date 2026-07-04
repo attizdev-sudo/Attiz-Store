@@ -46,9 +46,9 @@ export default function PickStyles() {
               <div
                 key={idx}
                 onClick={() => router.push(`/?secondary=${style.category}`)}
-                className="flex-shrink-0 w-72 sm:w-[17.5rem] md:w-[18rem] snap-start border border-brand-cream-dark bg-white shadow-sm overflow-hidden flex flex-col group cursor-pointer"
+                className="shrink-0 w-72 sm:w-70 md:w-[18rem] snap-start border border-brand-cream-dark bg-white shadow-sm overflow-hidden flex flex-col group cursor-pointer"
               >
-                <div className="h-[24rem] overflow-hidden bg-brand-cream relative">
+                <div className="h-96 overflow-hidden bg-brand-cream relative">
                   <img src={style.image} alt={style.name} className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" />
                   <div className="absolute inset-0 bg-brand-dark/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>

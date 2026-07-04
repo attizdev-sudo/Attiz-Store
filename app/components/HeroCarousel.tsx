@@ -29,7 +29,7 @@ export default function HeroCarousel() {
   }, [slides.length]);
 
   return (
-    <section className="relative w-full h-[32rem] sm:h-[36rem] md:h-[40rem] lg:h-[45rem] overflow-hidden bg-[#F7F3EE]">
+    <section className="relative w-full h-128 sm:h-144 md:h-160 lg:h-180 overflow-hidden bg-[#F7F3EE]">
       <div className="relative w-full h-full">
         {slides.map((slide, idx) => (
           <div
@@ -51,7 +51,7 @@ export default function HeroCarousel() {
               <div className="relative flex flex-col justify-center px-8 sm:px-16 lg:px-24 h-full text-white" style={{ backgroundColor: slide.bgSplitRight }}>
                 <div className="max-w-xl">
                   <span className="inline-block font-sans text-xs sm:text-sm font-bold tracking-[0.35em] text-white/95 uppercase mb-4 sm:mb-6">{slide.title}</span>
-                  <h1 className="font-sans text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-[0.05em] leading-tight mb-4 sm:mb-6">{slide.discount}</h1>
+                  <h1 className="font-sans text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-wider leading-tight mb-4 sm:mb-6">{slide.discount}</h1>
                   <p className="font-sans text-xs sm:text-sm md:text-base font-light tracking-[0.2em] text-white/80 uppercase">{slide.tagline}</p>
                 </div>
                 <div className="absolute bottom-10 right-10 text-[9px] font-bold tracking-[0.4em] opacity-20 uppercase hidden sm:block">ATTIZ CLOTHING CO.</div>

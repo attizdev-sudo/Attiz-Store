@@ -646,7 +646,7 @@ export default function AdminPanel() {
                             {prod.image && <Image src={prod.image} alt={prod.title} fill className="object-cover" sizes="40px" />}
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-semibold text-brand-dark max-w-[200px] truncate">{prod.title}</td>
+                        <td className="px-4 py-3 font-semibold text-brand-dark max-w-50 truncate">{prod.title}</td>
                         <td className="px-4 py-3 text-brand-dark/60">{prod.category}</td>
                         <td className="px-4 py-3 font-bold text-brand-brown">₹{parseFloat(String(prod.price)).toFixed(0)}</td>
                         <td className="px-4 py-3">
@@ -691,7 +691,7 @@ export default function AdminPanel() {
                   ) : (
                     <span className="font-sans text-xs font-semibold text-brand-dark">{cat.name}</span>
                   )}
-                  <div className="flex items-center space-x-2 flex-shrink-0">
+                  <div className="flex items-center space-x-2 shrink-0">
                     <button onClick={() => setEditingCategory(editingCategory?.id === cat.id ? null : { id: cat.id, name: cat.name })} className="p-1.5 text-brand-dark/50 hover:text-brand-brown transition-colors cursor-pointer"><Edit3 className="w-3.5 h-3.5" /></button>
                     <button onClick={() => handleDeleteCategory(cat.id, cat.name)} className="p-1.5 text-brand-dark/50 hover:text-red-500 transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>

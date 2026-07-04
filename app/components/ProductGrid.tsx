@@ -183,7 +183,7 @@ function ProductGridInner() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
             {[...Array(8)].map((_, i) => (
               <div key={i} className="flex flex-col bg-white border border-brand-cream-dark rounded-lg overflow-hidden">
-                <div className="aspect-[3/4] bg-brand-cream animate-pulse" />
+                <div className="aspect-3/4 bg-brand-cream animate-pulse" />
                 <div className="p-3 space-y-2">
                   <div className="h-3 bg-brand-cream animate-pulse rounded w-3/4" />
                   <div className="h-3 bg-brand-cream animate-pulse rounded w-1/3" />
@@ -202,7 +202,7 @@ function ProductGridInner() {
               return (
                 <div key={product.id} className="group flex flex-col cursor-pointer bg-white overflow-hidden border border-brand-cream-dark rounded-lg hover:shadow-md transition-shadow duration-300 relative">
                   <Link href={`/product/${product.id}`} className="flex flex-col h-full">
-                    <div className="relative aspect-[3/4] bg-brand-cream overflow-hidden">
+                    <div className="relative aspect-3/4 bg-brand-cream overflow-hidden">
                       <Image
                         src={product.image}
                         alt={product.title}
@@ -234,7 +234,7 @@ function ProductGridInner() {
                         </button>
                       </div>
                     </div>
-                    <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left flex-grow justify-between border-t border-brand-cream-dark/50">
+                    <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left grow justify-between border-t border-brand-cream-dark/50">
                       <div className="mb-2">
                         <h4 className="font-sans text-[11px] sm:text-xs font-semibold tracking-wider text-brand-dark hover:text-brand-brown transition-colors duration-300 line-clamp-1">{product.title}</h4>
                         <span className="text-[9px] text-brand-dark/45 font-bold tracking-wider uppercase block mt-0.5">Category: {product.category}</span>

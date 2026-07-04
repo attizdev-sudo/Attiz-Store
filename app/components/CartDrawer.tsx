@@ -86,10 +86,10 @@ export default function CartDrawer() {
               <div className="space-y-4 divide-y divide-brand-cream-dark">
                 {cartItems.map((item, idx) => (
                   <div key={`${item.id}-${item.selectedSize}`} className={`flex items-start gap-4 ${idx > 0 ? 'pt-4' : ''}`}>
-                    <div className="relative w-20 h-24 bg-brand-cream rounded-md overflow-hidden flex-shrink-0 border border-brand-cream-dark">
+                    <div className="relative w-20 h-24 bg-brand-cream rounded-md overflow-hidden shrink-0 border border-brand-cream-dark">
                       <Image src={item.image} alt={item.title} fill className="object-cover" sizes="80px" />
                     </div>
-                    <div className="flex-grow flex flex-col justify-between h-24">
+                    <div className="grow flex flex-col justify-between h-24">
                       <div>
                         <h4 className="font-sans text-[11px] font-bold text-brand-dark line-clamp-1">{item.title}</h4>
                         {item.selectedSize && <span className="font-sans text-[10px] text-brand-dark/50 tracking-wider">Size: {item.selectedSize}</span>}
@@ -129,7 +129,7 @@ export default function CartDrawer() {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleCheckoutSubmit} className="space-y-3 border-t border-brand-cream-dark/60 pt-4 max-h-[16rem] overflow-y-auto pr-1">
+                <form onSubmit={handleCheckoutSubmit} className="space-y-3 border-t border-brand-cream-dark/60 pt-4 max-h-64 overflow-y-auto pr-1">
                   <span className="block font-sans text-[10px] font-extrabold tracking-widest text-brand-dark/50 uppercase mb-2">SHIPPING DETAILS</span>
                   <div className="grid grid-cols-2 gap-2">
                     <input type="text" name="firstName" placeholder="First Name" required value={shippingDetails.firstName} onChange={handleInputChange} className="w-full px-3 py-2 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />

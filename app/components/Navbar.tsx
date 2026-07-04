@@ -43,7 +43,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-20">
 
           {/* Brand Logo */}
-          <div className="flex-shrink-0 flex items-center cursor-pointer" onClick={() => router.push('/')}>
+          <div className="shrink-0 flex items-center cursor-pointer" onClick={() => router.push('/')}>
             <Image
               src="/ATTIZ.png"
               alt="ATTIZ Logo"
