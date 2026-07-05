@@ -254,7 +254,12 @@ export default function AdminPanel() {
         return !isNaN(priceNum) && priceNum > 0 && !isNaN(stockNum) && stockNum >= 0 && (editingProduct.sizes || '').trim().length > 0;
       }
       if (step === 3) {
-        return !!editingProduct.image;
+        return !!editingProduct.image && !editAdditionalImagesUploading && !editSizeChartUploading;
+      }
+      if (step === 4) {
+        return String(editingProduct.description || '').trim().length > 0 &&
+               String(editingProduct.specifications || '').trim().length > 0 &&
+               String(editingProduct.wash_care || '').trim().length > 0;
       }
       return true;
     } else {
@@ -269,7 +274,12 @@ export default function AdminPanel() {
         return !isNaN(priceNum) && priceNum > 0 && !isNaN(stockNum) && stockNum >= 0 && newProduct.sizes.trim().length > 0;
       }
       if (step === 3) {
-        return !!newProduct.image;
+        return !!newProduct.image && !additionalImagesUploading && !sizeChartUploading;
+      }
+      if (step === 4) {
+        return newProduct.description.trim().length > 0 &&
+               newProduct.specifications.trim().length > 0 &&
+               newProduct.wash_care.trim().length > 0;
       }
       return true;
     }
@@ -389,8 +399,8 @@ export default function AdminPanel() {
     }
   };
 
-  const handleAddProductSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddProductSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (addStep < 4) return;
     setErrorMsg(''); setSuccessMsg('');
     const priceNum = parseFloat(String(newProduct.price));
@@ -419,8 +429,8 @@ export default function AdminPanel() {
     } catch { setErrorMsg('Failed to add product.'); }
   };
 
-  const handleEditProductSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEditProductSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (editStep < 4) return;
     setErrorMsg(''); setSuccessMsg('');
     if (!editingProduct) return;
@@ -821,7 +831,15 @@ export default function AdminPanel() {
             {/* ADD PRODUCT FORM (Redesigned with Stepper and Live Preview) */}
             {isAddFormOpen && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <form onSubmit={handleAddProductSubmit} className="lg:col-span-2 bg-white border border-brand-cream-dark rounded-xl p-6 shadow-sm space-y-6">
+                <form
+                  onSubmit={handleAddProductSubmit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
+                      e.preventDefault();
+                    }
+                  }}
+                  className="lg:col-span-2 bg-white border border-brand-cream-dark rounded-xl p-6 shadow-sm space-y-6"
+                >
                   <div className="flex items-center justify-between border-b border-brand-cream-dark pb-3">
                     <h4 className="font-serif text-sm text-brand-dark uppercase tracking-wider">Add New Premium Garment</h4>
                     <span className="text-[9px] font-bold text-brand-dark/40 uppercase bg-brand-cream px-2.5 py-1 rounded">Step {addStep} of 4</span>
@@ -1110,6 +1128,7 @@ export default function AdminPanel() {
 
                       {addStep < 4 ? (
                         <button
+                          key="add-next-btn"
                           type="button"
                           onClick={() => setAddStep(prev => prev + 1)}
                           disabled={!isStepValid(addStep, false)}
@@ -1120,8 +1139,10 @@ export default function AdminPanel() {
                         </button>
                       ) : (
                         <button
-                          type="submit"
-                          disabled={!isStepValid(1, false) || !isStepValid(2, false) || !isStepValid(3, false)}
+                          key="add-publish-btn"
+                          type="button"
+                          onClick={() => handleAddProductSubmit()}
+                          disabled={!isStepValid(1, false) || !isStepValid(2, false) || !isStepValid(3, false) || !isStepValid(4, false) || additionalImagesUploading || sizeChartUploading}
                           className="px-6 py-2.5 bg-brand-brown hover:bg-brand-brown-dark disabled:bg-brand-brown/40 text-white rounded text-[10px] font-bold tracking-widest uppercase transition-all cursor-pointer shadow-xs"
                         >
                           Publish Product
@@ -1139,7 +1160,15 @@ export default function AdminPanel() {
             {/* EDIT PRODUCT FORM (Redesigned with Stepper and Live Preview) */}
             {editingProduct && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <form onSubmit={handleEditProductSubmit} className="lg:col-span-2 bg-white border border-brand-cream-dark rounded-xl p-6 shadow-sm space-y-6">
+                <form
+                  onSubmit={handleEditProductSubmit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target instanceof HTMLInputElement) {
+                      e.preventDefault();
+                    }
+                  }}
+                  className="lg:col-span-2 bg-white border border-brand-cream-dark rounded-xl p-6 shadow-sm space-y-6"
+                >
                   <div className="flex items-center justify-between border-b border-brand-cream-dark pb-3">
                     <h4 className="font-serif text-sm text-brand-dark uppercase tracking-wider">Edit Product: <span className="font-sans text-[11px] font-bold tracking-wider text-brand-brown uppercase">{editingProduct.title}</span></h4>
                     <span className="text-[9px] font-bold text-brand-dark/40 uppercase bg-brand-cream px-2.5 py-1 rounded">Step {editStep} of 4</span>
@@ -1422,6 +1451,7 @@ export default function AdminPanel() {
 
                       {editStep < 4 ? (
                         <button
+                          key="edit-next-btn"
                           type="button"
                           onClick={() => setEditStep(prev => prev + 1)}
                           disabled={!isStepValid(editStep, true)}
@@ -1432,8 +1462,10 @@ export default function AdminPanel() {
                         </button>
                       ) : (
                         <button
-                          type="submit"
-                          disabled={!isStepValid(1, true) || !isStepValid(2, true) || !isStepValid(3, true)}
+                          key="edit-save-btn"
+                          type="button"
+                          onClick={() => handleEditProductSubmit()}
+                          disabled={!isStepValid(1, true) || !isStepValid(2, true) || !isStepValid(3, true) || !isStepValid(4, true) || editAdditionalImagesUploading || editSizeChartUploading}
                           className="px-6 py-2.5 bg-brand-brown hover:bg-brand-brown-dark disabled:bg-brand-brown/40 text-white rounded text-[10px] font-bold tracking-widest uppercase transition-all cursor-pointer shadow-xs"
                         >
                           Save Changes
