@@ -19,6 +19,7 @@ export default function ProductDetails() {
   const relatedProducts = products.filter((p) => p.category === product?.category && p.id !== product?.id).slice(0, 4);
 
   const [selectedSize, setSelectedSize] = useState('M');
+  const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [activeThumbIdx, setActiveThumbIdx] = useState(0);
@@ -40,6 +41,10 @@ export default function ProductDetails() {
       const sizes = product.sizes.split(',');
       if (sizes.length > 0) setSelectedSize(sizes[0].trim());
     }
+    if (product?.colors) {
+      const cols = product.colors.split(',');
+      if (cols.length > 0) setSelectedColor(cols[0].trim());
+    }
   }, [id, product]);
 
   const toggleAccordion = (section: keyof typeof accordionOpen) => {
@@ -47,12 +52,12 @@ export default function ProductDetails() {
   };
 
   const handleAddToCart = () => {
-    if (product) addToCart({ ...product, selectedSize, quantity } as CartItem);
+    if (product) addToCart({ ...product, selectedSize, selectedColor, quantity } as CartItem);
   };
 
   const handleBuyNow = () => {
     if (product) {
-      addToCart({ ...product, selectedSize, quantity } as CartItem);
+      addToCart({ ...product, selectedSize, selectedColor, quantity } as CartItem);
       setTimeout(() => setIsCartOpen(true), 200);
     }
   };
@@ -77,6 +82,7 @@ export default function ProductDetails() {
 
   const isOutOfStock = !product.stock || product.stock <= 0;
   const sizesArray = product.sizes ? product.sizes.split(',').map((s) => s.trim()).filter(Boolean) : ['S', 'M', 'L', 'XL', 'XXL'];
+  const colorsArray = product.colors ? product.colors.split(',').map((c) => c.trim()).filter(Boolean) : [];
 
   const thumbnails: string[] = [];
   if (product.image) thumbnails.push(product.image);
@@ -171,6 +177,25 @@ export default function ProductDetails() {
                 ))}
               </div>
             </div>
+
+            {/* Colors */}
+            {colorsArray.length > 0 && (
+              <div className="mb-6">
+                <span className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase mb-2">Color Options</span>
+                <div className="flex flex-wrap gap-2">
+                  {colorsArray.map((col) => (
+                    <button
+                      key={col}
+                      onClick={() => !isOutOfStock && setSelectedColor(col)}
+                      disabled={isOutOfStock}
+                      className={`px-4 py-2.5 border rounded text-[11px] font-bold tracking-wider transition-all cursor-pointer ${isOutOfStock ? 'border-gray-200 text-gray-300 bg-gray-50/50 cursor-not-allowed' : selectedColor === col ? 'border-brand-brown bg-brand-brown text-white shadow-sm' : 'border-brand-cream-dark text-brand-dark hover:border-brand-brown bg-white'}`}
+                    >
+                      {col}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quantity */}
             <div className="mb-8">
