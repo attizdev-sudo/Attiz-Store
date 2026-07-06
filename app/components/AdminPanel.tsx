@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   Database, Plus, Trash2, Edit3, CheckCircle, Package,
   ClipboardList, AlertCircle, LogOut, Tags, Upload, Image as ImageIcon,
-  ArrowLeft, ArrowRight, Search, Star, X, ChevronUp, ChevronDown, Check, Eye, Layers
+  ArrowLeft, ArrowRight, Search, Star, X, ChevronUp, ChevronDown, Check, Eye, Layers, GripVertical
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
@@ -77,7 +77,9 @@ export default function AdminPanel() {
   const [newCategoryParentId, setNewCategoryParentId] = useState('');
 
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string; parent_id?: string | null } | null>(null);
+  const [newCategorySortOrder, setNewCategorySortOrder] = useState('0');
+  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string; parent_id?: string | null; sort_order: number } | null>(null);
+  const [draggedCategoryId, setDraggedCategoryId] = useState<string | null>(null);
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [selectedParentIdForSub, setSelectedParentIdForSub] = useState('');
   const [bulkSubcategoryInput, setBulkSubcategoryInput] = useState('');
@@ -443,14 +445,17 @@ export default function AdminPanel() {
   const handleAddParentCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setErrorMsg(''); setSuccessMsg('');
     if (!newCategoryName.trim()) { setErrorMsg('Category name cannot be empty.'); return; }
+    const sortVal = parseInt(newCategorySortOrder, 10) || 0;
     try {
       const { error } = await addCategory({
         name: newCategoryName.trim(),
-        parent_id: null
+        parent_id: null,
+        sort_order: sortVal
       } as Partial<Category>);
       if (error) throw error;
       setSuccessMsg(`Parent category "${newCategoryName.trim()}" added!`);
       setNewCategoryName('');
+      setNewCategorySortOrder('0');
     } catch { setErrorMsg('Failed to add parent category. Names must be unique.'); }
   };
 
@@ -486,7 +491,8 @@ export default function AdminPanel() {
     try {
       const { error } = await updateCategory(editingCategory.id, {
         name: editingCategory.name.trim(),
-        parent_id: editingCategory.parent_id || null
+        parent_id: editingCategory.parent_id || null,
+        sort_order: editingCategory.sort_order
       });
       if (error) throw error;
       setSuccessMsg('Category updated!');
@@ -501,6 +507,76 @@ export default function AdminPanel() {
       if (error) throw error;
       setSuccessMsg(`Category "${name}" deleted.`);
     } catch { setErrorMsg('Failed to delete category.'); }
+  };
+
+  const handleReorderCategories = async (reorderedList: Category[]) => {
+    try {
+      await Promise.all(
+        reorderedList.map((cat, idx) => 
+          updateCategory(cat.id, {
+            name: cat.name,
+            parent_id: cat.parent_id || null,
+            sort_order: idx
+          })
+        )
+      );
+    } catch (e) {
+      console.error('Failed to save category order:', e);
+    }
+  };
+
+  const handleParentDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData('text/plain', id);
+    setDraggedCategoryId(id);
+  };
+
+  const handleParentDragOver = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+  };
+
+  const handleParentDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('text/plain');
+    if (!sourceId || sourceId === targetId) return;
+
+    const parents = categories.filter(c => !c.parent_id);
+    const sourceIndex = parents.findIndex(c => c.id === sourceId);
+    const targetIndex = parents.findIndex(c => c.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const updated = [...parents];
+    const [draggedItem] = updated.splice(sourceIndex, 1);
+    updated.splice(targetIndex, 0, draggedItem);
+
+    await handleReorderCategories(updated);
+    setDraggedCategoryId(null);
+  };
+
+  const handleChildDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.setData('text/plain', id);
+    setDraggedCategoryId(id);
+  };
+
+  const handleChildDragOver = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+  };
+
+  const handleChildDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('text/plain');
+    if (!sourceId || sourceId === targetId) return;
+
+    const children = categories.filter(c => c.parent_id === selectedParentIdForSub);
+    const sourceIndex = children.findIndex(c => c.id === sourceId);
+    const targetIndex = children.findIndex(c => c.id === targetId);
+    if (sourceIndex === -1 || targetIndex === -1) return;
+
+    const updated = [...children];
+    const [draggedItem] = updated.splice(sourceIndex, 1);
+    updated.splice(targetIndex, 0, draggedItem);
+
+    await handleReorderCategories(updated);
+    setDraggedCategoryId(null);
   };
 
   const handleUpdateOrderStatus = async (orderId: string, nextStatus: string) => {
@@ -1664,24 +1740,42 @@ export default function AdminPanel() {
                       const isSelected = selectedParentIdForSub === parent.id;
 
                       return (
-                        <div key={parent.id} className={`p-3 border rounded-lg flex items-center justify-between gap-3 transition-all ${
-                          isSelected 
-                            ? 'border-brand-brown bg-brand-cream/15 shadow-2xs' 
-                            : 'border-brand-cream-dark/60 bg-white hover:bg-brand-cream/5'
-                        }`}>
-                          <div className="flex flex-col flex-1 min-w-0">
-                            {editingCategory?.id === parent.id ? (
-                              <form onSubmit={handleEditCategorySubmit} className="flex gap-1.5">
-                                <input value={editingCategory.name} onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })} className={inputCls + ' h-7 text-[11px]'} autoFocus />
-                                <button type="submit" className="px-2 bg-brand-brown text-white rounded text-[9px] cursor-pointer shrink-0"><CheckCircle className="w-3 h-3" /></button>
-                                <button type="button" onClick={() => setEditingCategory(null)} className="px-2 border border-brand-cream-dark text-brand-dark/50 rounded text-[9px] cursor-pointer shrink-0">X</button>
-                              </form>
-                            ) : (
-                              <>
-                                <span className="font-serif text-xs font-bold text-brand-dark uppercase tracking-wider truncate">{parent.name}</span>
-                                <span className="text-[8px] text-brand-dark/40 font-bold uppercase tracking-widest mt-0.5">{childCount} subcategories linked</span>
-                              </>
-                            )}
+                        <div
+                          key={parent.id}
+                          draggable={!editingCategory || editingCategory.id !== parent.id}
+                          onDragStart={(e) => handleParentDragStart(e, parent.id)}
+                          onDragOver={(e) => handleParentDragOver(e, parent.id)}
+                          onDrop={(e) => handleParentDrop(e, parent.id)}
+                          className={`p-3 border rounded-lg flex items-center justify-between gap-3 transition-all ${
+                            isSelected 
+                              ? 'border-brand-brown bg-brand-cream/15 shadow-2xs' 
+                              : 'border-brand-cream-dark/60 bg-white hover:bg-brand-cream/5'
+                          } ${draggedCategoryId === parent.id ? 'opacity-40 border-dashed border-brand-brown' : ''} cursor-grab active:cursor-grabbing`}
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {!editingCategory || editingCategory.id !== parent.id ? (
+                              <GripVertical className="w-3.5 h-3.5 text-brand-dark/25 shrink-0 select-none cursor-grab" />
+                            ) : null}
+                            <div className="flex flex-col flex-1 min-w-0">
+                              {editingCategory?.id === parent.id ? (
+                                <form onSubmit={handleEditCategorySubmit} className="flex gap-1.5 items-center w-full">
+                                  <input value={editingCategory.name} onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })} className={inputCls + ' h-7 text-[11px] flex-1'} autoFocus />
+                                  <input type="number" value={editingCategory.sort_order} onChange={(e) => setEditingCategory({ ...editingCategory, sort_order: parseInt(e.target.value, 10) || 0 })} className={inputCls + ' h-7 text-[11px] w-14 shrink-0'} placeholder="Sort" />
+                                  <button type="submit" className="p-1 px-2 bg-brand-brown text-white rounded text-[9px] cursor-pointer shrink-0 h-7 flex items-center justify-center"><CheckCircle className="w-3.5 h-3.5" /></button>
+                                  <button type="button" onClick={() => setEditingCategory(null)} className="p-1 px-2 border border-brand-cream-dark text-brand-dark/50 rounded text-[9px] cursor-pointer shrink-0 h-7 flex items-center justify-center">X</button>
+                                </form>
+                              ) : (
+                                <>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="bg-brand-cream-dark/30 text-brand-brown text-[8px] font-extrabold px-1.5 py-0.5 rounded tracking-wider uppercase">
+                                      Ord: {parent.sort_order ?? 0}
+                                    </span>
+                                    <span className="font-serif text-xs font-bold text-brand-dark uppercase tracking-wider truncate">{parent.name}</span>
+                                  </div>
+                                  <span className="text-[8px] text-brand-dark/40 font-bold uppercase tracking-widest mt-0.5">{childCount} subcategories linked</span>
+                                </>
+                              )}
+                            </div>
                           </div>
 
                           {!editingCategory || editingCategory.id !== parent.id ? (
@@ -1697,7 +1791,7 @@ export default function AdminPanel() {
                               >
                                 {isSelected ? 'Managing' : 'Select'}
                               </button>
-                              <button onClick={() => setEditingCategory({ id: parent.id, name: parent.name, parent_id: null })} className="p-1 border border-brand-cream-dark/60 text-brand-dark/40 hover:text-brand-brown rounded hover:bg-brand-cream/10 cursor-pointer"><Edit3 className="w-3 h-3" /></button>
+                              <button onClick={() => setEditingCategory({ id: parent.id, name: parent.name, parent_id: null, sort_order: parent.sort_order ?? 0 })} className="p-1 border border-brand-cream-dark/60 text-brand-dark/40 hover:text-brand-brown rounded hover:bg-brand-cream/10 cursor-pointer"><Edit3 className="w-3 h-3" /></button>
                               <button onClick={() => handleDeleteCategory(parent.id, parent.name)} className="p-1 border border-brand-cream-dark/60 text-brand-dark/40 hover:text-red-500 rounded hover:bg-brand-cream/10 cursor-pointer"><Trash2 className="w-3 h-3" /></button>
                             </div>
                           ) : null}
@@ -1772,26 +1866,44 @@ export default function AdminPanel() {
                             const linkedProductCount = products.filter(p => p.category_id === child.id).length;
 
                             return (
-                              <div key={child.id} className="p-3 bg-white border border-brand-cream-dark/70 rounded-lg flex items-center justify-between gap-3 shadow-3xs transition-shadow hover:shadow-2xs">
-                                <div className="flex flex-col flex-1 min-w-0">
-                                  {editingCategory?.id === child.id ? (
-                                    <form onSubmit={handleEditCategorySubmit} className="flex gap-1.5">
-                                      <input value={editingCategory.name} onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })} className={inputCls + ' h-7 text-[11px]'} autoFocus />
-                                      <button type="submit" className="px-2 bg-brand-brown text-white rounded text-[9px] cursor-pointer shrink-0"><CheckCircle className="w-3 h-3" /></button>
-                                      <button type="button" onClick={() => setEditingCategory(null)} className="px-2 border border-brand-cream-dark text-brand-dark/50 rounded text-[9px] cursor-pointer shrink-0">X</button>
-                                    </form>
-                                  ) : (
-                                    <>
-                                      <span className="font-sans text-xs font-semibold text-brand-dark truncate">{child.name}</span>
-                                      <span className="text-[8px] text-brand-dark/40 font-bold uppercase tracking-widest mt-0.5">{linkedProductCount} garments linked</span>
-                                    </>
-                                  )}
+                              <div
+                                key={child.id}
+                                draggable={!editingCategory || editingCategory.id !== child.id}
+                                onDragStart={(e) => handleChildDragStart(e, child.id)}
+                                onDragOver={(e) => handleChildDragOver(e, child.id)}
+                                onDrop={(e) => handleChildDrop(e, child.id)}
+                                className={`p-3 bg-white border border-brand-cream-dark/70 rounded-lg flex items-center justify-between gap-3 shadow-3xs transition-shadow hover:shadow-2xs ${draggedCategoryId === child.id ? 'opacity-40 border-dashed border-brand-brown' : ''} cursor-grab active:cursor-grabbing`}
+                              >
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  {!editingCategory || editingCategory.id !== child.id ? (
+                                    <GripVertical className="w-3.5 h-3.5 text-brand-dark/25 shrink-0 select-none cursor-grab" />
+                                  ) : null}
+                                  <div className="flex flex-col flex-1 min-w-0">
+                                    {editingCategory?.id === child.id ? (
+                                      <form onSubmit={handleEditCategorySubmit} className="flex gap-1.5 items-center w-full">
+                                        <input value={editingCategory.name} onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })} className={inputCls + ' h-7 text-[11px] flex-1'} autoFocus />
+                                        <input type="number" value={editingCategory.sort_order} onChange={(e) => setEditingCategory({ ...editingCategory, sort_order: parseInt(e.target.value, 10) || 0 })} className={inputCls + ' h-7 text-[11px] w-14 shrink-0'} placeholder="Sort" />
+                                        <button type="submit" className="p-1 px-2 bg-brand-brown text-white rounded text-[9px] cursor-pointer shrink-0 h-7 flex items-center justify-center"><CheckCircle className="w-3.5 h-3.5" /></button>
+                                        <button type="button" onClick={() => setEditingCategory(null)} className="p-1 px-2 border border-brand-cream-dark text-brand-dark/50 rounded text-[9px] cursor-pointer shrink-0 h-7 flex items-center justify-center">X</button>
+                                      </form>
+                                    ) : (
+                                      <>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="bg-brand-cream-dark/20 text-brand-dark/60 text-[8px] font-extrabold px-1.5 py-0.5 rounded tracking-wider uppercase">
+                                            Ord: {child.sort_order ?? 0}
+                                          </span>
+                                          <span className="font-sans text-xs font-semibold text-brand-dark truncate">{child.name}</span>
+                                        </div>
+                                        <span className="text-[8px] text-brand-dark/40 font-bold uppercase tracking-widest mt-0.5">{linkedProductCount} garments linked</span>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
 
                                 {!editingCategory || editingCategory.id !== child.id ? (
                                   <div className="flex items-center space-x-1 shrink-0">
-                                    <button onClick={() => setEditingCategory({ id: child.id, name: child.name, parent_id: child.parent_id })} className="p-1 text-brand-dark/35 hover:text-brand-brown transition-colors cursor-pointer"><Edit3 className="w-3 h-3" /></button>
-                                    <button onClick={() => handleDeleteCategory(child.id, child.name)} className="p-1 text-brand-dark/35 hover:text-red-500 transition-colors cursor-pointer"><Trash2 className="w-3 h-3" /></button>
+                                    <button onClick={() => setEditingCategory({ id: child.id, name: child.name, parent_id: child.parent_id, sort_order: child.sort_order ?? 0 })} className="p-1 text-brand-dark/35 hover:text-brand-brown transition-colors cursor-pointer"><Edit3 className="w-3.5 h-3.5" /></button>
+                                    <button onClick={() => handleDeleteCategory(child.id, child.name)} className="p-1 text-brand-dark/35 hover:text-red-500 transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
                                   </div>
                                 ) : null}
                               </div>
