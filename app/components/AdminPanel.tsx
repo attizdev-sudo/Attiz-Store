@@ -6,17 +6,15 @@ import { useRouter } from 'next/navigation';
 import {
   Database, Plus, Trash2, Edit3, CheckCircle, Package,
   ClipboardList, AlertCircle, LogOut, Tags, Upload, Image as ImageIcon,
-  ArrowLeft, ArrowRight, Search, Star, X, ChevronUp, ChevronDown, Check, Eye
+  ArrowLeft, ArrowRight, Search, Star, X, ChevronUp, ChevronDown, Check, Eye, Layers
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
 import { uploadImage } from '@/lib/db';
-import { CATEGORIES_MAP } from '@/lib/categories';
 import type { Product, Category, Banner } from '@/lib/types';
 
 const BLANK_PRODUCT = {
-  title: '', price: '', parent_category: 'MEN', secondary_category: 'Round Neck Tees',
-  subcategory: '', category: 'Round Neck Tees', image: '', images: '',
+  title: '', price: '', discount: '0', image: '', images: '',
   sizes: 'S,M,L,XL,XXL', colors: 'Black,Dark Wine,Teal',
   size_chart: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800',
   stock: '100', description: '', specifications: '', wash_care: '',
@@ -28,7 +26,7 @@ const ORDER_STATUSES = ['Waiting for confirmation', 'Accepted', 'Dispatched', 'S
 
 const STANDARD_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
 
-type EditableProduct = Omit<Partial<Product>, 'price' | 'stock'> & { price: string | number; stock: string | number };
+type EditableProduct = Omit<Partial<Product>, 'price' | 'stock' | 'discount'> & { price: string | number; stock: string | number; discount?: string | number };
 
 export default function AdminPanel() {
   const { user, signin, logout } = useAuth();
@@ -72,18 +70,17 @@ export default function AdminPanel() {
   const [sortField, setSortField] = useState<'title' | 'price' | 'stock'>('title');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const [isCustomParent, setIsCustomParent] = useState(false);
-  const [customParent, setCustomParent] = useState('');
-  const [isCustomSecondary, setIsCustomSecondary] = useState(false);
-  const [customSecondary, setCustomSecondary] = useState('');
-
-  const [isEditCustomParent, setEditIsCustomParent] = useState(false);
-  const [editCustomParent, setEditCustomParent] = useState('');
-  const [isEditCustomSecondary, setEditIsCustomSecondary] = useState(false);
-  const [editCustomSecondary, setEditCustomSecondary] = useState('');
+  const [newProductParentId, setNewProductParentId] = useState('');
+  const [newProductSubId, setNewProductSubId] = useState('');
+  const [editProductParentId, setEditProductParentId] = useState('');
+  const [editProductSubId, setEditProductSubId] = useState('');
+  const [newCategoryParentId, setNewCategoryParentId] = useState('');
 
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string } | null>(null);
+  const [editingCategory, setEditingCategory] = useState<{ id: string; name: string; parent_id?: string | null } | null>(null);
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [selectedParentIdForSub, setSelectedParentIdForSub] = useState('');
+  const [bulkSubcategoryInput, setBulkSubcategoryInput] = useState('');
 
   const [isAddBannerFormOpen, setIsAddBannerFormOpen] = useState(false);
   const [newBanner, setNewBanner] = useState({ ...BLANK_BANNER });
@@ -97,9 +94,7 @@ export default function AdminPanel() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const parentsList = Object.keys(CATEGORIES_MAP);
-  const secondariesList = CATEGORIES_MAP[newProduct.parent_category] || [];
-  const editSecondariesList = editingProduct ? (CATEGORIES_MAP[String(editingProduct.parent_category)] || []) : [];
+
 
   const newProductAllImages = [newProduct.image, ...newProduct.images.split(',').filter(Boolean)].filter(Boolean);
   const editProductAllImages = editingProduct ? [editingProduct.image, ...(String(editingProduct.images || '')).split(',').filter(Boolean)].filter(Boolean) : [];
@@ -190,48 +185,25 @@ export default function AdminPanel() {
     finally { setBannerImageUploading(false); }
   };
 
-  const handleParentCategoryChange = (val: string) => {
-    const defaultSecondary = CATEGORIES_MAP[val]?.[0] || '';
-    setNewProduct((prev) => ({ ...prev, parent_category: val, secondary_category: defaultSecondary, category: defaultSecondary }));
-  };
-
-  const handleEditParentCategoryChange = (val: string) => {
-    const defaultSecondary = CATEGORIES_MAP[val]?.[0] || '';
-    setEditingProduct((prev) => prev ? { ...prev, parent_category: val, secondary_category: defaultSecondary, category: defaultSecondary } : prev);
-  };
-
   const handleStartEditProduct = (prod: Product) => {
-    const normParent = (prod.parent_category || 'MEN').trim().toUpperCase();
-    let normSecondary = (prod.secondary_category || prod.category || '').trim();
-    
-    const parentsList = Object.keys(CATEGORIES_MAP);
-    const isParentPreset = parentsList.includes(normParent);
-    
-    const secondariesList = CATEGORIES_MAP[normParent] || [];
-    const isSecondaryPreset = isParentPreset && secondariesList.includes(normSecondary);
-
     setEditingProduct({ 
       ...prod, 
+      discount: prod.discount ?? 0,
       images: prod.images || '', 
-      parent_category: normParent, 
-      secondary_category: normSecondary, 
-      subcategory: '' 
     });
 
-    if (isParentPreset) {
-      setEditIsCustomParent(false);
-      setEditCustomParent('');
+    const cat = categories.find(c => c.id === prod.category_id);
+    if (cat) {
+      if (cat.parent_id) {
+        setEditProductParentId(cat.parent_id);
+        setEditProductSubId(cat.id);
+      } else {
+        setEditProductParentId(cat.id);
+        setEditProductSubId('');
+      }
     } else {
-      setEditIsCustomParent(true);
-      setEditCustomParent(prod.parent_category || '');
-    }
-
-    if (isSecondaryPreset) {
-      setEditIsCustomSecondary(false);
-      setEditCustomSecondary('');
-    } else {
-      setEditIsCustomSecondary(true);
-      setEditCustomSecondary(normSecondary);
+      setEditProductParentId('');
+      setEditProductSubId('');
     }
 
     setEditStep(1);
@@ -243,15 +215,14 @@ export default function AdminPanel() {
   const isStepValid = (step: number, isEdit: boolean) => {
     if (isEdit) {
       if (!editingProduct) return false;
-      const parentVal = isEditCustomParent ? editCustomParent.trim() : String(editingProduct.parent_category || '');
-      const secondaryVal = isEditCustomSecondary ? editCustomSecondary.trim() : String(editingProduct.secondary_category || '');
       if (step === 1) {
-        return String(editingProduct.title || '').trim().length > 0 && parentVal.length > 0 && secondaryVal.length > 0;
+        return String(editingProduct.title || '').trim().length > 0 && (editProductParentId.length > 0 || editProductSubId.length > 0);
       }
       if (step === 2) {
         const priceNum = parseFloat(String(editingProduct.price));
+        const discountNum = parseFloat(String(editingProduct.discount || '0'));
         const stockNum = parseInt(String(editingProduct.stock), 10);
-        return !isNaN(priceNum) && priceNum > 0 && !isNaN(stockNum) && stockNum >= 0 && (editingProduct.sizes || '').trim().length > 0;
+        return !isNaN(priceNum) && priceNum > 0 && !isNaN(discountNum) && discountNum >= 0 && discountNum <= 100 && !isNaN(stockNum) && stockNum >= 0 && (editingProduct.sizes || '').trim().length > 0;
       }
       if (step === 3) {
         return !!editingProduct.image && !editAdditionalImagesUploading && !editSizeChartUploading;
@@ -263,15 +234,14 @@ export default function AdminPanel() {
       }
       return true;
     } else {
-      const parentVal = isCustomParent ? customParent.trim() : newProduct.parent_category;
-      const secondaryVal = isCustomSecondary ? customSecondary.trim() : newProduct.secondary_category;
       if (step === 1) {
-        return newProduct.title.trim().length > 0 && parentVal.length > 0 && secondaryVal.length > 0;
+        return newProduct.title.trim().length > 0 && (newProductParentId.length > 0 || newProductSubId.length > 0);
       }
       if (step === 2) {
         const priceNum = parseFloat(String(newProduct.price));
+        const discountNum = parseFloat(String(newProduct.discount || '0'));
         const stockNum = parseInt(String(newProduct.stock), 10);
-        return !isNaN(priceNum) && priceNum > 0 && !isNaN(stockNum) && stockNum >= 0 && newProduct.sizes.trim().length > 0;
+        return !isNaN(priceNum) && priceNum > 0 && !isNaN(discountNum) && discountNum >= 0 && discountNum <= 100 && !isNaN(stockNum) && stockNum >= 0 && newProduct.sizes.trim().length > 0;
       }
       if (step === 3) {
         return !!newProduct.image && !additionalImagesUploading && !sizeChartUploading;
@@ -404,16 +374,17 @@ export default function AdminPanel() {
     if (addStep < 4) return;
     setErrorMsg(''); setSuccessMsg('');
     const priceNum = parseFloat(String(newProduct.price));
+    const discountNum = parseFloat(String(newProduct.discount || '0'));
     const stockNum = parseInt(String(newProduct.stock), 10);
     if (isNaN(priceNum)) { setErrorMsg('Price must be a valid number.'); return; }
+    if (isNaN(discountNum) || discountNum < 0 || discountNum > 100) { setErrorMsg('Discount must be between 0% and 100%.'); return; }
     if (isNaN(stockNum) || stockNum < 0) { setErrorMsg('Stock must be a non-negative integer.'); return; }
-    const parentVal = isCustomParent ? customParent.trim() : newProduct.parent_category;
-    const secondaryVal = isCustomSecondary ? customSecondary.trim() : newProduct.secondary_category;
-    if (!parentVal || !secondaryVal) { setErrorMsg('Please specify parent and secondary categories.'); return; }
+    const categoryId = newProductSubId || newProductParentId || null;
+    if (!categoryId) { setErrorMsg('Please specify a category.'); return; }
     try {
       const { error } = await addProduct({
-        title: newProduct.title, price: priceNum,
-        category: secondaryVal, parent_category: parentVal, secondary_category: secondaryVal, subcategory: '',
+        title: newProduct.title, price: priceNum, discount: discountNum,
+        category_id: categoryId,
         image: newProduct.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600',
         images: newProduct.images || '', sizes: newProduct.sizes, colors: newProduct.colors,
         size_chart: newProduct.size_chart, stock: stockNum,
@@ -422,8 +393,8 @@ export default function AdminPanel() {
       if (error) throw error;
       setSuccessMsg('Product added successfully!');
       setNewProduct({ ...BLANK_PRODUCT });
-      setCustomParent(''); setCustomSecondary('');
-      setIsCustomParent(false); setIsCustomSecondary(false);
+      setNewProductParentId('');
+      setNewProductSubId('');
       setIsAddFormOpen(false);
       setAddStep(1);
     } catch { setErrorMsg('Failed to add product.'); }
@@ -435,16 +406,17 @@ export default function AdminPanel() {
     setErrorMsg(''); setSuccessMsg('');
     if (!editingProduct) return;
     const priceNum = parseFloat(String(editingProduct.price));
+    const discountNum = parseFloat(String(editingProduct.discount || '0'));
     const stockNum = parseInt(String(editingProduct.stock), 10);
     if (isNaN(priceNum)) { setErrorMsg('Price must be a valid number.'); return; }
+    if (isNaN(discountNum) || discountNum < 0 || discountNum > 100) { setErrorMsg('Discount must be between 0% and 100%.'); return; }
     if (isNaN(stockNum) || stockNum < 0) { setErrorMsg('Stock must be a non-negative integer.'); return; }
-    const parentVal = isEditCustomParent ? editCustomParent.trim() : String(editingProduct.parent_category || '');
-    const secondaryVal = isEditCustomSecondary ? editCustomSecondary.trim() : String(editingProduct.secondary_category || '');
-    if (!parentVal || !secondaryVal) { setErrorMsg('Please specify parent and secondary categories.'); return; }
+    const categoryId = editProductSubId || editProductParentId || null;
+    if (!categoryId) { setErrorMsg('Please specify a category.'); return; }
     try {
       const { error } = await editProduct(editingProduct.id as string, {
-        title: editingProduct.title, price: priceNum,
-        category: secondaryVal, parent_category: parentVal, secondary_category: secondaryVal, subcategory: '',
+        title: editingProduct.title, price: priceNum, discount: discountNum,
+        category_id: categoryId,
         image: editingProduct.image, images: String(editingProduct.images || ''),
         sizes: editingProduct.sizes, colors: editingProduct.colors, size_chart: editingProduct.size_chart,
         stock: stockNum, description: editingProduct.description,
@@ -453,6 +425,8 @@ export default function AdminPanel() {
       if (error) throw error;
       setSuccessMsg('Product updated!');
       setEditingProduct(null);
+      setEditProductParentId('');
+      setEditProductSubId('');
     } catch { setErrorMsg('Failed to update product.'); }
   };
 
@@ -466,22 +440,54 @@ export default function AdminPanel() {
     } catch { setErrorMsg('Failed to delete product.'); }
   };
 
-  const handleAddCategorySubmit = async (e: React.FormEvent) => {
+  const handleAddParentCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setErrorMsg(''); setSuccessMsg('');
     if (!newCategoryName.trim()) { setErrorMsg('Category name cannot be empty.'); return; }
     try {
-      const { error } = await addCategory({ name: newCategoryName.trim() } as Partial<Category>);
+      const { error } = await addCategory({
+        name: newCategoryName.trim(),
+        parent_id: null
+      } as Partial<Category>);
       if (error) throw error;
-      setSuccessMsg(`Category "${newCategoryName.trim()}" added!`);
+      setSuccessMsg(`Parent category "${newCategoryName.trim()}" added!`);
       setNewCategoryName('');
-    } catch { setErrorMsg('Failed to add category. Names must be unique.'); }
+    } catch { setErrorMsg('Failed to add parent category. Names must be unique.'); }
+  };
+
+  const handleAddSubcategoriesSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setErrorMsg(''); setSuccessMsg('');
+    if (!selectedParentIdForSub) { setErrorMsg('Please select a parent department first.'); return; }
+    if (!bulkSubcategoryInput.trim()) { setErrorMsg('Subcategory input cannot be empty.'); return; }
+    
+    const names = bulkSubcategoryInput
+      .split(',')
+      .map(name => name.trim())
+      .filter(Boolean);
+      
+    if (names.length === 0) { setErrorMsg('No valid subcategory names entered.'); return; }
+    
+    try {
+      const payload = names.map(name => ({
+        name,
+        parent_id: selectedParentIdForSub
+      }));
+      
+      const { error } = await addCategory(payload);
+      if (error) throw error;
+      
+      setSuccessMsg(`Added ${names.length} subcategories!`);
+      setBulkSubcategoryInput('');
+    } catch { setErrorMsg('Failed to add subcategories. Names under this parent must be unique.'); }
   };
 
   const handleEditCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setErrorMsg(''); setSuccessMsg('');
     if (!editingCategory?.name.trim()) { setErrorMsg('Category name cannot be empty.'); return; }
     try {
-      const { error } = await updateCategory(editingCategory.id, editingCategory.name.trim());
+      const { error } = await updateCategory(editingCategory.id, {
+        name: editingCategory.name.trim(),
+        parent_id: editingCategory.parent_id || null
+      });
       if (error) throw error;
       setSuccessMsg('Category updated!');
       setEditingCategory(null);
@@ -548,10 +554,13 @@ export default function AdminPanel() {
     .filter((prod) => {
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
+      const cat = categories.find(c => c.id === prod.category_id);
+      const catName = cat ? cat.name.toLowerCase() : '';
+      const parentCatName = cat?.parent_id ? (categories.find(c => c.id === cat.parent_id)?.name.toLowerCase() || '') : '';
       return (
         prod.title.toLowerCase().includes(q) ||
-        prod.category.toLowerCase().includes(q) ||
-        (prod.parent_category || '').toLowerCase().includes(q)
+        catName.includes(q) ||
+        parentCatName.includes(q)
       );
     })
     .sort((a, b) => {
@@ -673,18 +682,19 @@ export default function AdminPanel() {
 
   // Preview component
   const RenderProductLivePreview = ({ target }: { target: typeof BLANK_PRODUCT | EditableProduct }) => {
-    const parentVal = isAddFormOpen 
-      ? (isCustomParent ? customParent : newProduct.parent_category)
-      : (isEditCustomParent ? editCustomParent : String(editingProduct?.parent_category || ''));
-    
-    const secondaryVal = isAddFormOpen 
-      ? (isCustomSecondary ? customSecondary : newProduct.secondary_category)
-      : (isEditCustomSecondary ? editCustomSecondary : String(editingProduct?.secondary_category || ''));
+    const activeCatId = isAddFormOpen
+      ? (newProductSubId || newProductParentId)
+      : (editProductSubId || editProductParentId);
+    const activeCat = categories.find(c => c.id === activeCatId);
+    const displayCategory = activeCat ? activeCat.name : 'No category';
 
     const displayImage = target.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
     const displayTitle = target.title || 'Premium Cotton Tee';
-    const displayPrice = target.price ? parseFloat(String(target.price)).toFixed(0) : '0';
-    const displayCategory = secondaryVal || 'Round Neck Tees';
+    const discountVal = parseFloat(String(target.discount || '0'));
+    const isDiscounted = discountVal > 0 && discountVal <= 100;
+    const finalPrice = isDiscounted 
+      ? Math.round(parseFloat(String(target.price || 0)) * (1 - discountVal / 100))
+      : parseFloat(String(target.price || 0));
 
     const pSizes = (target.sizes || '').split(',').map(s => s.trim()).filter(Boolean);
     const pColors = (target.colors || '').split(',').map(c => c.trim()).filter(Boolean);
@@ -715,9 +725,23 @@ export default function AdminPanel() {
                   Category: {displayCategory}
                 </span>
               </div>
-              <div className="flex items-center justify-between mt-2">
-                <span className="font-sans text-[11px] font-bold text-brand-brown">Rs. {displayPrice}</span>
-                <span className="bg-brand-brown text-white text-[7px] font-bold tracking-wider px-2 py-0.5 rounded cursor-pointer hover:bg-brand-brown-dark transition-colors">ADD</span>
+              <div className="flex items-center justify-between mt-2 gap-1.5">
+                {isDiscounted ? (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-green-700 font-extrabold text-[9px] flex items-center shrink-0">
+                      ↓{discountVal}%
+                    </span>
+                    <span className="font-sans text-[9px] text-brand-dark/40 line-through shrink-0">
+                      {parseFloat(String(target.price || 0)).toFixed(0)}
+                    </span>
+                    <span className="font-sans text-[10px] font-bold text-brand-dark whitespace-nowrap">
+                      ₹{finalPrice.toFixed(0)}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="font-sans text-[10px] font-bold text-brand-brown">₹{parseFloat(String(target.price || 0)).toFixed(0)}</span>
+                )}
+                <span className="bg-brand-brown text-white text-[7px] font-bold tracking-wider px-2 py-0.5 rounded cursor-pointer hover:bg-brand-brown-dark transition-colors shrink-0">ADD</span>
               </div>
             </div>
           </div>
@@ -859,36 +883,18 @@ export default function AdminPanel() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div className="flex flex-col">
                           <label className={labelCls}>Parent Category</label>
-                          {!isCustomParent ? (
-                            <div className="flex gap-2">
-                              <select value={newProduct.parent_category} onChange={(e) => handleParentCategoryChange(e.target.value)} className={inputCls + ' flex-1'}>
-                                {parentsList.map((p) => <option key={p} value={p}>{p}</option>)}
-                              </select>
-                              <button type="button" onClick={() => setIsCustomParent(true)} className="text-[9px] text-brand-brown font-bold tracking-wider uppercase border border-brand-cream-dark px-3 rounded hover:bg-brand-cream cursor-pointer transition-colors">Custom</button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <input value={customParent} onChange={(e) => setCustomParent(e.target.value)} className={inputCls + ' flex-1'} placeholder="Custom parent category" />
-                              <button type="button" onClick={() => setIsCustomParent(false)} className="text-[9px] text-brand-brown font-bold tracking-wider uppercase border border-brand-cream-dark px-3 rounded hover:bg-brand-cream cursor-pointer transition-colors">Preset</button>
-                            </div>
-                          )}
+                          <select value={newProductParentId} onChange={(e) => { setNewProductParentId(e.target.value); setNewProductSubId(''); }} className={inputCls}>
+                            <option value="">-- Select Parent Category --</option>
+                            {categories.filter(c => !c.parent_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
                         </div>
 
                         <div className="flex flex-col">
-                          <label className={labelCls}>Secondary Category</label>
-                          {!isCustomSecondary ? (
-                            <div className="flex gap-2">
-                              <select value={newProduct.secondary_category} onChange={(e) => setNewProduct((p) => ({ ...p, secondary_category: e.target.value, category: e.target.value }))} className={inputCls + ' flex-1'}>
-                                {secondariesList.map((s) => <option key={s} value={s}>{s}</option>)}
-                              </select>
-                              <button type="button" onClick={() => setIsCustomSecondary(true)} className="text-[9px] text-brand-brown font-bold tracking-wider uppercase border border-brand-cream-dark px-3 rounded hover:bg-brand-cream cursor-pointer transition-colors">Custom</button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <input value={customSecondary} onChange={(e) => setCustomSecondary(e.target.value)} className={inputCls + ' flex-1'} placeholder="Custom secondary category" />
-                              <button type="button" onClick={() => setIsCustomSecondary(false)} className="text-[9px] text-brand-brown font-bold tracking-wider uppercase border border-brand-cream-dark px-3 rounded hover:bg-brand-cream cursor-pointer transition-colors">Preset</button>
-                            </div>
-                          )}
+                          <label className={labelCls}>Subcategory (Optional)</label>
+                          <select value={newProductSubId} onChange={(e) => setNewProductSubId(e.target.value)} className={inputCls} disabled={!newProductParentId}>
+                            <option value="">-- None (Keep directly under parent) --</option>
+                            {categories.filter(c => c.parent_id === newProductParentId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -897,10 +903,14 @@ export default function AdminPanel() {
                   {/* Step 2: Price & Inventory */}
                   {addStep === 2 && (
                     <div className="space-y-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                         <div className="flex flex-col">
                           <label className={labelCls}>Price (₹)</label>
                           <input required type="number" step="0.01" value={newProduct.price} onChange={(e) => setNewProduct((p) => ({ ...p, price: e.target.value }))} className={inputCls} placeholder="e.g. 799" />
+                        </div>
+                        <div className="flex flex-col">
+                          <label className={labelCls}>Discount (%)</label>
+                          <input type="number" min="0" max="100" value={newProduct.discount} onChange={(e) => setNewProduct((p) => ({ ...p, discount: e.target.value }))} className={inputCls} placeholder="e.g. 10" />
                         </div>
                         <div className="flex flex-col">
                           <label className={labelCls}>Stock Quantity</label>
@@ -1187,36 +1197,18 @@ export default function AdminPanel() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         <div className="flex flex-col">
                           <label className={labelCls}>Parent Category</label>
-                          {!isEditCustomParent ? (
-                            <div className="flex gap-2">
-                              <select value={String(editingProduct.parent_category || 'MEN')} onChange={(e) => handleEditParentCategoryChange(e.target.value)} className={inputCls + ' flex-1'}>
-                                {parentsList.map((p) => <option key={p} value={p}>{p}</option>)}
-                              </select>
-                              <button type="button" onClick={() => setEditIsCustomParent(true)} className="text-[9px] text-brand-brown font-bold tracking-wider uppercase border border-brand-cream-dark px-3 rounded hover:bg-brand-cream cursor-pointer transition-colors">Custom</button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <input value={editCustomParent} onChange={(e) => setEditCustomParent(e.target.value)} className={inputCls + ' flex-1'} placeholder="Custom parent category" />
-                              <button type="button" onClick={() => setEditIsCustomParent(false)} className="text-[9px] text-brand-brown font-bold tracking-wider uppercase border border-brand-cream-dark px-3 rounded hover:bg-brand-cream cursor-pointer transition-colors">Preset</button>
-                            </div>
-                          )}
+                          <select value={editProductParentId} onChange={(e) => { setEditProductParentId(e.target.value); setEditProductSubId(''); }} className={inputCls}>
+                            <option value="">-- Select Parent Category --</option>
+                            {categories.filter(c => !c.parent_id).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
                         </div>
 
                         <div className="flex flex-col">
-                          <label className={labelCls}>Secondary Category</label>
-                          {!isEditCustomSecondary ? (
-                            <div className="flex gap-2">
-                              <select value={String(editingProduct.secondary_category || '')} onChange={(e) => setEditingProduct((p) => p ? { ...p, secondary_category: e.target.value, category: e.target.value } : p)} className={inputCls + ' flex-1'}>
-                                {editSecondariesList.map((s) => <option key={s} value={s}>{s}</option>)}
-                              </select>
-                              <button type="button" onClick={() => setEditIsCustomSecondary(true)} className="text-[9px] text-brand-brown font-bold tracking-wider uppercase border border-brand-cream-dark px-3 rounded hover:bg-brand-cream cursor-pointer transition-colors">Custom</button>
-                            </div>
-                          ) : (
-                            <div className="flex gap-2">
-                              <input value={editCustomSecondary} onChange={(e) => setEditCustomSecondary(e.target.value)} className={inputCls + ' flex-1'} placeholder="Custom secondary category" />
-                              <button type="button" onClick={() => setEditIsCustomSecondary(false)} className="text-[9px] text-brand-brown font-bold tracking-wider uppercase border border-brand-cream-dark px-3 rounded hover:bg-brand-cream cursor-pointer transition-colors">Preset</button>
-                            </div>
-                          )}
+                          <label className={labelCls}>Subcategory (Optional)</label>
+                          <select value={editProductSubId} onChange={(e) => setEditProductSubId(e.target.value)} className={inputCls} disabled={!editProductParentId}>
+                            <option value="">-- None (Keep directly under parent) --</option>
+                            {categories.filter(c => c.parent_id === editProductParentId).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
                         </div>
                       </div>
                     </div>
@@ -1225,10 +1217,14 @@ export default function AdminPanel() {
                   {/* Step 2: Price & Inventory */}
                   {editStep === 2 && (
                     <div className="space-y-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                         <div className="flex flex-col">
                           <label className={labelCls}>Price (₹)</label>
                           <input required type="number" step="0.01" value={editingProduct.price} onChange={(e) => setEditingProduct((p) => p ? { ...p, price: e.target.value } : p)} className={inputCls} />
+                        </div>
+                        <div className="flex flex-col">
+                          <label className={labelCls}>Discount (%)</label>
+                          <input type="number" min="0" max="100" value={editingProduct.discount || ''} onChange={(e) => setEditingProduct((p) => p ? { ...p, discount: e.target.value } : p)} className={inputCls} />
                         </div>
                         <div className="flex flex-col">
                           <label className={labelCls}>Stock</label>
@@ -1554,9 +1550,29 @@ export default function AdminPanel() {
                               </td>
                               <td className="px-5 py-4.5 font-semibold text-brand-dark max-w-[240px] truncate">{prod.title}</td>
                               <td className="px-5 py-4.5 text-brand-dark/50 font-medium tracking-wide">
-                                <span className="bg-brand-cream/55 border border-brand-cream-dark/60 text-brand-dark/75 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">{prod.category}</span>
+                                <span className="bg-brand-cream/55 border border-brand-cream-dark/60 text-brand-dark/75 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                                  {categories.find(c => c.id === prod.category_id)?.name || 'Uncategorized'}
+                                </span>
                               </td>
-                              <td className="px-5 py-4.5 font-bold text-brand-brown">₹{parseFloat(String(prod.price)).toFixed(0)}</td>
+                              <td className="px-5 py-4.5">
+                                {prod.discount && prod.discount > 0 ? (
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-green-700 font-extrabold text-[10px] flex items-center">
+                                        ↓{prod.discount}%
+                                      </span>
+                                      <span className="text-[10px] text-brand-dark/45 line-through">
+                                        ₹{parseFloat(String(prod.price)).toFixed(0)}
+                                      </span>
+                                    </div>
+                                    <span className="font-bold text-brand-dark text-xs">
+                                      ₹{Math.round(parseFloat(String(prod.price)) * (1 - prod.discount / 100)).toLocaleString('en-IN')}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="font-bold text-brand-brown">₹{parseFloat(String(prod.price)).toFixed(0)}</span>
+                                )}
+                              </td>
                               <td className="px-5 py-4.5">
                                 <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
                                   isOutOfStock
@@ -1603,32 +1619,265 @@ export default function AdminPanel() {
           </div>
         )}
 
-        {/* CATEGORIES TAB */}
         {activeTab === 'categories' && (
           <div className="space-y-6">
-            <h3 className="font-serif text-lg text-brand-dark uppercase">Categories</h3>
-            <form onSubmit={handleAddCategorySubmit} className="flex gap-3">
-              <input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="New category name" className={inputCls + ' flex-1'} />
-              <button type="submit" className="px-6 py-2.5 bg-brand-brown hover:bg-brand-brown-dark text-white rounded text-[10px] font-bold tracking-widest uppercase transition-colors cursor-pointer">Add</button>
-            </form>
-            <div className="space-y-2">
-              {categories.map((cat) => (
-                <div key={cat.id} className="flex items-center justify-between bg-white border border-brand-cream-dark rounded-lg px-4 py-3">
-                  {editingCategory?.id === cat.id ? (
-                    <form onSubmit={handleEditCategorySubmit} className="flex gap-2 flex-1 mr-4">
-                      <input value={editingCategory.name} onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })} className={inputCls + ' flex-1'} autoFocus />
-                      <button type="submit" className="px-4 py-1.5 bg-brand-brown text-white rounded text-[9px] font-bold tracking-widest uppercase cursor-pointer"><CheckCircle className="w-3.5 h-3.5" /></button>
-                    </form>
-                  ) : (
-                    <span className="font-sans text-xs font-semibold text-brand-dark">{cat.name}</span>
-                  )}
-                  <div className="flex items-center space-x-2 shrink-0">
-                    <button onClick={() => setEditingCategory(editingCategory?.id === cat.id ? null : { id: cat.id, name: cat.name })} className="p-1.5 text-brand-dark/50 hover:text-brand-brown transition-colors cursor-pointer"><Edit3 className="w-3.5 h-3.5" /></button>
-                    <button onClick={() => handleDeleteCategory(cat.id, cat.name)} className="p-1.5 text-brand-dark/50 hover:text-red-500 transition-colors cursor-pointer"><Trash2 className="w-3.5 h-3.5" /></button>
+            <div>
+              <h3 className="font-serif text-lg text-brand-dark uppercase">Categories & Collections</h3>
+              <p className="text-[10px] text-brand-dark/50 uppercase tracking-widest">Construct and align your primary catalog hierarchy and departments.</p>
+            </div>
+
+            {/* Custom Multi-Builder Interface */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              
+              {/* Left Column: Manage Parent Departments */}
+              <div className="space-y-6">
+                
+                {/* Panel 1: Create Parent Department */}
+                <div className="bg-white border border-brand-cream-dark rounded-xl p-6 shadow-xs space-y-4">
+                  <div>
+                    <h4 className="font-serif text-xs font-bold text-brand-dark uppercase tracking-widest">Create Parent Department</h4>
+                    <p className="text-[8px] text-brand-dark/45 uppercase tracking-widest mt-0.5">Top-level categories like MEN, WOMEN, KIDS</p>
+                  </div>
+                  
+                  <form onSubmit={handleAddParentCategorySubmit} className="space-y-3">
+                    <div className="flex flex-col">
+                      <label className={labelCls}>Department Name</label>
+                      <input required value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} placeholder="e.g. MEN" className={inputCls} />
+                    </div>
+                    <button type="submit" className="w-full flex items-center justify-center space-x-1.5 py-2.5 bg-brand-brown hover:bg-brand-brown-dark text-white rounded text-[10px] font-bold tracking-widest uppercase transition-colors cursor-pointer shadow-xs">
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Create Department</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Panel 2: List of Parent Departments */}
+                <div className="bg-white border border-brand-cream-dark rounded-xl p-6 shadow-xs space-y-4">
+                  <div>
+                    <h4 className="font-serif text-xs font-bold text-brand-dark uppercase tracking-widest">Parent Departments</h4>
+                    <p className="text-[8px] text-brand-dark/45 uppercase tracking-widest mt-0.5">Select a department below to manage its subcategories</p>
+                  </div>
+
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                    {categories.filter(c => !c.parent_id).map((parent) => {
+                      const childCount = categories.filter(c => c.parent_id === parent.id).length;
+                      const isSelected = selectedParentIdForSub === parent.id;
+
+                      return (
+                        <div key={parent.id} className={`p-3 border rounded-lg flex items-center justify-between gap-3 transition-all ${
+                          isSelected 
+                            ? 'border-brand-brown bg-brand-cream/15 shadow-2xs' 
+                            : 'border-brand-cream-dark/60 bg-white hover:bg-brand-cream/5'
+                        }`}>
+                          <div className="flex flex-col flex-1 min-w-0">
+                            {editingCategory?.id === parent.id ? (
+                              <form onSubmit={handleEditCategorySubmit} className="flex gap-1.5">
+                                <input value={editingCategory.name} onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })} className={inputCls + ' h-7 text-[11px]'} autoFocus />
+                                <button type="submit" className="px-2 bg-brand-brown text-white rounded text-[9px] cursor-pointer shrink-0"><CheckCircle className="w-3 h-3" /></button>
+                                <button type="button" onClick={() => setEditingCategory(null)} className="px-2 border border-brand-cream-dark text-brand-dark/50 rounded text-[9px] cursor-pointer shrink-0">X</button>
+                              </form>
+                            ) : (
+                              <>
+                                <span className="font-serif text-xs font-bold text-brand-dark uppercase tracking-wider truncate">{parent.name}</span>
+                                <span className="text-[8px] text-brand-dark/40 font-bold uppercase tracking-widest mt-0.5">{childCount} subcategories linked</span>
+                              </>
+                            )}
+                          </div>
+
+                          {!editingCategory || editingCategory.id !== parent.id ? (
+                            <div className="flex items-center space-x-1.5 shrink-0">
+                              <button
+                                onClick={() => setSelectedParentIdForSub(parent.id)}
+                                title="Manage Subcategories"
+                                className={`px-2 py-1 text-[8px] font-bold uppercase tracking-widest rounded transition-colors cursor-pointer border ${
+                                  isSelected
+                                    ? 'bg-brand-brown text-white border-brand-brown'
+                                    : 'bg-white text-brand-brown border-brand-cream-dark/85 hover:bg-brand-cream/10'
+                                }`}
+                              >
+                                {isSelected ? 'Managing' : 'Select'}
+                              </button>
+                              <button onClick={() => setEditingCategory({ id: parent.id, name: parent.name, parent_id: null })} className="p-1 border border-brand-cream-dark/60 text-brand-dark/40 hover:text-brand-brown rounded hover:bg-brand-cream/10 cursor-pointer"><Edit3 className="w-3 h-3" /></button>
+                              <button onClick={() => handleDeleteCategory(parent.id, parent.name)} className="p-1 border border-brand-cream-dark/60 text-brand-dark/40 hover:text-red-500 rounded hover:bg-brand-cream/10 cursor-pointer"><Trash2 className="w-3 h-3" /></button>
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                    {categories.filter(c => !c.parent_id).length === 0 && (
+                      <div className="text-center py-6 text-brand-dark/30 text-[10px] font-bold uppercase tracking-widest">No departments yet.</div>
+                    )}
                   </div>
                 </div>
-              ))}
-              {categories.length === 0 && <div className="text-center py-10 text-brand-dark/40 text-xs font-bold tracking-widest uppercase">No categories yet.</div>}
+              </div>
+
+              {/* Right Column: Manage Subcategories builder */}
+              <div className="lg:col-span-2 space-y-6">
+                
+                {/* Subcategory manager panel */}
+                <div className="bg-white border border-brand-cream-dark rounded-xl p-6 shadow-xs space-y-5">
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-brand-cream-dark pb-4.5">
+                    <div>
+                      <h4 className="font-serif text-sm text-brand-dark uppercase tracking-wider">
+                        {selectedParentIdForSub 
+                          ? `Subcategories of "${categories.find(c => c.id === selectedParentIdForSub)?.name}"` 
+                          : 'Subcategories Manager'
+                        }
+                      </h4>
+                      <p className="text-[9px] text-brand-dark/45 uppercase tracking-widest mt-0.5">
+                        {selectedParentIdForSub 
+                          ? 'Add multiple subcategories below to this department' 
+                          : 'Select a parent department on the left to start adding subcategories'
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedParentIdForSub ? (
+                    <div className="space-y-6">
+                      
+                      {/* Bulk Add Form */}
+                      <form onSubmit={handleAddSubcategoriesSubmit} className="bg-brand-cream/5 border border-brand-cream-dark/50 rounded-xl p-4.5 space-y-4">
+                        <div className="flex flex-col">
+                          <label className={labelCls}>Add Subcategories (Multiple, Comma-Separated)</label>
+                          <textarea
+                            required
+                            rows={3}
+                            value={bulkSubcategoryInput}
+                            onChange={(e) => setBulkSubcategoryInput(e.target.value)}
+                            placeholder="e.g. Round Neck Tees, Polo Tees, Joggers, Sweatshirts, Hoodies"
+                            className={inputCls + ' font-sans resize-none h-20'}
+                          />
+                          <span className="text-[8px] text-brand-dark/40 font-semibold tracking-wider uppercase mt-1.5 leading-normal">
+                            Enter subcategory names separated by commas. We will add them in bulk under this department.
+                          </span>
+                        </div>
+                        <button type="submit" className="flex items-center justify-center space-x-1.5 px-6 py-2.5 bg-brand-brown hover:bg-brand-brown-dark text-white rounded text-[10px] font-bold tracking-widest uppercase transition-colors cursor-pointer shadow-xs w-full sm:w-auto ml-auto">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Subcategories</span>
+                        </button>
+                      </form>
+
+                      {/* Subcategories list */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h5 className="font-serif text-xs text-brand-dark uppercase tracking-wider">Active Subcategories</h5>
+                          <span className="text-[9px] font-bold text-brand-dark/40 uppercase bg-brand-cream px-2 py-0.5 rounded">
+                            {categories.filter(c => c.parent_id === selectedParentIdForSub).length} items
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-1">
+                          {categories.filter(c => c.parent_id === selectedParentIdForSub).map((child) => {
+                            const linkedProductCount = products.filter(p => p.category_id === child.id).length;
+
+                            return (
+                              <div key={child.id} className="p-3 bg-white border border-brand-cream-dark/70 rounded-lg flex items-center justify-between gap-3 shadow-3xs transition-shadow hover:shadow-2xs">
+                                <div className="flex flex-col flex-1 min-w-0">
+                                  {editingCategory?.id === child.id ? (
+                                    <form onSubmit={handleEditCategorySubmit} className="flex gap-1.5">
+                                      <input value={editingCategory.name} onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })} className={inputCls + ' h-7 text-[11px]'} autoFocus />
+                                      <button type="submit" className="px-2 bg-brand-brown text-white rounded text-[9px] cursor-pointer shrink-0"><CheckCircle className="w-3 h-3" /></button>
+                                      <button type="button" onClick={() => setEditingCategory(null)} className="px-2 border border-brand-cream-dark text-brand-dark/50 rounded text-[9px] cursor-pointer shrink-0">X</button>
+                                    </form>
+                                  ) : (
+                                    <>
+                                      <span className="font-sans text-xs font-semibold text-brand-dark truncate">{child.name}</span>
+                                      <span className="text-[8px] text-brand-dark/40 font-bold uppercase tracking-widest mt-0.5">{linkedProductCount} garments linked</span>
+                                    </>
+                                  )}
+                                </div>
+
+                                {!editingCategory || editingCategory.id !== child.id ? (
+                                  <div className="flex items-center space-x-1 shrink-0">
+                                    <button onClick={() => setEditingCategory({ id: child.id, name: child.name, parent_id: child.parent_id })} className="p-1 text-brand-dark/35 hover:text-brand-brown transition-colors cursor-pointer"><Edit3 className="w-3 h-3" /></button>
+                                    <button onClick={() => handleDeleteCategory(child.id, child.name)} className="p-1 text-brand-dark/35 hover:text-red-500 transition-colors cursor-pointer"><Trash2 className="w-3 h-3" /></button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })}
+                          {categories.filter(c => c.parent_id === selectedParentIdForSub).length === 0 && (
+                            <div className="col-span-full py-10 bg-brand-cream/5 border border-dashed border-brand-cream-dark rounded-xl text-center text-brand-dark/30 text-[10px] font-bold uppercase tracking-widest">
+                              No subcategories added yet. Use the form above to add your first subcategories.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                    </div>
+                  ) : (
+                    <div className="py-16 text-center text-brand-dark/35 bg-brand-cream/5 border border-dashed border-brand-cream-dark rounded-xl space-y-3">
+                      <Layers className="w-8 h-8 text-brand-dark/25 mx-auto" />
+                      <div className="max-w-[280px] mx-auto space-y-1">
+                        <p className="font-serif text-xs font-bold text-brand-dark uppercase tracking-wider">No Department Selected</p>
+                        <p className="text-[9px] text-brand-dark/45 uppercase tracking-widest leading-relaxed">Select a parent department on the left column to view, add, or manage subcategories.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* General category finder list (Search tool) */}
+                <div className="bg-white border border-brand-cream-dark rounded-xl p-6 shadow-xs space-y-4">
+                  <div>
+                    <h4 className="font-serif text-xs font-bold text-brand-dark uppercase tracking-widest">Global Category Finder</h4>
+                    <p className="text-[8px] text-brand-dark/45 uppercase tracking-widest mt-0.5">Quickly find any category or subcategory</p>
+                  </div>
+                  
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-brand-dark/40 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Type name to search..."
+                      value={categorySearchQuery}
+                      onChange={(e) => setCategorySearchQuery(e.target.value)}
+                      className={inputCls + ' pl-9 text-[11px]'}
+                    />
+                    {categorySearchQuery && (
+                      <button onClick={() => setCategorySearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-dark/30 hover:text-brand-dark cursor-pointer"><X className="w-3 h-3" /></button>
+                    )}
+                  </div>
+
+                  {categorySearchQuery.trim() !== '' && (
+                    <div className="border border-brand-cream-dark rounded-lg divide-y divide-brand-cream-dark/50 max-h-[200px] overflow-y-auto pr-1">
+                      {categories
+                        .filter(c => c.name.toLowerCase().includes(categorySearchQuery.toLowerCase()))
+                        .map((cat) => {
+                          const parentName = cat.parent_id ? categories.find(c => c.id === cat.parent_id)?.name : null;
+                          return (
+                            <div key={cat.id} className="p-2.5 flex items-center justify-between text-xs hover:bg-brand-cream/5">
+                              <span className="font-medium text-brand-dark">
+                                {parentName ? `${parentName} > ${cat.name}` : cat.name}
+                                <span className="text-[8px] font-bold text-brand-dark/40 uppercase bg-brand-cream px-1.5 py-0.5 rounded ml-2">
+                                  {cat.parent_id ? 'Subcategory' : 'Department'}
+                                </span>
+                              </span>
+                              <div className="flex items-center space-x-1.5">
+                                <button
+                                  onClick={() => {
+                                    if (cat.parent_id) {
+                                      setSelectedParentIdForSub(cat.parent_id);
+                                    } else {
+                                      setSelectedParentIdForSub(cat.id);
+                                    }
+                                    setCategorySearchQuery('');
+                                  }}
+                                  className="text-[8px] font-bold uppercase tracking-widest text-brand-brown hover:underline cursor-pointer"
+                                >
+                                  Go to parent
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {categories.filter(c => c.name.toLowerCase().includes(categorySearchQuery.toLowerCase())).length === 0 && (
+                        <div className="p-4 text-center text-brand-dark/35 text-[9px] font-bold uppercase tracking-widest">No matching categories found.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+              </div>
             </div>
           </div>
         )}

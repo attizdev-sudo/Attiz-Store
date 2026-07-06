@@ -47,7 +47,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-p, input, textarea, select {
+p,
+input,
+textarea,
+select {
   letter-spacing: 0.02em;
 }
 
@@ -55,13 +58,16 @@ p, input, textarea, select {
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: var(--color-brand-cream);
 }
+
 ::-webkit-scrollbar-thumb {
   background: var(--color-brand-brown);
   border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-brand-brown-dark);
 }
@@ -69,12 +75,15 @@ p, input, textarea, select {
 .transition-luxury {
   transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
 .text-stroke-beige {
   -webkit-text-stroke: 1px var(--color-brand-cream-dark);
 }
+
 .tracking-luxury {
   letter-spacing: 0.08em;
 }
+
 .tracking-luxury-wide {
   letter-spacing: 0.15em;
 }

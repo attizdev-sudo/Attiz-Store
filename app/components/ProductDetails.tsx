@@ -16,7 +16,7 @@ export default function ProductDetails() {
   const { products, dbLoading } = useStore();
 
   const product = products.find((p) => p.id === id);
-  const relatedProducts = products.filter((p) => p.category === product?.category && p.id !== product?.id).slice(0, 4);
+  const relatedProducts = products.filter((p) => p.category_id === product?.category_id && p.id !== product?.id).slice(0, 4);
 
   const [selectedSize, setSelectedSize] = useState('M');
   const [selectedColor, setSelectedColor] = useState('');
@@ -52,12 +52,20 @@ export default function ProductDetails() {
   };
 
   const handleAddToCart = () => {
-    if (product) addToCart({ ...product, selectedSize, selectedColor, quantity } as CartItem);
+    if (product) {
+      const finalPrice = product.discount && product.discount > 0
+        ? Math.round(product.price * (1 - product.discount / 100))
+        : product.price;
+      addToCart({ ...product, price: finalPrice, selectedSize, selectedColor, quantity } as CartItem);
+    }
   };
 
   const handleBuyNow = () => {
     if (product) {
-      addToCart({ ...product, selectedSize, selectedColor, quantity } as CartItem);
+      const finalPrice = product.discount && product.discount > 0
+        ? Math.round(product.price * (1 - product.discount / 100))
+        : product.price;
+      addToCart({ ...product, price: finalPrice, selectedSize, selectedColor, quantity } as CartItem);
       setTimeout(() => setIsCartOpen(true), 200);
     }
   };
@@ -147,9 +155,27 @@ export default function ProductDetails() {
           {/* Right: Product Info */}
           <div className="lg:col-span-5 flex flex-col justify-start">
             <span className="font-sans text-[10px] font-bold tracking-[0.25em] text-brand-dark/45 uppercase mb-2">ATTIZ</span>
-            <h1 className="font-serif text-2xl sm:text-3xl font-light text-brand-dark leading-snug uppercase mb-1">{product.title}</h1>
+            <h1 className="font-sans text-[15px] font-bold tracking-widest uppercase mb-4 block">{product.title}</h1>
             <span className="font-sans text-[9px] font-bold text-brand-dark/40 tracking-widest uppercase mb-4 block">SKU: ATZTS-{product.id.slice(0, 5).toUpperCase()}</span>
-            <div className="text-xl font-extrabold text-brand-brown mb-4">Rs. {parseFloat(String(product.price)).toFixed(2)}</div>
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              {product.discount && product.discount > 0 ? (
+                <>
+                  <span className="text-green-700 font-extrabold text-xs flex items-center gap-0.5 bg-green-50 border border-green-200 px-2 py-0.5 rounded-sm shrink-0">
+                    <span className="text-[10px]">↓</span>{product.discount}%
+                  </span>
+                  <span className="font-sans text-sm text-brand-dark/40 line-through shrink-0">
+                    ₹{parseFloat(String(product.price)).toLocaleString('en-IN')}
+                  </span>
+                  <span className="text-xl font-extrabold text-brand-dark whitespace-nowrap">
+                    ₹{Math.round(product.price * (1 - product.discount / 100)).toLocaleString('en-IN')}
+                  </span>
+                </>
+              ) : (
+                <div className="text-xl font-extrabold text-brand-brown">
+                  ₹{parseFloat(String(product.price)).toLocaleString('en-IN')}
+                </div>
+              )}
+            </div>
 
             {isOutOfStock && (
               <span className="inline-flex items-center space-x-1.5 text-[9px] font-bold text-red-600 tracking-wider uppercase mb-6 bg-red-50 border border-red-200 px-3 py-1 rounded w-max">
@@ -305,7 +331,23 @@ export default function ProductDetails() {
                     </div>
                     <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left grow justify-between border-t border-brand-cream-dark/50">
                       <h4 className="font-sans text-[11px] sm:text-xs font-semibold tracking-wider text-brand-dark hover:text-brand-brown transition-colors duration-300 line-clamp-1">{prod.title}</h4>
-                      <span className="font-sans text-xs font-bold text-brand-brown mt-2">Rs. {parseFloat(String(prod.price)).toFixed(2)}</span>
+                      <div className="flex items-center mt-2 flex-wrap gap-1.5">
+                        {prod.discount && prod.discount > 0 ? (
+                          <>
+                            <span className="text-green-700 font-extrabold text-[10px] flex items-center shrink-0">
+                              ↓{prod.discount}%
+                            </span>
+                            <span className="font-sans text-[10px] text-brand-dark/40 line-through shrink-0">
+                              {parseFloat(String(prod.price)).toLocaleString('en-IN')}
+                            </span>
+                            <span className="font-sans text-xs font-bold text-brand-dark whitespace-nowrap">
+                              ₹{Math.round(prod.price * (1 - prod.discount / 100)).toLocaleString('en-IN')}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="font-sans text-xs font-bold text-brand-brown">₹{parseFloat(String(prod.price)).toLocaleString('en-IN')}</span>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 </div>

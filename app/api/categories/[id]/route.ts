@@ -5,13 +5,13 @@ type Params = Promise<{ id: string }>;
 
 export async function PUT(request: Request, { params }: { params: Params }) {
   const { id } = await params;
-  let name: string;
+  let body: { name?: string; parent_id?: string | null };
   try {
-    ({ name } = await request.json());
+    body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
-  const { data, error } = await supabase.from('categories').update({ name }).eq('id', id).select();
+  const { data, error } = await supabase.from('categories').update(body).eq('id', id).select();
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json(data);
 }
