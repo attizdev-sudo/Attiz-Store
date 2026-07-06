@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 const shopLinks = [
   { name: 'POLOS', href: '#' },
@@ -8,12 +9,12 @@ const shopLinks = [
 ];
 
 const policyLinks = [
-  { name: 'ABOUT US', href: '#' },
-  { name: 'CONTACT US', href: '#' },
-  { name: 'TERMS & CONDITIONS', href: '#' },
+  { name: 'ABOUT US', href: '/about' },
+  { name: 'CONTACT US', href: '/contact' },
+  { name: 'TERMS & CONDITIONS', href: '/terms' },
   { name: 'PRIVACY POLICY', href: '#' },
-  { name: 'REFUND & RETURN POLICY', href: '#' },
-  { name: 'SHIPPING & DELIVERY POLICY', href: '#' },
+  { name: 'REFUND & RETURN POLICY', href: '/refund-return' },
+  { name: 'SHIPPING & DELIVERY POLICY', href: '/shipping-delivery' },
   { name: 'CANCELLATION & RETURN POLICY', href: '#' },
 ];
 
@@ -58,9 +59,15 @@ export default function Footer() {
             <ul className="space-y-3">
               {policyLinks.map((link) => (
                 <li key={link.name}>
-                  <a href={link.href} className="font-sans text-[10px] font-semibold text-brand-dark/65 hover:text-brand-brown tracking-widest transition-colors duration-300 uppercase">
-                    {link.name}
-                  </a>
+                  {link.href.startsWith('/') ? (
+                    <Link href={link.href} className="font-sans text-[10px] font-semibold text-brand-dark/65 hover:text-brand-brown tracking-widest transition-colors duration-300 uppercase">
+                      {link.name}
+                    </Link>
+                  ) : (
+                    <a href={link.href} className="font-sans text-[10px] font-semibold text-brand-dark/65 hover:text-brand-brown tracking-widest transition-colors duration-300 uppercase">
+                      {link.name}
+                    </a>
+                  )}
                 </li>
               ))}
             </ul>
