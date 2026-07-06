@@ -22,10 +22,8 @@ export interface Product {
   id: string;
   title: string;
   price: number;
-  parent_category: string;
-  secondary_category: string;
-  subcategory?: string;
-  category: string;
+  discount?: number;
+  category_id?: string | null;
   image: string;
   images: string;
   sizes: string;
@@ -41,6 +39,8 @@ export interface Product {
 export interface Category {
   id: string;
   name: string;
+  parent_id?: string | null;
+  created_at?: string;
 }
 
 export interface Order {

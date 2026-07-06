@@ -93,7 +93,7 @@ export default function CartDrawer() {
                       <div>
                         <h4 className="font-sans text-[11px] font-bold text-brand-dark line-clamp-1">{item.title}</h4>
                         {item.selectedSize && <span className="font-sans text-[10px] text-brand-dark/50 tracking-wider">Size: {item.selectedSize}</span>}
-                        <span className="font-sans text-xs font-semibold text-brand-brown mt-1 block">Rs. {item.price.toFixed(2)}</span>
+                        <span className="font-sans text-xs font-semibold text-brand-brown mt-1 block">₹{item.price.toLocaleString('en-IN')}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center border border-brand-cream-dark rounded-md bg-brand-cream/15">
@@ -115,7 +115,7 @@ export default function CartDrawer() {
             <div className="border-t border-brand-cream-dark p-6 bg-brand-cream/15">
               <div className="flex justify-between items-center mb-6">
                 <span className="font-sans text-xs font-bold tracking-[0.2em] text-brand-dark uppercase">TOTAL AMOUNT</span>
-                <span className="font-sans text-sm font-extrabold text-brand-brown">Rs. {totalAmount.toFixed(2)}</span>
+                <span className="font-sans text-sm font-extrabold text-brand-brown">₹{totalAmount.toLocaleString('en-IN')}</span>
               </div>
 
               {!user ? (

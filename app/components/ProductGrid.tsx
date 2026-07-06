@@ -7,12 +7,11 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Heart, ShoppingCart, SlidersHorizontal, ChevronDown } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
-import { CATEGORIES_MAP } from '@/lib/categories';
 import type { CartItem, Product } from '@/lib/types';
 
 function ProductGridInner() {
   const { addToCart } = useCart();
-  const { products: allProducts, dbLoading } = useStore();
+  const { products: allProducts, categories: allCategories, dbLoading } = useStore();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -25,7 +24,7 @@ function ProductGridInner() {
   const [selectedSort, setSelectedSort] = useState('latest');
   const [wishlist, setWishlist] = useState<Record<string, boolean>>({});
 
-  const categories = ['All', ...Object.keys(CATEGORIES_MAP)];
+  const categories = ['All', ...allCategories.filter(c => !c.parent_id).map(c => c.name)];
 
   useEffect(() => {
     setSelectedCategory(parentParam || 'All');
@@ -45,20 +44,42 @@ function ProductGridInner() {
     router.push(cat === 'All' ? '/' : `/?parent=${cat}`);
   };
 
-  const filteredProducts = allProducts.filter((product) => {
-    if (parentParam && product.parent_category?.toLowerCase() !== parentParam.toLowerCase()) return false;
-    if (secondaryParam) {
-      const matchSecondary =
-        product.secondary_category?.toLowerCase() === secondaryParam.toLowerCase() ||
-        product.category?.toLowerCase() === secondaryParam.toLowerCase();
-      if (!matchSecondary) return false;
+  // Helper function to get all descendants of a category (including itself)
+  const getDescendantIds = (catId: string): string[] => {
+    const ids = [catId];
+    const queue = [catId];
+    while (queue.length > 0) {
+      const currId = queue.shift();
+      const children = allCategories.filter(c => c.parent_id === currId);
+      for (const child of children) {
+        if (!ids.includes(child.id)) {
+          ids.push(child.id);
+          queue.push(child.id);
+        }
+      }
     }
-    if (subcategoryParam && product.subcategory?.toLowerCase() !== subcategoryParam.toLowerCase()) return false;
-    if (categoryParam && categoryParam !== 'All') {
-      const matchCategory =
-        product.category?.toLowerCase() === categoryParam.toLowerCase() ||
-        product.secondary_category?.toLowerCase() === categoryParam.toLowerCase();
-      if (!matchCategory) return false;
+    return ids;
+  };
+
+  const filterParam = categoryParam || secondaryParam || parentParam || subcategoryParam;
+  let activeFilterCatIds: string[] | null = null;
+  let activeCategoryName = '';
+
+  if (filterParam && filterParam !== 'All') {
+    const matchingCat = allCategories.find(
+      (c) => c.id === filterParam || c.name.toLowerCase() === filterParam.toLowerCase()
+    );
+    if (matchingCat) {
+      activeFilterCatIds = getDescendantIds(matchingCat.id);
+      activeCategoryName = matchingCat.name;
+    }
+  }
+
+  const filteredProducts = allProducts.filter((product) => {
+    if (activeFilterCatIds) {
+      if (!product.category_id || !activeFilterCatIds.includes(product.category_id)) {
+        return false;
+      }
     }
     return true;
   });
@@ -73,21 +94,19 @@ function ProductGridInner() {
     setWishlist((prev) => ({ ...prev, [productId]: !prev[productId] }));
   };
 
-  const hasFilter = parentParam || secondaryParam || subcategoryParam || (categoryParam && categoryParam !== 'All');
+  const hasFilter = !!filterParam && filterParam !== 'All';
 
   let bannerTitle = 'OUR COLLECTIONS';
   if (hasFilter) {
-    const mainCat = secondaryParam || categoryParam || '';
+    const mainCat = activeCategoryName || filterParam || '';
     if (mainCat) {
-      if (mainCat.toLowerCase().includes('polo')) bannerTitle = 'PREMIUM POLO T-SHIRTS';
-      else if (mainCat.toLowerCase().includes('crew') || mainCat.toLowerCase().includes('tee')) bannerTitle = 'PREMIUM CREW NECK T-SHIRTS';
-      else if (mainCat.toLowerCase().includes('jogger')) bannerTitle = 'PREMIUM JOGGER PANTS';
-      else if (mainCat.toLowerCase().includes('sweatshirt')) bannerTitle = 'PREMIUM SWEATSHIRTS';
-      else bannerTitle = `PREMIUM ${mainCat} SELECTIONS`;
-    } else if (parentParam) {
-      bannerTitle = `PREMIUM ${parentParam}'S COLLECTIONS`;
+      const lowerCat = mainCat.toLowerCase();
+      if (lowerCat.includes('polo')) bannerTitle = 'PREMIUM POLO T-SHIRTS';
+      else if (lowerCat.includes('crew') || lowerCat.includes('tee')) bannerTitle = 'PREMIUM CREW NECK T-SHIRTS';
+      else if (lowerCat.includes('jogger')) bannerTitle = 'PREMIUM JOGGER PANTS';
+      else if (lowerCat.includes('sweatshirt')) bannerTitle = 'PREMIUM SWEATSHIRTS';
+      else bannerTitle = `PREMIUM ${mainCat.toUpperCase()} SELECTIONS`;
     }
-    if (subcategoryParam) bannerTitle = `${bannerTitle} - ${subcategoryParam}`;
   }
 
   return (
@@ -221,8 +240,12 @@ function ProductGridInner() {
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            const finalPrice = product.discount && product.discount > 0 
+                              ? Math.round(product.price * (1 - product.discount / 100)) 
+                              : product.price;
                             addToCart({
                               ...product,
+                              price: finalPrice,
                               quantity: 1,
                               selectedSize: product.sizes ? product.sizes.split(',')[0].trim() : 'M',
                             });
@@ -237,16 +260,34 @@ function ProductGridInner() {
                     <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left grow justify-between border-t border-brand-cream-dark/50">
                       <div className="mb-2">
                         <h4 className="font-sans text-[11px] sm:text-xs font-semibold tracking-wider text-brand-dark hover:text-brand-brown transition-colors duration-300 line-clamp-1">{product.title}</h4>
-                        <span className="text-[9px] text-brand-dark/45 font-bold tracking-wider uppercase block mt-0.5">Category: {product.category}</span>
+                        <span className="text-[9px] text-brand-dark/45 font-bold tracking-wider uppercase block mt-0.5">Category: {allCategories.find(c => c.id === product.category_id)?.name || 'Uncategorized'}</span>
                       </div>
                       <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
-                        <span className="font-sans text-xs font-bold text-brand-brown">Rs. {parseFloat(String(product.price)).toFixed(2)}</span>
+                        {product.discount && product.discount > 0 ? (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-green-700 font-extrabold text-[10px] flex items-center shrink-0">
+                              ↓{product.discount}%
+                            </span>
+                            <span className="font-sans text-[10px] text-brand-dark/40 line-through shrink-0">
+                              {parseFloat(String(product.price)).toLocaleString('en-IN')}
+                            </span>
+                            <span className="font-sans text-xs font-bold text-brand-dark whitespace-nowrap">
+                              ₹{Math.round(product.price * (1 - product.discount / 100)).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="font-sans text-xs font-bold text-brand-brown">₹{parseFloat(String(product.price)).toLocaleString('en-IN')}</span>
+                        )}
                         <button
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
+                            const finalPrice = product.discount && product.discount > 0 
+                              ? Math.round(product.price * (1 - product.discount / 100)) 
+                              : product.price;
                             addToCart({
                               ...product,
+                              price: finalPrice,
                               quantity: 1,
                               selectedSize: product.sizes ? product.sizes.split(',')[0].trim() : 'M',
                             });

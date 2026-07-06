@@ -88,10 +88,10 @@ export default function OrdersPage() {
                           </div>
                           <div>
                             <h4 className="font-sans text-xs font-bold text-brand-dark line-clamp-1">{item.title}</h4>
-                            <span className="font-sans text-[10px] text-brand-dark/50 tracking-wider">Qty: {item.quantity} × Rs. {item.price.toFixed(2)}</span>
+                            <span className="font-sans text-[10px] text-brand-dark/50 tracking-wider">Qty: {item.quantity} × ₹{item.price.toLocaleString('en-IN')}</span>
                           </div>
                         </div>
-                        <span className="font-sans text-xs font-bold text-brand-dark">Rs. {(item.price * item.quantity).toFixed(2)}</span>
+                        <span className="font-sans text-xs font-bold text-brand-dark">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                       </div>
                     ))}
                   </div>
@@ -103,7 +103,7 @@ export default function OrdersPage() {
                     </div>
                     <div className="text-right shrink-0">
                       <span className="block font-sans text-[9px] font-bold text-brand-dark/45 tracking-widest uppercase">Total Price</span>
-                      <span className="font-sans text-base font-extrabold text-brand-brown mt-0.5 block">Rs. {order.total_price.toFixed(2)}</span>
+                      <span className="font-sans text-base font-extrabold text-brand-brown mt-0.5 block">₹{order.total_price.toLocaleString('en-IN')}</span>
                     </div>
                   </div>
                 </div>

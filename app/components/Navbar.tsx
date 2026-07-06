@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Search, User, ShoppingBag, ChevronDown, Menu, X, ClipboardList, Database, LogOut } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { CATEGORIES_MAP } from '@/lib/categories';
+import { useStore } from '@/context/StoreContext';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -17,6 +17,7 @@ export default function Navbar() {
 
   const { cartItems, setIsCartOpen } = useCart();
   const { user, logout } = useAuth();
+  const { categories } = useStore();
   const router = useRouter();
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -77,22 +78,22 @@ export default function Navbar() {
                 {item.hasDropdown && (
                   <div className="absolute top-full left-4 right-4 mt-1 rounded-xl shadow-xl bg-white border border-brand-cream-dark opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50 p-6">
                     <div className="grid grid-cols-5 gap-6">
-                      {Object.keys(CATEGORIES_MAP).map((parent) => (
-                        <div key={parent} className="space-y-4">
+                      {categories.filter(c => !c.parent_id).map((parent) => (
+                        <div key={parent.id} className="space-y-4">
                           <button
-                            onClick={() => { setActiveTab('COLLECTIONS'); router.push(`/?parent=${parent}`); }}
+                            onClick={() => { setActiveTab('COLLECTIONS'); router.push(`/?category=${parent.id}`); }}
                             className="text-xs font-bold tracking-[0.2em] text-brand-brown hover:text-brand-brown-dark uppercase border-b border-brand-cream-dark pb-2 w-full text-left transition-colors cursor-pointer"
                           >
-                            {parent}
+                            {parent.name}
                           </button>
                           <div className="space-y-2.5 flex flex-col items-start">
-                            {CATEGORIES_MAP[parent].map((secondary) => (
+                            {categories.filter(c => c.parent_id === parent.id).map((secondary) => (
                               <button
-                                key={secondary}
-                                onClick={() => { setActiveTab('COLLECTIONS'); router.push(`/?parent=${parent}&secondary=${secondary}`); }}
+                                key={secondary.id}
+                                onClick={() => { setActiveTab('COLLECTIONS'); router.push(`/?category=${secondary.id}`); }}
                                 className="text-[10px] font-bold tracking-widest text-brand-dark/70 hover:text-brand-brown uppercase text-left w-full transition-colors cursor-pointer"
                               >
-                                {secondary}
+                                {secondary.name}
                               </button>
                             ))}
                           </div>
@@ -223,22 +224,22 @@ export default function Navbar() {
                     </button>
                     {isMobileCollectionsOpen && (
                       <div className="pl-4 border-l border-brand-cream-dark/65 space-y-3 mt-1 pb-2">
-                        {Object.keys(CATEGORIES_MAP).map((parent) => (
-                          <div key={parent} className="space-y-1.5">
+                        {categories.filter(c => !c.parent_id).map((parent) => (
+                          <div key={parent.id} className="space-y-1.5">
                             <button
-                              onClick={() => { router.push(`/?parent=${parent}`); setIsMobileMenuOpen(false); }}
+                              onClick={() => { router.push(`/?category=${parent.id}`); setIsMobileMenuOpen(false); }}
                               className="text-[10px] font-bold tracking-widest text-brand-brown uppercase text-left block w-full py-1 cursor-pointer"
                             >
-                              {parent}
+                              {parent.name}
                             </button>
                             <div className="pl-3 flex flex-col space-y-1.5 border-l border-brand-cream-dark/40">
-                              {CATEGORIES_MAP[parent].map((secondary) => (
+                              {categories.filter(c => c.parent_id === parent.id).map((secondary) => (
                                 <button
-                                  key={secondary}
-                                  onClick={() => { router.push(`/?parent=${parent}&secondary=${secondary}`); setIsMobileMenuOpen(false); }}
+                                  key={secondary.id}
+                                  onClick={() => { router.push(`/?category=${secondary.id}`); setIsMobileMenuOpen(false); }}
                                   className="text-[9px] font-bold tracking-widest text-brand-dark/70 hover:text-brand-brown uppercase text-left block w-full py-0.5 cursor-pointer"
                                 >
-                                  {secondary}
+                                  {secondary.name}
                                 </button>
                               ))}
                             </div>

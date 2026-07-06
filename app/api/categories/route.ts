@@ -8,7 +8,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  let body: Record<string, unknown>;
+  let body: any;
   try {
     body = await request.json();
   } catch {

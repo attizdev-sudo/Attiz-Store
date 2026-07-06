@@ -15,8 +15,8 @@ interface StoreContextValue {
   addProduct: (data: Partial<Product>) => Promise<{ data: unknown; error: unknown }>;
   editProduct: (id: string, updates: Partial<Product>) => Promise<{ data: unknown; error: unknown }>;
   deleteProduct: (id: string) => Promise<{ data: unknown; error: unknown }>;
-  addCategory: (data: Partial<Category>) => Promise<{ data: unknown; error: unknown }>;
-  updateCategory: (id: string, name: string) => Promise<{ data: unknown; error: unknown }>;
+  addCategory: (data: Partial<Category> | Partial<Category>[]) => Promise<{ data: unknown; error: unknown }>;
+  updateCategory: (id: string, updates: { name: string; parent_id?: string | null }) => Promise<{ data: unknown; error: unknown }>;
   deleteCategory: (id: string) => Promise<{ data: unknown; error: unknown }>;
   addBanner: (data: Partial<Banner>) => Promise<{ data: unknown; error: unknown }>;
   deleteBanner: (id: string) => Promise<{ data: unknown; error: unknown }>;
@@ -89,14 +89,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return result;
   };
 
-  const addCategory = async (data: Partial<Category>) => {
+  const addCategory = async (data: Partial<Category> | Partial<Category>[]) => {
     const result = await apiFetch('/api/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     if (!result.error) await refreshData();
     return result;
   };
 
-  const updateCategory = async (id: string, name: string) => {
-    const result = await apiFetch(`/api/categories/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+  const updateCategory = async (id: string, updates: { name: string; parent_id?: string | null }) => {
+    const result = await apiFetch(`/api/categories/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
     if (!result.error) await refreshData();
     return result;
   };
