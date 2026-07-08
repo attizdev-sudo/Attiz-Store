@@ -18,22 +18,45 @@ export interface CartItem {
   [key: string]: unknown;
 }
 
+export interface ProductVariantImage {
+  id: string;
+  variant_id: string;
+  image_url: string;
+  sort_order?: number;
+  created_at?: string;
+}
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  color: string;
+  size: string;
+  stock: number;
+  price: number;
+  discount?: number;
+  sku?: string | null;
+  created_at?: string;
+  product_variant_images?: ProductVariantImage[];
+}
+
 export interface Product {
   id: string;
   title: string;
-  price: number;
-  discount?: number;
-  category_id?: string | null;
-  image: string;
-  images: string;
-  sizes: string;
-  colors: string;
-  size_chart?: string;
-  stock: number;
   description?: string;
   specifications?: string;
   wash_care?: string;
+  category_id?: string | null;
   created_at?: string;
+  product_variants?: ProductVariant[];
+  // Legacy / convenience fields (can be computed at runtime):
+  price?: number;
+  discount?: number;
+  image?: string;
+  images?: string;
+  sizes?: string;
+  colors?: string;
+  stock?: number;
+  size_chart?: string;
 }
 
 export interface Category {
