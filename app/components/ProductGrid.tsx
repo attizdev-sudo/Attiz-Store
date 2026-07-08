@@ -223,7 +223,7 @@ function ProductGridInner() {
                   <Link href={`/product/${product.id}`} className="flex flex-col h-full">
                     <div className="relative aspect-3/4 bg-brand-cream overflow-hidden">
                       <Image
-                        src={product.image}
+                        src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
                         alt={product.title}
                         fill
                         className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
@@ -241,14 +241,14 @@ function ProductGridInner() {
                             e.preventDefault();
                             e.stopPropagation();
                             const finalPrice = product.discount && product.discount > 0 
-                              ? Math.round(product.price * (1 - product.discount / 100)) 
-                              : product.price;
+                              ? Math.round((product.price || 0) * (1 - (product.discount || 0) / 100)) 
+                              : (product.price || 0);
                             addToCart({
                               ...product,
                               price: finalPrice,
                               quantity: 1,
                               selectedSize: product.sizes ? product.sizes.split(',')[0].trim() : 'M',
-                            });
+                            } as any);
                           }}
                           className="w-full h-full text-[10px] font-bold tracking-[0.25em] text-white flex items-center justify-center space-x-1.5 cursor-pointer"
                         >
@@ -269,28 +269,28 @@ function ProductGridInner() {
                               ↓{product.discount}%
                             </span>
                             <span className="font-sans text-[10px] text-brand-dark/40 line-through shrink-0">
-                              {parseFloat(String(product.price)).toLocaleString('en-IN')}
+                              {parseFloat(String(product.price || 0)).toLocaleString('en-IN')}
                             </span>
                             <span className="font-sans text-xs font-bold text-brand-dark whitespace-nowrap">
-                              ₹{Math.round(product.price * (1 - product.discount / 100)).toLocaleString('en-IN')}
+                              ₹{Math.round((product.price || 0) * (1 - (product.discount || 0) / 100)).toLocaleString('en-IN')}
                             </span>
                           </div>
                         ) : (
-                          <span className="font-sans text-xs font-bold text-brand-brown">₹{parseFloat(String(product.price)).toLocaleString('en-IN')}</span>
+                          <span className="font-sans text-xs font-bold text-brand-brown">₹{parseFloat(String(product.price || 0)).toLocaleString('en-IN')}</span>
                         )}
                         <button
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             const finalPrice = product.discount && product.discount > 0 
-                              ? Math.round(product.price * (1 - product.discount / 100)) 
-                              : product.price;
+                              ? Math.round((product.price || 0) * (1 - (product.discount || 0) / 100)) 
+                              : (product.price || 0);
                             addToCart({
                               ...product,
                               price: finalPrice,
                               quantity: 1,
                               selectedSize: product.sizes ? product.sizes.split(',')[0].trim() : 'M',
-                            });
+                            } as any);
                           }}
                           className="lg:hidden p-1.5 px-3 rounded bg-brand-brown hover:bg-brand-brown-dark text-white text-[9px] font-bold tracking-widest uppercase flex items-center space-x-1 cursor-pointer transition-colors z-20"
                         >

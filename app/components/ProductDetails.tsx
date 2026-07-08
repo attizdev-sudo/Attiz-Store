@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -14,6 +14,8 @@ export default function ProductDetails() {
   const router = useRouter();
   const { addToCart, setIsCartOpen } = useCart();
   const { products, dbLoading } = useStore();
+
+  const thumbnailsContainerRef = useRef<HTMLDivElement>(null);
 
   const product = products.find((p) => p.id === id);
   const relatedProducts = products.filter((p) => p.category_id === product?.category_id && p.id !== product?.id).slice(0, 4);
@@ -37,13 +39,21 @@ export default function ProductDetails() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActiveThumbIdx(0);
     setQuantity(1);
-    if (product?.sizes) {
-      const sizes = product.sizes.split(',');
-      if (sizes.length > 0) setSelectedSize(sizes[0].trim());
-    }
-    if (product?.colors) {
-      const cols = product.colors.split(',');
-      if (cols.length > 0) setSelectedColor(cols[0].trim());
+    const variants = product?.product_variants || [];
+    if (variants.length > 0) {
+      const colors = Array.from(new Set(variants.map(v => v.color))).filter(Boolean);
+      const sizes = Array.from(new Set(variants.map(v => v.size))).filter(Boolean);
+      if (colors.length > 0) setSelectedColor(colors[0]);
+      if (sizes.length > 0) setSelectedSize(sizes[0]);
+    } else {
+      if (product?.sizes) {
+        const sizes = product.sizes.split(',');
+        if (sizes.length > 0) setSelectedSize(sizes[0].trim());
+      }
+      if (product?.colors) {
+        const cols = product.colors.split(',');
+        if (cols.length > 0) setSelectedColor(cols[0].trim());
+      }
     }
   }, [id, product]);
 
@@ -51,21 +61,49 @@ export default function ProductDetails() {
     setAccordionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
+  const handleShare = () => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({
+        title: product?.title,
+        url: window.location.href,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Link copied to clipboard!');
+    }
+  };
+
   const handleAddToCart = () => {
-    if (product) {
-      const finalPrice = product.discount && product.discount > 0
-        ? Math.round(product.price * (1 - product.discount / 100))
-        : product.price;
-      addToCart({ ...product, price: finalPrice, selectedSize, selectedColor, quantity } as CartItem);
+    if (product && activeVariant) {
+      const finalPrice = displayDiscount > 0
+        ? Math.round(displayPrice * (1 - displayDiscount / 100))
+        : displayPrice;
+      const primaryImage = thumbnails[activeThumbIdx]?.url || product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+      addToCart({
+        ...product,
+        image: primaryImage,
+        price: finalPrice,
+        selectedSize,
+        selectedColor,
+        quantity,
+      } as any);
     }
   };
 
   const handleBuyNow = () => {
-    if (product) {
-      const finalPrice = product.discount && product.discount > 0
-        ? Math.round(product.price * (1 - product.discount / 100))
-        : product.price;
-      addToCart({ ...product, price: finalPrice, selectedSize, selectedColor, quantity } as CartItem);
+    if (product && activeVariant) {
+      const finalPrice = displayDiscount > 0
+        ? Math.round(displayPrice * (1 - displayDiscount / 100))
+        : displayPrice;
+      const primaryImage = thumbnails[activeThumbIdx]?.url || product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+      addToCart({
+        ...product,
+        image: primaryImage,
+        price: finalPrice,
+        selectedSize,
+        selectedColor,
+        quantity,
+      } as any);
       setTimeout(() => setIsCartOpen(true), 200);
     }
   };
@@ -88,52 +126,142 @@ export default function ProductDetails() {
     );
   }
 
-  const isOutOfStock = !product.stock || product.stock <= 0;
-  const sizesArray = product.sizes ? product.sizes.split(',').map((s) => s.trim()).filter(Boolean) : ['S', 'M', 'L', 'XL', 'XXL'];
-  const colorsArray = product.colors ? product.colors.split(',').map((c) => c.trim()).filter(Boolean) : [];
+  // 1. Unique sizes and colors from variants
+  const colorsArray = product.product_variants
+    ? Array.from(new Set(product.product_variants.map((v) => v.color))).filter(Boolean)
+    : [];
 
-  const thumbnails: string[] = [];
-  if (product.image) thumbnails.push(product.image);
-  if (product.images) {
-    product.images.split(',').map((img) => img.trim()).filter(Boolean).forEach((img) => {
-      if (!thumbnails.includes(img)) thumbnails.push(img);
+  const sizesArray = product.product_variants
+    ? Array.from(new Set(product.product_variants.map((v) => v.size))).filter(Boolean)
+    : ['S', 'M', 'L', 'XL', 'XXL'];
+
+  // 2. Identify the active variant matching BOTH selectedColor and selectedSize
+  const activeVariant = product.product_variants?.find(
+    (v) =>
+      v.color.toLowerCase() === (selectedColor || '').toLowerCase() &&
+      v.size.toLowerCase() === (selectedSize || '').toLowerCase()
+  ) || product.product_variants?.[0];
+
+  const isOutOfStock = !activeVariant || activeVariant.stock <= 0;
+  const displayPrice = activeVariant ? activeVariant.price : 0;
+  const displayDiscount = activeVariant ? activeVariant.discount || 0 : 0;
+
+  // 3. Thumbnails: Select ALL images of ALL colors
+  const thumbnails: Array<{ url: string; color: string }> = [];
+  product.product_variants?.forEach((v) => {
+    v.product_variant_images?.forEach((img) => {
+      if (img.image_url && !thumbnails.some((t) => t.url === img.image_url)) {
+        thumbnails.push({ url: img.image_url, color: v.color });
+      }
     });
-  } else if (product.image?.includes('unsplash.com')) {
-    thumbnails.push(
-      product.image + '&auto=format&fit=crop&w=600&q=70',
-      product.image + '&auto=format&fit=crop&w=600&q=60',
-    );
+  });
+
+  // Fallbacks if no variant-specific images are found
+  if (thumbnails.length === 0) {
+    if (product.image) thumbnails.push({ url: product.image, color: '' });
+    if (product.images) {
+      product.images.split(',').map((img) => img.trim()).filter(Boolean).forEach((img) => {
+        if (!thumbnails.some((t) => t.url === img)) {
+          thumbnails.push({ url: img, color: '' });
+        }
+      });
+    }
   }
+
+  // Scroll target thumbnail into view helper
+  const scrollThumbIntoView = (idx: number) => {
+    setTimeout(() => {
+      const container = thumbnailsContainerRef.current;
+      if (container) {
+        const child = container.children[idx] as HTMLElement;
+        if (child) {
+          const isVertical = window.innerWidth >= 768; // md breakpoint is 768px
+          if (isVertical) {
+            container.scrollTo({
+              top: child.offsetTop - container.offsetTop - 10,
+              behavior: 'smooth',
+            });
+          } else {
+            container.scrollTo({
+              left: child.offsetLeft - container.offsetLeft - 10,
+              behavior: 'smooth',
+            });
+          }
+        }
+      }
+    }, 50);
+  };
+
+  const handleThumbnailClick = (idx: number) => {
+    setActiveThumbIdx(idx);
+    const thumbColor = thumbnails[idx]?.color;
+    if (thumbColor && thumbColor.toLowerCase() !== selectedColor.toLowerCase()) {
+      setSelectedColor(thumbColor);
+      const sizeForColor = product.product_variants?.find(
+        (v) => v.color.toLowerCase() === thumbColor.toLowerCase() && v.stock > 0
+      );
+      if (sizeForColor) setSelectedSize(sizeForColor.size);
+    }
+  };
+
+  const selectColorAndScroll = (col: string) => {
+    setSelectedColor(col);
+    const targetIdx = thumbnails.findIndex((t) => t.color.toLowerCase() === col.toLowerCase());
+    if (targetIdx !== -1) {
+      setActiveThumbIdx(targetIdx);
+      scrollThumbIntoView(targetIdx);
+    }
+  };
+
+  // Helper selectors
+  const isSizeDisabled = (sz: string) => {
+    const variant = product.product_variants?.find(
+      (v) =>
+        v.color.toLowerCase() === (selectedColor || '').toLowerCase() &&
+        v.size.toLowerCase() === sz.toLowerCase()
+    );
+    return !variant || variant.stock <= 0;
+  };
+
+  const isColorDisabled = (col: string) => {
+    const colVariants = product.product_variants?.filter(
+      (v) => v.color.toLowerCase() === col.toLowerCase()
+    ) || [];
+    return colVariants.length === 0 || colVariants.every((v) => v.stock <= 0);
+  };
 
   return (
     <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
 
         {/* Main grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 mb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 mb-20 items-start">
 
           {/* Left: Image Gallery */}
-          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4">
-            <div className="flex md:flex-col flex-row gap-3 md:w-24 w-full shrink-0">
+          <div className="lg:col-span-7 flex flex-col-reverse md:flex-row gap-4 max-w-full px-4 md:px-8">
+            <div
+              ref={thumbnailsContainerRef}
+              className="flex md:flex-col flex-row gap-2.5 md:w-28 w-full shrink-0 overflow-x-auto md:overflow-y-auto md:max-h-[550px] pb-2 md:pb-0 pr-0 md:pr-1.5 scrollbar-thin relative scroll-smooth"
+            >
               {thumbnails.map((thumb, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setActiveThumbIdx(idx)}
-                  className={`relative w-20 aspect-3/4 border rounded-md overflow-hidden bg-brand-cream hover:opacity-100 transition-all cursor-pointer ${activeThumbIdx === idx ? 'border-brand-brown opacity-100 shadow-sm' : 'border-brand-cream-dark opacity-60'}`}
+                  onClick={() => handleThumbnailClick(idx)}
+                  className={`relative w-20 aspect-3/4 border rounded-md overflow-hidden bg-brand-cream hover:opacity-100 transition-all cursor-pointer shrink-0 ${activeThumbIdx === idx ? 'border-brand-brown opacity-100 shadow-sm' : 'border-brand-cream-dark opacity-60'}`}
                 >
-                  <Image src={thumb} alt={`thumbnail ${idx + 1}`} fill className="object-cover" sizes="80px" />
+                  <Image src={thumb.url} alt={`thumbnail ${idx + 1}`} fill className="object-cover" sizes="80px" />
                 </button>
               ))}
             </div>
 
             <div
-              className="flex-1 aspect-3/4 bg-brand-cream rounded-xl overflow-hidden border border-brand-cream-dark shadow-sm relative group cursor-zoom-in"
+              className="flex-1 aspect-3/4 max-h-[550px] md:max-w-[412px] md:ml-auto bg-brand-cream rounded-xl overflow-hidden border border-brand-cream-dark shadow-sm relative group cursor-zoom-in"
               onMouseMove={handleMouseMove}
               onMouseEnter={() => setIsZoomed(true)}
               onMouseLeave={() => { setIsZoomed(false); setZoomPos({ x: 50, y: 50 }); }}
             >
               <img
-                src={thumbnails[activeThumbIdx]}
+                src={thumbnails[activeThumbIdx]?.url || product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
                 alt={product.title}
                 className="w-full h-full object-cover object-center transition-transform duration-200 ease-out"
                 style={{ transform: isZoomed ? 'scale(2.2)' : 'scale(1)', transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
@@ -154,25 +282,34 @@ export default function ProductDetails() {
 
           {/* Right: Product Info */}
           <div className="lg:col-span-5 flex flex-col justify-start">
-            <span className="font-sans text-[10px] font-bold tracking-[0.25em] text-brand-dark/45 uppercase mb-2">ATTIZ</span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-sans text-[10px] font-bold tracking-[0.25em] text-brand-dark/45 uppercase">ATTIZ</span>
+              <button
+                onClick={handleShare}
+                className="text-brand-dark/45 hover:text-brand-brown transition-colors cursor-pointer p-1 rounded-full hover:bg-brand-cream/30"
+                title="Share Product"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
+            </div>
             <h1 className="font-sans text-[15px] font-bold tracking-widest uppercase mb-4 block">{product.title}</h1>
             <span className="font-sans text-[9px] font-bold text-brand-dark/40 tracking-widest uppercase mb-4 block">SKU: ATZTS-{product.id.slice(0, 5).toUpperCase()}</span>
             <div className="flex items-center gap-2 mb-4 flex-wrap">
-              {product.discount && product.discount > 0 ? (
+              {displayDiscount > 0 ? (
                 <>
                   <span className="text-green-700 font-extrabold text-xs flex items-center gap-0.5 bg-green-50 border border-green-200 px-2 py-0.5 rounded-sm shrink-0">
-                    <span className="text-[10px]">↓</span>{product.discount}%
+                    <span className="text-[10px]">↓</span>{displayDiscount}%
                   </span>
                   <span className="font-sans text-sm text-brand-dark/40 line-through shrink-0">
-                    ₹{parseFloat(String(product.price)).toLocaleString('en-IN')}
+                    ₹{parseFloat(String(displayPrice)).toLocaleString('en-IN')}
                   </span>
                   <span className="text-xl font-extrabold text-brand-dark whitespace-nowrap">
-                    ₹{Math.round(product.price * (1 - product.discount / 100)).toLocaleString('en-IN')}
+                    ₹{Math.round(displayPrice * (1 - displayDiscount / 100)).toLocaleString('en-IN')}
                   </span>
                 </>
               ) : (
                 <div className="text-xl font-extrabold text-brand-brown">
-                  ₹{parseFloat(String(product.price)).toLocaleString('en-IN')}
+                  ₹{parseFloat(String(displayPrice)).toLocaleString('en-IN')}
                 </div>
               )}
             </div>
@@ -191,16 +328,24 @@ export default function ProductDetails() {
                 <button onClick={() => setIsSizeChartOpen(true)} className="text-[10px] font-bold text-brand-brown hover:text-brand-brown-dark tracking-wider underline uppercase cursor-pointer">SIZE CHART</button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {sizesArray.map((sz) => (
-                  <button
-                    key={sz}
-                    onClick={() => !isOutOfStock && setSelectedSize(sz)}
-                    disabled={isOutOfStock}
-                    className={`w-12 h-10 border rounded text-[11px] font-bold tracking-wider transition-all ${isOutOfStock ? 'border-gray-200 text-gray-300 bg-gray-50/50 cursor-not-allowed' : selectedSize === sz ? 'border-brand-brown bg-brand-brown text-white shadow-sm' : 'border-brand-cream-dark text-brand-dark hover:border-brand-brown bg-white cursor-pointer'}`}
-                  >
-                    {sz}
-                  </button>
-                ))}
+                {sizesArray.map((sz) => {
+                  const isDisabled = isSizeDisabled(sz);
+                  return (
+                    <button
+                      key={sz}
+                      onClick={() => setSelectedSize(sz)}
+                      disabled={isDisabled}
+                      className={`w-12 h-10 border rounded text-[11px] font-bold tracking-wider transition-all ${isDisabled
+                        ? 'border-gray-200 text-gray-300 bg-gray-50/50 cursor-not-allowed line-through'
+                        : selectedSize === sz
+                          ? 'border-brand-brown bg-brand-brown text-white shadow-sm'
+                          : 'border-brand-cream-dark text-brand-dark hover:border-brand-brown bg-white cursor-pointer'
+                        }`}
+                    >
+                      {sz}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -209,16 +354,30 @@ export default function ProductDetails() {
               <div className="mb-6">
                 <span className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase mb-2">Color Options</span>
                 <div className="flex flex-wrap gap-2">
-                  {colorsArray.map((col) => (
-                    <button
-                      key={col}
-                      onClick={() => !isOutOfStock && setSelectedColor(col)}
-                      disabled={isOutOfStock}
-                      className={`px-4 py-2.5 border rounded text-[11px] font-bold tracking-wider transition-all cursor-pointer ${isOutOfStock ? 'border-gray-200 text-gray-300 bg-gray-50/50 cursor-not-allowed' : selectedColor === col ? 'border-brand-brown bg-brand-brown text-white shadow-sm' : 'border-brand-cream-dark text-brand-dark hover:border-brand-brown bg-white'}`}
-                    >
-                      {col}
-                    </button>
-                  ))}
+                  {colorsArray.map((col) => {
+                    const isDisabled = isColorDisabled(col);
+                    return (
+                      <button
+                        key={col}
+                        onClick={() => {
+                          selectColorAndScroll(col);
+                          const sizeForColor = product.product_variants?.find(
+                            (v) => v.color.toLowerCase() === col.toLowerCase() && v.stock > 0
+                          );
+                          if (sizeForColor) setSelectedSize(sizeForColor.size);
+                        }}
+                        disabled={isDisabled}
+                        className={`px-4 py-2.5 border rounded text-[11px] font-bold tracking-wider transition-all cursor-pointer ${isDisabled
+                          ? 'border-gray-250 text-gray-350 bg-gray-50/50 cursor-not-allowed line-through'
+                          : selectedColor === col
+                            ? 'border-brand-brown bg-brand-brown text-white shadow-sm'
+                            : 'border-brand-cream-dark text-brand-dark hover:border-brand-brown bg-white'
+                          }`}
+                      >
+                        {col}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -229,9 +388,9 @@ export default function ProductDetails() {
               <div className={`flex items-center border rounded-md bg-white w-28 ${isOutOfStock ? 'border-gray-200 opacity-50' : 'border-brand-cream-dark'}`}>
                 <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => Math.max(1, prev - 1))} className={`p-2 px-3 text-brand-dark hover:text-brand-brown transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Minus className="w-3.5 h-3.5" /></button>
                 <span className="font-sans text-xs font-bold px-3 text-brand-dark select-none grow text-center">{isOutOfStock ? 0 : quantity}</span>
-                <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => prev < (product.stock || 0) ? prev + 1 : prev)} className={`p-2 px-3 text-brand-dark hover:text-brand-brown transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Plus className="w-3.5 h-3.5" /></button>
+                <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => prev < (activeVariant?.stock || 0) ? prev + 1 : prev)} className={`p-2 px-3 text-brand-dark hover:text-brand-brown transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Plus className="w-3.5 h-3.5" /></button>
               </div>
-              {!isOutOfStock && quantity >= (product.stock || 0) && (
+              {!isOutOfStock && quantity >= (activeVariant?.stock || 0) && (
                 <span className="text-[9px] text-orange-600 font-bold tracking-wider mt-1 block">Maximum available stock reached.</span>
               )}
             </div>
@@ -250,29 +409,28 @@ export default function ProductDetails() {
               </button>
             </div>
 
-            {/* Accordions */}
-            <div className="border-t border-brand-cream-dark divide-y divide-brand-cream-dark">
-              {([
-                { key: 'description' as const, label: 'Style Description', content: product.description || 'Exquisitely tailored garment featuring premium organic fibers.' },
-                { key: 'specifications' as const, label: 'Specifications', content: product.specifications },
-                { key: 'washCare' as const, label: 'Wash Care Instructions', content: product.wash_care || 'Machine wash cold gentle cycle. Do not bleach.' },
-              ] as const).map(({ key, label, content }) => (
-                <div key={key} className="py-4">
-                  <button onClick={() => toggleAccordion(key)} className="w-full flex justify-between items-center text-left text-xs font-bold tracking-widest text-brand-dark uppercase cursor-pointer">
-                    <span>{label}</span>
-                    <ChevronDown className={`w-4 h-4 text-brand-dark/45 transition-transform duration-300 ${accordionOpen[key] ? 'rotate-180' : ''}`} />
-                  </button>
-                  {accordionOpen[key] && (
-                    <p className="mt-3 font-sans text-xs text-brand-dark/70 tracking-wider leading-relaxed text-justify">{content || 'Premium tailored garment with reinforced stitching.'}</p>
-                  )}
-                </div>
-              ))}
-            </div>
+          </div>
+        </div>
 
-            <div className="mt-6 flex items-center justify-start space-x-2 text-brand-dark/45 hover:text-brand-brown cursor-pointer transition-colors w-max">
-              <Share2 className="w-4 h-4" />
-              <span className="font-sans text-[10px] font-bold tracking-widest uppercase">Share Product</span>
-            </div>
+        {/* Product Details Info Section (Static 3-Column Grid) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 py-10 border-t border-b border-brand-cream-dark/40 my-16">
+          <div className="space-y-3">
+            <h3 className="font-serif text-[10px] font-bold tracking-[0.2em] text-brand-dark uppercase">Style Description</h3>
+            <p className="font-sans text-xs text-brand-dark/65 tracking-wider leading-relaxed text-justify">
+              {product.description || 'Exquisitely tailored garment featuring premium organic fibers.'}
+            </p>
+          </div>
+          <div className="space-y-3">
+            <h3 className="font-serif text-[10px] font-bold tracking-[0.2em] text-brand-dark uppercase">Specifications</h3>
+            <p className="font-sans text-xs text-brand-dark/65 tracking-wider leading-relaxed text-justify whitespace-pre-line">
+              {product.specifications || 'Premium tailored garment with reinforced stitching.'}
+            </p>
+          </div>
+          <div className="space-y-3">
+            <h3 className="font-serif text-[10px] font-bold tracking-[0.2em] text-brand-dark uppercase">Wash Care Instructions</h3>
+            <p className="font-sans text-xs text-brand-dark/65 tracking-wider leading-relaxed text-justify font-normal">
+              {product.wash_care || 'Machine wash cold gentle cycle. Do not bleach.'}
+            </p>
           </div>
         </div>
 
@@ -327,7 +485,7 @@ export default function ProductDetails() {
                 <div key={prod.id} className="group flex flex-col cursor-pointer bg-white overflow-hidden border border-brand-cream-dark rounded-lg hover:shadow-md transition-shadow duration-300">
                   <Link href={`/product/${prod.id}`} className="flex flex-col h-full">
                     <div className="relative aspect-3/4 bg-brand-cream overflow-hidden">
-                      <Image src={prod.image} alt={prod.title} fill className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" sizes="(max-width: 640px) 100vw, 25vw" />
+                      <Image src={prod.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'} alt={prod.title} fill className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" sizes="(max-width: 640px) 100vw, 25vw" />
                     </div>
                     <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left grow justify-between border-t border-brand-cream-dark/50">
                       <h4 className="font-sans text-[11px] sm:text-xs font-semibold tracking-wider text-brand-dark hover:text-brand-brown transition-colors duration-300 line-clamp-1">{prod.title}</h4>
@@ -338,14 +496,14 @@ export default function ProductDetails() {
                               ↓{prod.discount}%
                             </span>
                             <span className="font-sans text-[10px] text-brand-dark/40 line-through shrink-0">
-                              {parseFloat(String(prod.price)).toLocaleString('en-IN')}
+                              {parseFloat(String(prod.price || 0)).toLocaleString('en-IN')}
                             </span>
                             <span className="font-sans text-xs font-bold text-brand-dark whitespace-nowrap">
-                              ₹{Math.round(prod.price * (1 - prod.discount / 100)).toLocaleString('en-IN')}
+                              ₹{Math.round((prod.price || 0) * (1 - (prod.discount || 0) / 100)).toLocaleString('en-IN')}
                             </span>
                           </>
                         ) : (
-                          <span className="font-sans text-xs font-bold text-brand-brown">₹{parseFloat(String(prod.price)).toLocaleString('en-IN')}</span>
+                          <span className="font-sans text-xs font-bold text-brand-brown">₹{parseFloat(String(prod.price || 0)).toLocaleString('en-IN')}</span>
                         )}
                       </div>
                     </div>

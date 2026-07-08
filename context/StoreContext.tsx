@@ -58,7 +58,40 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         ordRes.json(),
         banRes.json(),
       ]);
-      setProducts(Array.isArray(prodData) ? prodData : []);
+      const enrichedProducts = Array.isArray(prodData)
+        ? prodData.map((p: any) => {
+            const variants = p.product_variants || [];
+            const uniqueSizes = Array.from(new Set(variants.map((v: any) => v.size))).join(',');
+            const uniqueColors = Array.from(new Set(variants.map((v: any) => v.color))).join(',');
+            const totalStock = variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
+            const firstVariant = variants[0];
+            const price = firstVariant ? parseFloat(String(firstVariant.price)) : 0;
+            const discount = firstVariant ? parseFloat(String(firstVariant.discount || 0)) : 0;
+            
+            const imageUrls: string[] = [];
+            variants.forEach((v: any) => {
+              v.product_variant_images?.forEach((img: any) => {
+                if (img.image_url && !imageUrls.includes(img.image_url)) {
+                  imageUrls.push(img.image_url);
+                }
+              });
+            });
+            const image = imageUrls[0] || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+            const images = imageUrls.join(',');
+
+            return {
+              ...p,
+              price,
+              discount,
+              image,
+              images,
+              sizes: uniqueSizes,
+              colors: uniqueColors,
+              stock: totalStock,
+            };
+          })
+        : [];
+      setProducts(enrichedProducts);
       setCategories(Array.isArray(catData) ? catData : []);
       setOrders(Array.isArray(ordData) ? ordData : []);
       setBanners(Array.isArray(banData) ? banData : []);

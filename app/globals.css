@@ -87,3 +87,27 @@ select {
 .tracking-luxury-wide {
   letter-spacing: 0.15em;
 }
+
+div.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brand-brown) transparent;
+}
+
+div.scrollbar-thin::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+div.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent !important;
+  border-radius: 4px !important;
+}
+
+div.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--color-brand-brown) !important;
+  border-radius: 4px !important;
+}
+
+div.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--color-brand-brown-dark) !important;
+}
