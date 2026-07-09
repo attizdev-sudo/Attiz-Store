@@ -30,8 +30,7 @@ export default function ProductForm({
   const { categories, addProduct, editProduct } = useStore();
 
   const [step, setStep] = useState(1);
-  const [parentId, setParentId] = useState('');
-  const [subId, setSubId] = useState('');
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
 
   // 1. Product fields
   const [productData, setProductData] = useState({
@@ -119,19 +118,8 @@ export default function ProductForm({
       setColorImages(imgMap);
       setMediaPool(poolUrls);
 
-      const cat = categories.find((c) => c.id === editingProduct.category_id);
-      if (cat) {
-        if (cat.parent_id) {
-          setParentId(cat.parent_id);
-          setSubId(cat.id);
-        } else {
-          setParentId(cat.id);
-          setSubId('');
-        }
-      } else {
-        setParentId('');
-        setSubId('');
-      }
+      const initialCatIds = editingProduct.category_ids || (editingProduct.category_id ? [editingProduct.category_id] : []);
+      setSelectedCategoryIds(initialCatIds);
     } else {
       setProductData({
         title: '',
@@ -145,8 +133,7 @@ export default function ProductForm({
       setMediaPool([]);
       setVariantInputs({});
       setColorImages({});
-      setParentId('');
-      setSubId('');
+      setSelectedCategoryIds([]);
     }
     setStep(1);
     setCustomSize('');
@@ -183,7 +170,7 @@ export default function ProductForm({
     if (stepNumber === 1) {
       return (
         productData.title.trim().length > 0 &&
-        (parentId.length > 0 || subId.length > 0)
+        selectedCategoryIds.length > 0
       );
     }
     if (stepNumber === 2) {
@@ -327,9 +314,8 @@ export default function ProductForm({
   const handleSubmit = async () => {
     setErrorMsg('');
     setSuccessMsg('');
-    const categoryId = subId || parentId || null;
-    if (!categoryId) {
-      setErrorMsg('Please specify a category.');
+    if (selectedCategoryIds.length === 0) {
+      setErrorMsg('Please select at least one category.');
       return;
     }
 
@@ -345,7 +331,7 @@ export default function ProductForm({
         description: productData.description.trim(),
         specifications: productData.specifications.trim(),
         wash_care: productData.wash_care.trim(),
-        category_id: categoryId,
+        category_id: selectedCategoryIds[0] || null,
       };
 
       const variantsPayload: any[] = [];
@@ -373,6 +359,7 @@ export default function ProductForm({
       const payload = {
         product: productPayload,
         variants: variantsPayload,
+        category_ids: selectedCategoryIds,
       };
 
       // Step 2 status
@@ -513,46 +500,119 @@ export default function ProductForm({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="flex flex-col">
-                <label className={labelCls}>Parent Category</label>
-                <select
-                  disabled={isSubmitting}
-                  value={parentId}
-                  onChange={(e) => {
-                    setParentId(e.target.value);
-                    setSubId('');
-                  }}
-                  className={inputCls}
-                >
-                  <option value="">-- Select Parent Category --</option>
-                  {categories
-                    .filter((c) => !c.parent_id)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
+            <div className="flex flex-col space-y-4">
+              <div className="flex items-center justify-between">
+                <label className={labelCls}>Product Categories</label>
+                <span className="text-[9px] font-bold text-brand-dark/40 uppercase bg-brand-cream px-2 py-0.5 rounded">
+                  {selectedCategoryIds.length} Selected
+                </span>
               </div>
 
-              <div className="flex flex-col">
-                <label className={labelCls}>Subcategory (Optional)</label>
-                <select
-                  disabled={isSubmitting || !parentId}
-                  value={subId}
-                  onChange={(e) => setSubId(e.target.value)}
-                  className={inputCls}
-                >
-                  <option value="">-- None (Keep directly under parent) --</option>
-                  {categories
-                    .filter((c) => c.parent_id === parentId)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                </select>
+              {/* Selected Categories Badges */}
+              {selectedCategoryIds.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 p-3 bg-brand-cream/10 border border-brand-cream-dark/40 rounded-xl">
+                  {selectedCategoryIds.map((id) => {
+                    const cat = categories.find((c) => c.id === id);
+                    if (!cat) return null;
+                    const parentCat = cat.parent_id ? categories.find((c) => c.id === cat.parent_id) : null;
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-1 bg-brand-cream text-brand-brown border border-brand-cream-dark/70 text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-3xs"
+                      >
+                        {parentCat ? `${parentCat.name} > ` : ''}{cat.name}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCategoryIds((prev) => prev.filter((x) => x !== id))}
+                          className="hover:text-red-600 transition-colors p-0.5 rounded-full hover:bg-brand-cream-dark/30 ml-0.5 cursor-pointer"
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-4 border border-dashed border-brand-cream-dark/40 rounded-xl bg-brand-cream/5 text-[9px] font-bold text-brand-dark/35 uppercase tracking-widest animate-pulse">
+                  Select categories below to link this product
+                </div>
+              )}
+
+              {/* Interactive Category Selector Grid */}
+              <div className="space-y-3">
+                {categories
+                  .filter((c) => !c.parent_id)
+                  .map((parent) => {
+                    const subCategories = categories.filter((c) => c.parent_id === parent.id);
+                    const isParentChecked = selectedCategoryIds.includes(parent.id);
+                    const selectedSubCount = subCategories.filter((sub) => selectedCategoryIds.includes(sub.id)).length;
+
+                    return (
+                      <div
+                        key={parent.id}
+                        className="border border-brand-cream-dark/60 rounded-xl overflow-hidden bg-white shadow-3xs hover:border-brand-cream-dark transition-colors"
+                      >
+                        {/* Parent Row */}
+                        <div className="flex items-center justify-between p-3.5 bg-brand-cream/5 border-b border-brand-cream-dark/40">
+                          <label className="flex items-center gap-2.5 font-sans text-xs font-bold text-brand-dark cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              disabled={isSubmitting}
+                              checked={isParentChecked}
+                              onChange={() => {
+                                setSelectedCategoryIds((prev) =>
+                                  prev.includes(parent.id)
+                                    ? prev.filter((id) => id !== parent.id)
+                                    : [...prev, parent.id]
+                                );
+                              }}
+                              className="rounded border-brand-cream-dark text-brand-brown focus:ring-brand-brown w-4 h-4 cursor-pointer"
+                            />
+                            <span className="uppercase tracking-wider font-serif text-brand-dark font-black">{parent.name}</span>
+                          </label>
+                          
+                          {selectedSubCount > 0 && (
+                            <span className="text-[8px] font-black text-brand-brown uppercase bg-brand-cream/40 px-2 py-0.5 rounded-full">
+                              {selectedSubCount} Subcategories
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Subcategories Pill Grid */}
+                        {subCategories.length > 0 && (
+                          <div className="p-4 bg-brand-cream/5">
+                            <div className="flex flex-wrap gap-2">
+                              {subCategories.map((sub) => {
+                                const isSubChecked = selectedCategoryIds.includes(sub.id);
+                                return (
+                                  <button
+                                    key={sub.id}
+                                    type="button"
+                                    disabled={isSubmitting}
+                                    onClick={() => {
+                                      setSelectedCategoryIds((prev) =>
+                                        prev.includes(sub.id)
+                                          ? prev.filter((id) => id !== sub.id)
+                                          : [...prev, sub.id]
+                                      );
+                                    }}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                                      isSubChecked
+                                        ? 'bg-brand-brown text-white border-brand-brown shadow-2xs scale-[1.02]'
+                                        : 'bg-white text-brand-dark/75 border-brand-cream-dark/75 hover:bg-brand-cream/15 hover:border-brand-cream-dark'
+                                    }`}
+                                  >
+                                    {isSubChecked && <Check className="w-3 h-3" />}
+                                    {sub.name}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           </div>
@@ -882,7 +942,7 @@ export default function ProductForm({
             description: productData.description,
           } as any
         }
-        activeCategoryId={subId || parentId}
+        activeCategoryId={selectedCategoryIds[0] || ''}
         categories={categories}
       />
 

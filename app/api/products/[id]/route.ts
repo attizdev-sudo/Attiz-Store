@@ -12,6 +12,9 @@ export async function GET(_: Request, { params }: { params: Params }) {
     .from('products')
     .select(`
       *,
+      product_categories (
+        category_id
+      ),
       product_variants (
         *,
         product_variant_images (
@@ -22,7 +25,11 @@ export async function GET(_: Request, { params }: { params: Params }) {
     .eq('id', id)
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 404 });
-  return NextResponse.json(data);
+  const formatted = {
+    ...data,
+    category_ids: data.product_categories?.map((pc: any) => pc.category_id) || []
+  };
+  return NextResponse.json(formatted);
 }
 
 /** PUT /api/products/:id (Admin Only) */
@@ -47,10 +54,17 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { product, variants } = body;
+  const { product, variants, category_ids } = body;
 
   if (!product) {
     return NextResponse.json({ error: 'Product payload is required.' }, { status: 400 });
+  }
+
+  // Update primary category for backward compatibility
+  if (category_ids && category_ids.length > 0) {
+    product.category_id = category_ids[0];
+  } else {
+    product.category_id = null;
   }
 
   // 1. Update product table
@@ -62,6 +76,26 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     .single();
 
   if (prodErr) return NextResponse.json({ error: prodErr.message }, { status: 400 });
+
+  // 1b. Update category mappings
+  if (category_ids) {
+    // Delete existing relation entries
+    await supabase.from('product_categories').delete().eq('product_id', id);
+
+    // Bulk insert new relation entries
+    if (category_ids.length > 0) {
+      const relationPayload = category_ids.map((catId: string) => ({
+        product_id: id,
+        category_id: catId,
+      }));
+      const { error: relErr } = await supabase
+        .from('product_categories')
+        .insert(relationPayload);
+      if (relErr) {
+        console.error('Product categories update error:', relErr);
+      }
+    }
+  }
 
   // 2. Fetch old variants to delete their variant images and entries
   const { data: oldVars } = await supabase
@@ -108,7 +142,7 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     }
   }
 
-  return NextResponse.json(prodData);
+  return NextResponse.json({ ...prodData, category_ids: category_ids || [] });
 }
 
 /** DELETE /api/products/:id (Admin Only) */
@@ -126,6 +160,9 @@ export async function DELETE(request: Request, { params }: { params: Params }) {
   }
 
   const { id } = await params;
+
+  // 0. Clean up product categories mapping first
+  await supabase.from('product_categories').delete().eq('product_id', id);
 
   // 1. Fetch variant IDs for this product
   const { data: oldVars } = await supabase

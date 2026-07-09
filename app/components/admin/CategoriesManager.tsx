@@ -665,7 +665,7 @@ export default function CategoriesManager({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[350px] overflow-y-auto pr-1">
                     {displayChildren.map((child) => {
                       const linkedProductCount = products.filter(
-                        (p) => p.category_id === child.id
+                        (p) => p.category_ids?.includes(child.id) || p.category_id === child.id
                       ).length;
                       const isBeingDeleted = isDeleting === child.id;
 

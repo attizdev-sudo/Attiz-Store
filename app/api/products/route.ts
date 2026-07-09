@@ -10,6 +10,9 @@ export async function GET() {
       .from('products')
       .select(`
         *,
+        product_categories (
+          category_id
+        ),
         product_variants (
           *,
           product_variant_images (
@@ -20,7 +23,13 @@ export async function GET() {
       .order('created_at', { ascending: false });
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json(data);
+
+    const formatted = data?.map((prod: any) => ({
+      ...prod,
+      category_ids: prod.product_categories?.map((pc: any) => pc.category_id) || [],
+    })) || [];
+
+    return NextResponse.json(formatted);
   } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -42,10 +51,17 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { product, variants } = body;
+    const { product, variants, category_ids } = body;
 
     if (!product || !product.title) {
       return NextResponse.json({ error: 'Product title is required.' }, { status: 400 });
+    }
+
+    // Assign primary category for backward compatibility
+    if (category_ids && category_ids.length > 0) {
+      product.category_id = category_ids[0];
+    } else {
+      product.category_id = null;
     }
 
     // 1. Insert product
@@ -56,6 +72,20 @@ export async function POST(request: Request) {
       .single();
 
     if (prodErr) return NextResponse.json({ error: prodErr.message }, { status: 400 });
+
+    // 1b. Bulk insert category relations
+    if (category_ids && category_ids.length > 0) {
+      const relationPayload = category_ids.map((catId: string) => ({
+        product_id: prodData.id,
+        category_id: catId,
+      }));
+      const { error: relErr } = await supabase
+        .from('product_categories')
+        .insert(relationPayload);
+      if (relErr) {
+        console.error('Product categories insert error:', relErr);
+      }
+    }
 
     // 2. Insert variants and variant images
     if (variants && variants.length > 0) {
@@ -88,7 +118,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json(prodData, { status: 201 });
+    return NextResponse.json({ ...prodData, category_ids: category_ids || [] }, { status: 201 });
   } catch (err: any) {
     console.error('POST /api/products internal error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
