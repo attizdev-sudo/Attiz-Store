@@ -32,6 +32,18 @@ export async function signSession(payload: { role: string; id: string }): Promis
 /**
  * Verify a signed session string. Returns the payload if valid, or null.
  */
+export function getSessionCookieFromHeaders(headers: Headers | undefined): string | null {
+  const fromHeader = headers?.get('x-attiz-session');
+  if (fromHeader) return fromHeader;
+
+  const authorization = headers?.get('authorization');
+  if (authorization?.startsWith('Bearer ')) {
+    return authorization.replace(/^Bearer\s+/i, '');
+  }
+
+  return null;
+}
+
 export async function verifySession(cookieValue: string): Promise<{ role: string; id: string } | null> {
   if (!cookieValue) return null;
   try {
