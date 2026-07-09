@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabase } from '@/lib/db';
-import { verifySession } from '@/lib/session';
+import { getSessionCookieFromHeaders, verifySession } from '@/lib/session';
 
 type Params = Promise<{ id: string }>;
 
@@ -28,13 +28,14 @@ export async function GET(_: Request, { params }: { params: Params }) {
 /** PUT /api/products/:id (Admin Only) */
 export async function PUT(request: Request, { params }: { params: Params }) {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('attiz_session')?.value;
+  const sessionCookie = cookieStore.get('attiz_session')?.value || getSessionCookieFromHeaders(request.headers);
   if (!sessionCookie) {
     return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
   }
 
   const session = await verifySession(sessionCookie);
-  if (!session || session.role !== 'admin') {
+  const isAdmin = Boolean(session && (session.role === 'admin' || session.role === 'super_admin' || session.role === 'Administrator' || session.role === 'administrator'));
+  if (!session || !isAdmin) {
     return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 });
   }
 
@@ -69,7 +70,7 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     .eq('product_id', id);
 
   if (oldVars && oldVars.length > 0) {
-    const varIds = oldVars.map((v) => v.id);
+    const varIds = oldVars.map((v: { id: string }) => v.id);
     // Delete variant images
     await supabase.from('product_variant_images').delete().in('variant_id', varIds);
     // Delete variants
@@ -111,15 +112,16 @@ export async function PUT(request: Request, { params }: { params: Params }) {
 }
 
 /** DELETE /api/products/:id (Admin Only) */
-export async function DELETE(_: Request, { params }: { params: Params }) {
+export async function DELETE(request: Request, { params }: { params: Params }) {
   const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('attiz_session')?.value;
+  const sessionCookie = cookieStore.get('attiz_session')?.value || getSessionCookieFromHeaders(request.headers);
   if (!sessionCookie) {
     return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
   }
 
   const session = await verifySession(sessionCookie);
-  if (!session || session.role !== 'admin') {
+  const isAdmin = Boolean(session && (session.role === 'admin' || session.role === 'super_admin' || session.role === 'Administrator' || session.role === 'administrator'));
+  if (!session || !isAdmin) {
     return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 });
   }
 
@@ -132,7 +134,7 @@ export async function DELETE(_: Request, { params }: { params: Params }) {
     .eq('product_id', id);
 
   if (oldVars && oldVars.length > 0) {
-    const varIds = oldVars.map((v) => v.id);
+    const varIds = oldVars.map((v: { id: string }) => v.id);
     // Delete variant images
     await supabase.from('product_variant_images').delete().in('variant_id', varIds);
     // Delete variants

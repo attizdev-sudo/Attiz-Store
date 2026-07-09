@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabase } from '@/lib/db';
-import { verifySession } from '@/lib/session';
+import { getSessionCookieFromHeaders, verifySession } from '@/lib/session';
 
 /** GET /api/products — list all products */
 export async function GET() {
@@ -30,13 +30,14 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get('attiz_session')?.value;
+    const sessionCookie = cookieStore.get('attiz_session')?.value || getSessionCookieFromHeaders(request.headers);
     if (!sessionCookie) {
       return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
     }
 
     const session = await verifySession(sessionCookie);
-    if (!session || session.role !== 'admin') {
+    const isAdmin = Boolean(session && (session.role === 'admin' || session.role === 'super_admin' || session.role === 'Administrator' || session.role === 'administrator'));
+    if (!session || !isAdmin) {
       return NextResponse.json({ error: 'Unauthorized. Admin access required.' }, { status: 403 });
     }
 

@@ -25,9 +25,22 @@ interface StoreContextValue {
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
+function getSessionToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)attiz_session=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function apiFetch(url: string, options?: RequestInit) {
   try {
-    const res = await fetch(url, options);
+    const sessionToken = getSessionToken();
+    const headers = new Headers(options?.headers);
+    if (sessionToken) headers.set('x-attiz-session', sessionToken);
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      credentials: 'include',
+    });
     const json = await res.json();
     if (!res.ok) return { data: null, error: json.error || 'Request failed' };
     return { data: json, error: null };
@@ -46,11 +59,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const refreshData = async () => {
     try {
       setDbLoading(true);
+      const sessionToken = getSessionToken();
       const [prodRes, catRes, ordRes, banRes] = await Promise.all([
-        fetch('/api/products'),
-        fetch('/api/categories'),
-        fetch('/api/orders'),
-        fetch('/api/banners'),
+        fetch('/api/products', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
+        fetch('/api/categories', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
+        fetch('/api/orders', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
+        fetch('/api/banners', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
       ]);
       const [prodData, catData, ordData, banData] = await Promise.all([
         prodRes.json(),
