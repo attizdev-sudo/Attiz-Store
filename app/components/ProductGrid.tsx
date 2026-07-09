@@ -77,7 +77,9 @@ function ProductGridInner() {
 
   const filteredProducts = allProducts.filter((product) => {
     if (activeFilterCatIds) {
-      if (!product.category_id || !activeFilterCatIds.includes(product.category_id)) {
+      const pCats = product.category_ids || (product.category_id ? [product.category_id] : []);
+      const matches = pCats.some((id) => activeFilterCatIds.includes(id));
+      if (!matches) {
         return false;
       }
     }
@@ -260,7 +262,12 @@ function ProductGridInner() {
                     <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left grow justify-between border-t border-brand-cream-dark/50">
                       <div className="mb-2">
                         <h4 className="font-sans text-[11px] sm:text-xs font-semibold tracking-wider text-brand-dark hover:text-brand-brown transition-colors duration-300 line-clamp-1">{product.title}</h4>
-                        <span className="text-[9px] text-brand-dark/45 font-bold tracking-wider uppercase block mt-0.5">Category: {allCategories.find(c => c.id === product.category_id)?.name || 'Uncategorized'}</span>
+                        <span className="text-[9px] text-brand-dark/45 font-bold tracking-wider uppercase block mt-0.5">
+                          Category: {(() => {
+                            const prodCats = allCategories.filter((c) => product.category_ids?.includes(c.id) || c.id === product.category_id);
+                            return prodCats.length > 0 ? prodCats.map((c) => c.name).join(', ') : 'Uncategorized';
+                          })()}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
                         {product.discount && product.discount > 0 ? (

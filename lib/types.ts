@@ -46,6 +46,7 @@ export interface Product {
   specifications?: string;
   wash_care?: string;
   category_id?: string | null;
+  category_ids?: string[];
   created_at?: string;
   product_variants?: ProductVariant[];
   // Legacy / convenience fields (can be computed at runtime):

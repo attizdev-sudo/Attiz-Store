@@ -18,7 +18,14 @@ export default function ProductDetails() {
   const thumbnailsContainerRef = useRef<HTMLDivElement>(null);
 
   const product = products.find((p) => p.id === id);
-  const relatedProducts = products.filter((p) => p.category_id === product?.category_id && p.id !== product?.id).slice(0, 4);
+  const relatedProducts = products
+    .filter((p) => {
+      if (p.id === product?.id) return false;
+      const productCats = product?.category_ids || (product?.category_id ? [product.category_id] : []);
+      const pCats = p.category_ids || (p.category_id ? [p.category_id] : []);
+      return pCats.some((catId) => productCats.includes(catId));
+    })
+    .slice(0, 4);
 
   const [selectedSize, setSelectedSize] = useState('M');
   const [selectedColor, setSelectedColor] = useState('');

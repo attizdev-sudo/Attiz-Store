@@ -65,15 +65,16 @@ export default function ProductsTable({
     .filter((prod) => {
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
-      const cat = categories.find((c) => c.id === prod.category_id);
-      const catName = cat ? cat.name.toLowerCase() : '';
-      const parentCatName = cat?.parent_id
-        ? categories.find((c) => c.id === cat.parent_id)?.name.toLowerCase() || ''
-        : '';
+      const prodCats = categories.filter((c) => prod.category_ids?.includes(c.id) || c.id === prod.category_id);
+      const catNamesJoined = prodCats.map((c) => c.name.toLowerCase()).join(' ');
+      const parentCatNamesJoined = prodCats
+        .map((cat) => (cat.parent_id ? categories.find((c) => c.id === cat.parent_id)?.name.toLowerCase() || '' : ''))
+        .filter(Boolean)
+        .join(' ');
       return (
         prod.title.toLowerCase().includes(q) ||
-        catName.includes(q) ||
-        parentCatName.includes(q)
+        catNamesJoined.includes(q) ||
+        parentCatNamesJoined.includes(q)
       );
     })
     .sort((a, b) => {
@@ -264,8 +265,10 @@ export default function ProductsTable({
                     </td>
                     <td className="px-5 py-4.5 text-brand-dark/50 font-medium tracking-wide">
                       <span className="bg-brand-cream/55 border border-brand-cream-dark/60 text-brand-dark/75 text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
-                        {categories.find((c) => c.id === prod.category_id)?.name ||
-                          'Uncategorized'}
+                        {(() => {
+                          const prodCats = categories.filter((c) => prod.category_ids?.includes(c.id) || c.id === prod.category_id);
+                          return prodCats.length > 0 ? prodCats.map((c) => c.name).join(', ') : 'Uncategorized';
+                        })()}
                       </span>
                     </td>
                     <td className="px-5 py-4.5">
