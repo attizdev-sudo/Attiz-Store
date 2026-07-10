@@ -95,3 +95,138 @@ export async function uploadImage(bucket: string, file: File): Promise<string> {
   const { data } = supabase.storage.from(bucket).getPublicUrl(fileName);
   return data.publicUrl;
 }
+
+export async function deleteImage(bucket: string, url: string): Promise<boolean> {
+  if (!supabase || !url) return false;
+  try {
+    const prefix = '/storage/v1/object/public/';
+    const index = url.indexOf(prefix);
+    if (index === -1) {
+      return false;
+    }
+    const rest = decodeURIComponent(url.substring(index + prefix.length));
+    const firstSlash = rest.indexOf('/');
+    if (firstSlash === -1) return false;
+
+    const resolvedBucket = rest.substring(0, firstSlash) || bucket;
+    const filePath = rest.substring(firstSlash + 1);
+
+    const { error } = await supabase.storage.from(resolvedBucket).remove([filePath]);
+    if (error) {
+      console.error(`Failed to delete storage file ${filePath} from bucket ${resolvedBucket}:`, error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(`Error deleting image from storage:`, err);
+    return false;
+  }
+}
+
+export async function deleteImages(bucket: string, urls: string[]): Promise<boolean[]> {
+  if (!supabase || !urls || urls.length === 0) return [];
+  try {
+    const prefix = '/storage/v1/object/public/';
+    
+    // Group files by bucket name so we can do batch deletes per bucket
+    const bucketGroups: Record<string, string[]> = {};
+    const urlIndices: Record<string, number> = {};
+
+    urls.forEach((url, i) => {
+      urlIndices[url] = i;
+      const index = url.indexOf(prefix);
+      if (index === -1) return;
+
+      const rest = decodeURIComponent(url.substring(index + prefix.length));
+      const firstSlash = rest.indexOf('/');
+      if (firstSlash === -1) return;
+
+      const resolvedBucket = rest.substring(0, firstSlash) || bucket;
+      const filePath = rest.substring(firstSlash + 1);
+
+      if (!bucketGroups[resolvedBucket]) {
+        bucketGroups[resolvedBucket] = [];
+      }
+      bucketGroups[resolvedBucket].push(filePath);
+    });
+
+    const results = urls.map(() => false);
+
+    for (const [resolvedBucket, filePaths] of Object.entries(bucketGroups)) {
+      const { error } = await supabase.storage.from(resolvedBucket).remove(filePaths);
+      if (error) {
+        console.error(`Failed to delete storage files ${filePaths.join(', ')} from bucket ${resolvedBucket}:`, error.message);
+      } else {
+        urls.forEach((url, i) => {
+          const index = url.indexOf(prefix);
+          if (index !== -1) {
+            const rest = decodeURIComponent(url.substring(index + prefix.length));
+            const firstSlash = rest.indexOf('/');
+            if (firstSlash !== -1) {
+              const b = rest.substring(0, firstSlash);
+              const f = rest.substring(firstSlash + 1);
+              if (b === resolvedBucket && filePaths.includes(f)) {
+                results[i] = true;
+              }
+            }
+          }
+        });
+      }
+    }
+
+    return results;
+  } catch (err) {
+    console.error(`Error deleting images from storage:`, err);
+    return urls.map(() => false);
+  }
+}
+
+export async function deleteUnreferencedImages(urls: string[]): Promise<void> {
+  if (!supabase || !urls || urls.length === 0) return;
+
+  const prefix = '/storage/v1/object/public/';
+
+  for (const url of urls) {
+    if (!url) continue;
+    const index = url.indexOf(prefix);
+    if (index === -1) continue;
+
+    const rest = decodeURIComponent(url.substring(index + prefix.length));
+    const firstSlash = rest.indexOf('/');
+    if (firstSlash === -1) continue;
+
+    const resolvedBucket = rest.substring(0, firstSlash);
+    const filePath = rest.substring(firstSlash + 1);
+
+    // Check references in the database
+    // Check product_variant_images
+    const { count: variantImgCount } = await supabase
+      .from('product_variant_images')
+      .select('*', { count: 'exact', head: true })
+      .eq('image_url', url);
+
+    // Check products size_chart
+    const { count: productSizeChartCount } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq('size_chart', url);
+
+    // Check banners image
+    const { count: bannerImgCount } = await supabase
+      .from('banners')
+      .select('*', { count: 'exact', head: true })
+      .eq('image', url);
+
+    const totalRefs = (variantImgCount || 0) + (productSizeChartCount || 0) + (bannerImgCount || 0);
+
+    if (totalRefs === 0) {
+      const { error } = await supabase.storage.from(resolvedBucket).remove([filePath]);
+      if (error) {
+        console.error(`Failed to delete unreferenced storage file ${filePath} from bucket ${resolvedBucket}:`, error.message);
+      } else {
+        console.log(`Deleted unreferenced storage file ${filePath} from bucket ${resolvedBucket}`);
+      }
+    }
+  }
+}
+
