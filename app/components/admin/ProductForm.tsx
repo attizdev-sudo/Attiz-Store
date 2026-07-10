@@ -308,6 +308,48 @@ export default function ProductForm({
     });
   };
 
+  const handleDefaultPriceChange = (val: string) => {
+    setDefaultPrice(val);
+    setVariantInputs((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        next[key] = {
+          ...next[key],
+          price: val,
+        };
+      });
+      return next;
+    });
+  };
+
+  const handleDefaultDiscountChange = (val: string) => {
+    setDefaultDiscount(val);
+    setVariantInputs((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        next[key] = {
+          ...next[key],
+          discount: val,
+        };
+      });
+      return next;
+    });
+  };
+
+  const handleDefaultStockChange = (val: string) => {
+    setDefaultStock(val);
+    setVariantInputs((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        next[key] = {
+          ...next[key],
+          stock: val,
+        };
+      });
+      return next;
+    });
+  };
+
   // Color selection triggers
   const addColorTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -770,15 +812,15 @@ export default function ProductForm({
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className={labelCls}>Default Price (₹)</label>
-                  <input type="number" value={defaultPrice} onChange={(e) => setDefaultPrice(e.target.value)} className={inputCls} />
+                  <input type="number" value={defaultPrice} onChange={(e) => handleDefaultPriceChange(e.target.value)} className={inputCls} />
                 </div>
                 <div>
                   <label className={labelCls}>Default Discount (%)</label>
-                  <input type="number" min="0" max="100" value={defaultDiscount} onChange={(e) => setDefaultDiscount(e.target.value)} className={inputCls} />
+                  <input type="number" min="0" max="100" value={defaultDiscount} onChange={(e) => handleDefaultDiscountChange(e.target.value)} className={inputCls} />
                 </div>
                 <div>
                   <label className={labelCls}>Default Stock</label>
-                  <input type="number" value={defaultStock} onChange={(e) => setDefaultStock(e.target.value)} className={inputCls} />
+                  <input type="number" value={defaultStock} onChange={(e) => handleDefaultStockChange(e.target.value)} className={inputCls} />
                 </div>
               </div>
             </div>
