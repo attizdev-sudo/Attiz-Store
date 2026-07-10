@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { supabase } from '@/lib/db';
+import { supabase, deleteUnreferencedImages } from '@/lib/db';
 import { getSessionCookieFromHeaders, verifySession } from '@/lib/session';
 
 type Params = Promise<{ id: string }>;
@@ -67,6 +67,38 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     product.category_id = null;
   }
 
+  // Fetch old product information (including size_chart) and old variant images for cleanup
+  const { data: oldProduct } = await supabase
+    .from('products')
+    .select('size_chart')
+    .eq('id', id)
+    .single();
+
+  const { data: oldVarsForCleanup } = await supabase
+    .from('product_variants')
+    .select('id')
+    .eq('product_id', id);
+
+  let oldImageUrls: string[] = [];
+  if (oldProduct?.size_chart) {
+    oldImageUrls.push(oldProduct.size_chart);
+  }
+
+  if (oldVarsForCleanup && oldVarsForCleanup.length > 0) {
+    const varIds = oldVarsForCleanup.map((v: { id: string }) => v.id);
+    const { data: oldImages } = await supabase
+      .from('product_variant_images')
+      .select('image_url')
+      .in('variant_id', varIds);
+    if (oldImages) {
+      oldImages.forEach((img: any) => {
+        if (img.image_url && !oldImageUrls.includes(img.image_url)) {
+          oldImageUrls.push(img.image_url);
+        }
+      });
+    }
+  }
+
   // 1. Update product table
   const { data: prodData, error: prodErr } = await supabase
     .from('products')
@@ -97,19 +129,11 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     }
   }
 
-  // 2. Fetch old variants to delete their variant images and entries
-  const { data: oldVars } = await supabase
+  // 2. Delete old variants (database cascade automatically deletes product_variant_images)
+  await supabase
     .from('product_variants')
-    .select('id')
+    .delete()
     .eq('product_id', id);
-
-  if (oldVars && oldVars.length > 0) {
-    const varIds = oldVars.map((v: { id: string }) => v.id);
-    // Delete variant images
-    await supabase.from('product_variant_images').delete().in('variant_id', varIds);
-    // Delete variants
-    await supabase.from('product_variants').delete().in('id', varIds);
-  }
 
   // 3. Insert new variants and variant images
   if (variants && variants.length > 0) {
@@ -142,6 +166,10 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     }
   }
 
+  if (oldImageUrls.length > 0) {
+    await deleteUnreferencedImages(oldImageUrls);
+  }
+
   return NextResponse.json({ ...prodData, category_ids: category_ids || [] });
 }
 
@@ -161,26 +189,47 @@ export async function DELETE(request: Request, { params }: { params: Params }) {
 
   const { id } = await params;
 
-  // 0. Clean up product categories mapping first
-  await supabase.from('product_categories').delete().eq('product_id', id);
+  // Fetch old product information and variant images for cleanup
+  const { data: oldProduct } = await supabase
+    .from('products')
+    .select('size_chart')
+    .eq('id', id)
+    .single();
 
-  // 1. Fetch variant IDs for this product
   const { data: oldVars } = await supabase
     .from('product_variants')
     .select('id')
     .eq('product_id', id);
 
-  if (oldVars && oldVars.length > 0) {
-    const varIds = oldVars.map((v: { id: string }) => v.id);
-    // Delete variant images
-    await supabase.from('product_variant_images').delete().in('variant_id', varIds);
-    // Delete variants
-    await supabase.from('product_variants').delete().in('id', varIds);
+  let oldImageUrls: string[] = [];
+  if (oldProduct?.size_chart) {
+    oldImageUrls.push(oldProduct.size_chart);
   }
 
-  // 2. Delete product
+  if (oldVars && oldVars.length > 0) {
+    const varIds = oldVars.map((v: { id: string }) => v.id);
+    const { data: oldImages } = await supabase
+      .from('product_variant_images')
+      .select('image_url')
+      .in('variant_id', varIds);
+    if (oldImages) {
+      oldImages.forEach((img: any) => {
+        if (img.image_url && !oldImageUrls.includes(img.image_url)) {
+          oldImageUrls.push(img.image_url);
+        }
+      });
+    }
+  }
+
+  // 2. Delete product (database cascade automatically deletes product_categories, product_variants, and product_variant_images)
   const { error } = await supabase.from('products').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+
+  // Cleanup files from storage if they are no longer referenced anywhere else
+  if (oldImageUrls.length > 0) {
+    await deleteUnreferencedImages(oldImageUrls);
+  }
+
   return NextResponse.json({ success: true });
 }
 

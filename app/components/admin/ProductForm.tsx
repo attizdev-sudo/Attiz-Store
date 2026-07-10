@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useStore } from '@/context/StoreContext';
-import { uploadImage } from '@/lib/db';
+import { uploadImage, deleteImage, deleteImages } from '@/lib/db';
 import type { Product } from '@/lib/types';
 import ProductPreviewCard from './ProductPreviewCard';
 
@@ -49,6 +49,7 @@ export default function ProductForm({
   const [mediaPool, setMediaPool] = useState<string[]>([]);
   const [mediaPoolUploading, setMediaPoolUploading] = useState(false);
   const [sizeChartUploading, setSizeChartUploading] = useState(false);
+  const [sessionUploadedUrls, setSessionUploadedUrls] = useState<string[]>([]);
 
   // 4. Color-specific assignments mapping: Record<colorName, array of mediaPool urls>
   const [colorImages, setColorImages] = useState<Record<string, string[]>>({});
@@ -138,6 +139,7 @@ export default function ProductForm({
     setStep(1);
     setCustomSize('');
     setColorInput('');
+    setSessionUploadedUrls([]);
   }, [editingProduct, categories, isOpen]);
 
   // Sync variations matrix when colors or sizes change
@@ -162,6 +164,25 @@ export default function ProductForm({
       return next;
     });
   }, [colors, sizes]);
+
+  // Cleanup newly uploaded images that weren't saved when the form is closed/cancelled
+  useEffect(() => {
+    if (!isOpen) {
+      if (sessionUploadedUrls.length > 0) {
+        const urlsToDelete = [...sessionUploadedUrls];
+        setSessionUploadedUrls([]);
+        
+        const performCleanup = async () => {
+          try {
+            await deleteImages('product-images', urlsToDelete);
+          } catch (err) {
+            console.error('Error cleaning up unsaved images:', err);
+          }
+        };
+        performCleanup();
+      }
+    }
+  }, [isOpen, sessionUploadedUrls]);
 
   if (!isOpen) return null;
 
@@ -207,6 +228,7 @@ export default function ProductForm({
         files.map((f) => uploadImage('product-images', f))
       );
       setMediaPool((prev) => [...prev, ...urls]);
+      setSessionUploadedUrls((prev) => [...prev, ...urls]);
       setSuccessMsg(`Successfully uploaded ${files.length} image(s) to pool!`);
     } catch {
       setErrorMsg('Failed to upload some images.');
@@ -216,7 +238,7 @@ export default function ProductForm({
     }
   };
 
-  const deleteFromPool = (index: number) => {
+  const deleteFromPool = async (index: number) => {
     const deletedUrl = mediaPool[index];
     setMediaPool((prev) => prev.filter((_, i) => i !== index));
     // Clean up color mappings
@@ -227,6 +249,12 @@ export default function ProductForm({
       });
       return next;
     });
+
+    // If it's a newly uploaded image during this session, delete it from storage immediately
+    if (sessionUploadedUrls.includes(deletedUrl)) {
+      setSessionUploadedUrls((prev) => prev.filter((url) => url !== deletedUrl));
+      await deleteImage('product-images', deletedUrl);
+    }
   };
 
   // Size chart single uploader
@@ -236,8 +264,17 @@ export default function ProductForm({
     try {
       setSizeChartUploading(true);
       setErrorMsg('');
-      const url = await uploadImage('product-images', file);
+      const url = await uploadImage('size-charts', file);
+
+      // If we already uploaded a size chart in this session, delete the old one from storage first
+      const oldSessionSizeChart = productData.size_chart;
+      if (oldSessionSizeChart && sessionUploadedUrls.includes(oldSessionSizeChart)) {
+        setSessionUploadedUrls((prev) => prev.filter((u) => u !== oldSessionSizeChart));
+        await deleteImage('size-charts', oldSessionSizeChart);
+      }
+
       setProductData((prev) => ({ ...prev, size_chart: url }));
+      setSessionUploadedUrls((prev) => [...prev, url]);
       setSuccessMsg('Size chart uploaded successfully!');
     } catch {
       setErrorMsg('Failed to upload size chart.');
@@ -332,6 +369,7 @@ export default function ProductForm({
         specifications: productData.specifications.trim(),
         wash_care: productData.wash_care.trim(),
         category_id: selectedCategoryIds[0] || null,
+        size_chart: productData.size_chart,
       };
 
       const variantsPayload: any[] = [];
@@ -385,6 +423,7 @@ export default function ProductForm({
         setSuccessMsg('Product and variants added successfully!');
       }
 
+      setSessionUploadedUrls([]);
       onClose();
     } catch (err: any) {
       console.error(err);
