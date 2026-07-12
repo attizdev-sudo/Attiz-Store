@@ -28,18 +28,18 @@ export default function ProductsTable({
   const { products, categories, dbLoading, deleteProduct } = useStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortField, setSortField] = useState<'title' | 'price' | 'stock'>('title');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<'created_at' | 'title' | 'price' | 'stock'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Track product id being deleted for inline loading spinner
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const toggleSort = (field: 'title' | 'price' | 'stock') => {
+  const toggleSort = (field: 'created_at' | 'title' | 'price' | 'stock') => {
     if (sortField === field) {
       setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortField(field);
-      setSortOrder('asc');
+      setSortOrder(field === 'created_at' ? 'desc' : 'asc');
     }
   };
 
@@ -81,7 +81,10 @@ export default function ProductsTable({
       let valA: string | number = '';
       let valB: string | number = '';
 
-      if (sortField === 'title') {
+      if (sortField === 'created_at') {
+        valA = a.created_at || '';
+        valB = b.created_at || '';
+      } else if (sortField === 'title') {
         valA = a.title.toLowerCase();
         valB = b.title.toLowerCase();
       } else if (sortField === 'price') {
@@ -126,7 +129,7 @@ export default function ProductsTable({
           <span className="text-[10px] font-bold text-brand-dark/45 uppercase tracking-wider">
             Sort by:
           </span>
-          {(['title', 'price', 'stock'] as const).map((field) => (
+          {(['created_at', 'title', 'price', 'stock'] as const).map((field) => (
             <button
               key={field}
               onClick={() => toggleSort(field)}
@@ -137,7 +140,7 @@ export default function ProductsTable({
               }`}
             >
               <span className="flex items-center gap-1">
-                {field}
+                {field === 'created_at' ? 'Date Added' : field}
                 {sortField === field &&
                   (sortOrder === 'asc' ? (
                     <ChevronUp className="w-3 h-3" />

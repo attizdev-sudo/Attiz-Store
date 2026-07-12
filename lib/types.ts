@@ -82,12 +82,8 @@ export interface Order {
 
 export interface Banner {
   id: string;
-  title: string;
-  discount: string;
-  tagline: string;
-  bgSplitLeft: string;
-  bgSplitRight: string;
-  image: string;
+  image_url: string;
+  redirect_url: string;
   created_at?: string;
 }
 

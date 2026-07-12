@@ -77,16 +77,16 @@ export default function Navbar() {
 
                 {item.hasDropdown && (
                   <div className="absolute top-full left-4 right-4 mt-1 rounded-xl shadow-xl bg-white border border-brand-cream-dark opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50 p-6">
-                    <div className="grid grid-cols-5 gap-6">
+                    <div className="flex flex-row overflow-x-auto gap-8 pb-2 scrollbar-thin scrollbar-thumb-brand-brown/20 scrollbar-track-transparent">
                       {categories.filter(c => !c.parent_id).map((parent) => (
-                        <div key={parent.id} className="space-y-4">
+                        <div key={parent.id} className="space-y-4 shrink-0 min-w-[180px]">
                           <button
                             onClick={() => { setActiveTab('COLLECTIONS'); router.push(`/?category=${parent.id}`); }}
                             className="text-xs font-bold tracking-[0.2em] text-brand-brown hover:text-brand-brown-dark uppercase border-b border-brand-cream-dark pb-2 w-full text-left transition-colors cursor-pointer"
                           >
                             {parent.name}
                           </button>
-                          <div className="space-y-2.5 flex flex-col items-start">
+                          <div className="space-y-2.5 flex flex-col items-start max-h-[220px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-brand-brown/20 scrollbar-track-transparent">
                             {categories.filter(c => c.parent_id === parent.id).map((secondary) => (
                               <button
                                 key={secondary.id}

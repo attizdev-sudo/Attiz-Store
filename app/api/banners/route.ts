@@ -15,6 +15,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
   const { data, error } = await supabase.from('banners').insert(body).select();
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    console.error('Banners insert error:', error);
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
   return NextResponse.json(data, { status: 201 });
 }
