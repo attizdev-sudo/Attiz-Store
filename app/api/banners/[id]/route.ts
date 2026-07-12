@@ -9,11 +9,11 @@ export async function DELETE(_: Request, { params }: { params: Params }) {
   // Fetch banner image URL for cleanup
   const { data: banner } = await supabase
     .from('banners')
-    .select('image')
+    .select('image_url')
     .eq('id', id)
     .single();
 
-  const imageUrl = banner?.image;
+  const imageUrl = banner?.image_url;
 
   const { error } = await supabase.from('banners').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

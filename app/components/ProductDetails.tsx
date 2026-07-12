@@ -7,7 +7,30 @@ import Link from 'next/link';
 import { Heart, Plus, Minus, ChevronDown, Share2, Star, CheckCircle } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
-import type { CartItem } from '@/lib/types';
+import type { CartItem, Product } from '@/lib/types';
+
+const getProductImages = (product: Product) => {
+  const urls: string[] = [];
+  if (product.image) urls.push(product.image);
+
+  product.product_variants?.forEach((v) => {
+    v.product_variant_images?.forEach((img) => {
+      if (img.image_url && !urls.includes(img.image_url)) {
+        urls.push(img.image_url);
+      }
+    });
+  });
+
+  if (urls.length === 1 && product.images) {
+    product.images.split(',').map((img) => img.trim()).filter(Boolean).forEach((img) => {
+      if (!urls.includes(img)) {
+        urls.push(img);
+      }
+    });
+  }
+
+  return urls;
+};
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -33,14 +56,18 @@ export default function ProductDetails() {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [activeThumbIdx, setActiveThumbIdx] = useState(0);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
-  const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 });
   const [isZoomed, setIsZoomed] = useState(false);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const lastClickTime = useRef(0);
   const [accordionOpen, setAccordionOpen] = useState({ description: true, specifications: false, washCare: false });
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const { left, top, width, height } = e.currentTarget.getBoundingClientRect();
-    setZoomPos({ x: ((e.clientX - left) / width) * 100, y: ((e.clientY - top) / height) * 100 });
-  };
+  useEffect(() => {
+    setIsTouchDevice(typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -115,6 +142,38 @@ export default function ProductDetails() {
     }
   };
 
+  // 3. Thumbnails: Select ALL images of ALL colors safely at the top level
+  const thumbnails: Array<{ url: string; color: string }> = [];
+  if (product) {
+    product.product_variants?.forEach((v) => {
+      v.product_variant_images?.forEach((img) => {
+        if (img.image_url && !thumbnails.some((t) => t.url === img.image_url)) {
+          thumbnails.push({ url: img.image_url, color: v.color });
+        }
+      });
+    });
+
+    // Fallbacks if no variant-specific images are found
+    if (thumbnails.length === 0) {
+      if (product.image) thumbnails.push({ url: product.image, color: '' });
+      if (product.images) {
+        product.images.split(',').map((img) => img.trim()).filter(Boolean).forEach((img) => {
+          if (!thumbnails.some((t) => t.url === img)) {
+            thumbnails.push({ url: img, color: '' });
+          }
+        });
+      }
+    }
+  }
+
+  const currentImageUrl = thumbnails[activeThumbIdx]?.url || product?.image;
+
+  useEffect(() => {
+    if (currentImageUrl) {
+      setIsImageLoading(true);
+    }
+  }, [currentImageUrl]);
+
   if (dbLoading && !product) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center space-y-4 text-brand-dark/45">
@@ -153,27 +212,7 @@ export default function ProductDetails() {
   const displayPrice = activeVariant ? activeVariant.price : 0;
   const displayDiscount = activeVariant ? activeVariant.discount || 0 : 0;
 
-  // 3. Thumbnails: Select ALL images of ALL colors
-  const thumbnails: Array<{ url: string; color: string }> = [];
-  product.product_variants?.forEach((v) => {
-    v.product_variant_images?.forEach((img) => {
-      if (img.image_url && !thumbnails.some((t) => t.url === img.image_url)) {
-        thumbnails.push({ url: img.image_url, color: v.color });
-      }
-    });
-  });
 
-  // Fallbacks if no variant-specific images are found
-  if (thumbnails.length === 0) {
-    if (product.image) thumbnails.push({ url: product.image, color: '' });
-    if (product.images) {
-      product.images.split(',').map((img) => img.trim()).filter(Boolean).forEach((img) => {
-        if (!thumbnails.some((t) => t.url === img)) {
-          thumbnails.push({ url: img, color: '' });
-        }
-      });
-    }
-  }
 
   // Scroll target thumbnail into view helper
   const scrollThumbIntoView = (idx: number) => {
@@ -201,6 +240,8 @@ export default function ProductDetails() {
 
   const handleThumbnailClick = (idx: number) => {
     setActiveThumbIdx(idx);
+    setIsZoomed(false);
+    setPanOffset({ x: 0, y: 0 });
     const thumbColor = thumbnails[idx]?.color;
     if (thumbColor && thumbColor.toLowerCase() !== selectedColor.toLowerCase()) {
       setSelectedColor(thumbColor);
@@ -237,6 +278,96 @@ export default function ProductDetails() {
     return colVariants.length === 0 || colVariants.every((v) => v.stock <= 0);
   };
 
+
+
+  const ZOOM_SCALE = 1.7;
+  const LIMIT_FACTOR = (ZOOM_SCALE - 1) / 2;
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isZoomed || isOutOfStock) return;
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - panOffset.x, y: e.clientY - panOffset.y };
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isZoomed || !isDragging || isOutOfStock) return;
+    const container = e.currentTarget;
+    const { width, height } = container.getBoundingClientRect();
+    let newX = e.clientX - dragStart.current.x;
+    let newY = e.clientY - dragStart.current.y;
+    
+    const limitX = width * LIMIT_FACTOR;
+    const limitY = height * LIMIT_FACTOR;
+    newX = Math.max(-limitX, Math.min(limitX, newX));
+    newY = Math.max(-limitY, Math.min(limitY, newY));
+    
+    setPanOffset({ x: newX, y: newY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (isOutOfStock) return;
+
+    // Double tap detection for touch devices
+    const currentTime = Date.now();
+    const timeDiff = currentTime - lastClickTime.current;
+    if (timeDiff < 300) {
+      if (isZoomed) {
+        setIsZoomed(false);
+        setPanOffset({ x: 0, y: 0 });
+      } else {
+        setIsZoomed(true);
+        setPanOffset({ x: 0, y: 0 });
+      }
+      lastClickTime.current = 0;
+      setIsDragging(false);
+      return;
+    }
+    lastClickTime.current = currentTime;
+
+    if (!isZoomed) return;
+    const touch = e.touches[0];
+    setIsDragging(true);
+    dragStart.current = { x: touch.clientX - panOffset.x, y: touch.clientY - panOffset.y };
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isZoomed || !isDragging || isOutOfStock) return;
+    const touch = e.touches[0];
+    const container = e.currentTarget;
+    const { width, height } = container.getBoundingClientRect();
+    let newX = touch.clientX - dragStart.current.x;
+    let newY = touch.clientY - dragStart.current.y;
+    
+    const limitX = width * LIMIT_FACTOR;
+    const limitY = height * LIMIT_FACTOR;
+    newX = Math.max(-limitX, Math.min(limitX, newX));
+    newY = Math.max(-limitY, Math.min(limitY, newY));
+    
+    setPanOffset({ x: newX, y: newY });
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isOutOfStock) return;
+    if (isZoomed) {
+      setIsZoomed(false);
+      setPanOffset({ x: 0, y: 0 });
+    } else {
+      setIsZoomed(true);
+      setPanOffset({ x: 0, y: 0 });
+    }
+  };
+
+  const getCursorClass = () => {
+    if (isOutOfStock) return 'cursor-default';
+    if (!isZoomed) return 'cursor-zoom-in';
+    return isDragging ? 'cursor-grabbing' : 'cursor-grab';
+  };
+
   return (
     <div className="min-h-screen bg-white py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -262,27 +393,43 @@ export default function ProductDetails() {
             </div>
 
             <div
-              className="flex-1 aspect-3/4 max-h-[550px] md:max-w-[412px] md:ml-auto bg-brand-cream rounded-xl overflow-hidden border border-brand-cream-dark shadow-sm relative group cursor-zoom-in"
+              className={`flex-1 aspect-3/4 max-h-[550px] md:max-w-[412px] md:ml-auto bg-brand-cream rounded-xl overflow-hidden border border-brand-cream-dark shadow-sm relative select-none touch-none ${getCursorClass()}`}
+              onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
-              onMouseEnter={() => setIsZoomed(true)}
-              onMouseLeave={() => { setIsZoomed(false); setZoomPos({ x: 50, y: 50 }); }}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleMouseUp}
+              onDoubleClick={handleDoubleClick}
             >
+              {isImageLoading && (
+                <div className="absolute top-4 left-4 z-20 flex items-center justify-center bg-white/80 rounded-full p-2 border border-brand-cream-dark shadow-sm animate-fade-in">
+                  <div className="w-3.5 h-3.5 rounded-full border-2 border-brand-brown border-t-transparent animate-spin" />
+                </div>
+              )}
               <img
-                src={thumbnails[activeThumbIdx]?.url || product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                src={currentImageUrl || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
                 alt={product.title}
-                className="w-full h-full object-cover object-center transition-transform duration-200 ease-out"
-                style={{ transform: isZoomed ? 'scale(2.2)' : 'scale(1)', transformOrigin: `${zoomPos.x}% ${zoomPos.y}%` }}
+                className={`w-full h-full object-cover object-center pointer-events-none select-none transition-all duration-250 ease-out ${isDragging ? '' : 'transition-transform'} `}  //${isImageLoading ? 'opacity-45 blur-xs' : 'opacity-100 blur-none'}
+                style={{
+                  transform: isZoomed 
+                    ? `translate(${panOffset.x}px, ${panOffset.y}px) scale(${ZOOM_SCALE})` 
+                    : 'translate(0px, 0px) scale(1)',
+                }}
+                onLoad={() => setIsImageLoading(false)}
+                draggable="false"
               />
               {isOutOfStock ? (
-                <div className="absolute inset-0 bg-brand-dark/45 backdrop-blur-xs flex items-center justify-center z-10">
+                <div className="absolute inset-0 bg-brand-dark/45 backdrop-blur-xs flex items-center justify-center z-10 pointer-events-none">
                   <span className="px-6 py-3 bg-red-600 text-white font-sans text-[10px] font-bold tracking-[0.2em] rounded shadow-md uppercase">Out of Stock</span>
                 </div>
               ) : (
-                !isZoomed && (
-                  <div className="absolute bottom-4 right-4 bg-white/90 px-2.5 py-1.5 rounded-md text-[9px] font-bold text-brand-dark tracking-wider border border-brand-cream-dark shadow-sm uppercase select-none opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    Hover to Zoom
-                  </div>
-                )
+                <div className="absolute bottom-4 right-4 bg-white/90 px-2.5 py-1.5 rounded-md text-[9px] font-bold text-brand-dark tracking-wider border border-brand-cream-dark shadow-sm uppercase select-none opacity-70 transition-opacity pointer-events-none">
+                  {isZoomed 
+                    ? (isTouchDevice ? 'Drag to Pan | Double Tap to Zoom Out' : 'Drag to Pan | Double Click to Zoom Out') 
+                    : (isTouchDevice ? 'Double Tap to Zoom' : 'Double Click to Zoom')}
+                </div>
               )}
             </div>
           </div>
@@ -300,7 +447,7 @@ export default function ProductDetails() {
               </button>
             </div>
             <h1 className="font-sans text-[15px] font-bold tracking-widest uppercase mb-4 block">{product.title}</h1>
-            <span className="font-sans text-[9px] font-bold text-brand-dark/40 tracking-widest uppercase mb-4 block">SKU: ATZTS-{product.id.slice(0, 5).toUpperCase()}</span>
+            <span className="font-sans text-[9px] font-bold text-brand-dark/40 tracking-widest uppercase mb-4 block">SKU: {activeVariant?.sku || `ATZTS-${product.id.slice(0, 5).toUpperCase()}`}</span>
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               {displayDiscount > 0 ? (
                 <>
@@ -492,7 +639,30 @@ export default function ProductDetails() {
                 <div key={prod.id} className="group flex flex-col cursor-pointer bg-white overflow-hidden border border-brand-cream-dark rounded-lg hover:shadow-md transition-shadow duration-300">
                   <Link href={`/product/${prod.id}`} className="flex flex-col h-full">
                     <div className="relative aspect-3/4 bg-brand-cream overflow-hidden">
-                      <Image src={prod.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'} alt={prod.title} fill className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" sizes="(max-width: 640px) 100vw, 25vw" />
+                      {(() => {
+                        const images = getProductImages(prod);
+                        const nextImage = images[1];
+                        return (
+                          <>
+                            <Image
+                              src={prod.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                              alt={prod.title}
+                              fill
+                              className={`object-cover object-center transition-all duration-700 ease-in-out group-hover:scale-105 ${nextImage ? 'group-hover:opacity-0' : ''}`}
+                              sizes="(max-width: 640px) 100vw, 25vw"
+                            />
+                            {nextImage && (
+                              <Image
+                                src={nextImage}
+                                alt={`${prod.title} Hover`}
+                                fill
+                                className="object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-in-out group-hover:scale-105"
+                                sizes="(max-width: 640px) 100vw, 25vw"
+                              />
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left grow justify-between border-t border-brand-cream-dark/50">
                       <h4 className="font-sans text-[11px] sm:text-xs font-semibold tracking-wider text-brand-dark hover:text-brand-brown transition-colors duration-300 line-clamp-1">{prod.title}</h4>

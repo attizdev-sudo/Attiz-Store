@@ -9,6 +9,29 @@ import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import type { CartItem, Product } from '@/lib/types';
 
+const getProductImages = (product: Product) => {
+  const urls: string[] = [];
+  if (product.image) urls.push(product.image);
+
+  product.product_variants?.forEach((v) => {
+    v.product_variant_images?.forEach((img) => {
+      if (img.image_url && !urls.includes(img.image_url)) {
+        urls.push(img.image_url);
+      }
+    });
+  });
+
+  if (urls.length === 1 && product.images) {
+    product.images.split(',').map((img) => img.trim()).filter(Boolean).forEach((img) => {
+      if (!urls.includes(img)) {
+        urls.push(img);
+      }
+    });
+  }
+
+  return urls;
+};
+
 function ProductGridInner() {
   const { addToCart } = useCart();
   const { products: allProducts, categories: allCategories, dbLoading } = useStore();
@@ -224,13 +247,30 @@ function ProductGridInner() {
                 <div key={product.id} className="group flex flex-col cursor-pointer bg-white overflow-hidden border border-brand-cream-dark rounded-lg hover:shadow-md transition-shadow duration-300 relative">
                   <Link href={`/product/${product.id}`} className="flex flex-col h-full">
                     <div className="relative aspect-3/4 bg-brand-cream overflow-hidden">
-                      <Image
-                        src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
-                        alt={product.title}
-                        fill
-                        className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      />
+                      {(() => {
+                        const images = getProductImages(product);
+                        const nextImage = images[1];
+                        return (
+                          <>
+                            <Image
+                              src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                              alt={product.title}
+                              fill
+                              className={`object-cover object-center transition-all duration-700 ease-in-out group-hover:scale-105 ${nextImage ? 'group-hover:opacity-0' : ''}`}
+                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                            />
+                            {nextImage && (
+                              <Image
+                                src={nextImage}
+                                alt={`${product.title} Hover`}
+                                fill
+                                className="object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-in-out group-hover:scale-105"
+                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                              />
+                            )}
+                          </>
+                        );
+                      })()}
                       <button
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product.id); }}
                         className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center shadow-sm text-brand-dark hover:text-brand-brown hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
@@ -262,12 +302,6 @@ function ProductGridInner() {
                     <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left grow justify-between border-t border-brand-cream-dark/50">
                       <div className="mb-2">
                         <h4 className="font-sans text-[11px] sm:text-xs font-semibold tracking-wider text-brand-dark hover:text-brand-brown transition-colors duration-300 line-clamp-1">{product.title}</h4>
-                        <span className="text-[9px] text-brand-dark/45 font-bold tracking-wider uppercase block mt-0.5">
-                          Category: {(() => {
-                            const prodCats = allCategories.filter((c) => product.category_ids?.includes(c.id) || c.id === product.category_id);
-                            return prodCats.length > 0 ? prodCats.map((c) => c.name).join(', ') : 'Uncategorized';
-                          })()}
-                        </span>
                       </div>
                       <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
                         {product.discount && product.discount > 0 ? (

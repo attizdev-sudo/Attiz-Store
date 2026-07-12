@@ -73,9 +73,6 @@ export default function ProductPreviewCard({
               <h6 className="font-sans text-[10px] font-bold tracking-wider text-brand-dark line-clamp-1 group-hover:text-brand-brown transition-colors">
                 {displayTitle}
               </h6>
-              <span className="text-[8px] text-brand-dark/40 font-bold tracking-widest uppercase block mt-0.5">
-                Category: {displayCategory}
-              </span>
             </div>
             <div className="flex items-center justify-between mt-2 gap-1.5">
               {isDiscounted ? (

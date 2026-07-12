@@ -215,7 +215,7 @@ export async function deleteUnreferencedImages(urls: string[]): Promise<void> {
     const { count: bannerImgCount } = await supabase
       .from('banners')
       .select('*', { count: 'exact', head: true })
-      .eq('image', url);
+      .eq('image_url', url);
 
     const totalRefs = (variantImgCount || 0) + (productSizeChartCount || 0) + (bannerImgCount || 0);
 
