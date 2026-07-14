@@ -22,6 +22,9 @@ export default function Navbar() {
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
+  const parentCategories = categories.filter(c => !c.parent_id);
+  const showScroll = parentCategories.length > 6;
+
   const navItems = [
     { name: 'HOME', href: '/' },
     { name: 'COLLECTIONS', href: '#', hasDropdown: true },
@@ -77,9 +80,19 @@ export default function Navbar() {
 
                 {item.hasDropdown && (
                   <div className="absolute top-full left-4 right-4 mt-1 rounded-xl shadow-xl bg-white border border-brand-cream-dark opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50 p-6">
-                    <div className="flex flex-row overflow-x-auto gap-8 pb-2 scrollbar-thin scrollbar-thumb-brand-brown/20 scrollbar-track-transparent">
-                      {categories.filter(c => !c.parent_id).map((parent) => (
-                        <div key={parent.id} className="space-y-4 shrink-0 min-w-[180px]">
+                    <div className={showScroll
+                      ? "flex flex-row overflow-x-auto gap-8 pb-2 scrollbar-thin scrollbar-thumb-brand-brown/20 scrollbar-track-transparent"
+                      : `grid gap-6 w-full ${
+                          parentCategories.length === 1 ? 'grid-cols-1' :
+                          parentCategories.length === 2 ? 'grid-cols-2' :
+                          parentCategories.length === 3 ? 'grid-cols-3' :
+                          parentCategories.length === 4 ? 'grid-cols-4' :
+                          parentCategories.length === 5 ? 'grid-cols-5' :
+                          'grid-cols-6'
+                        }`
+                    }>
+                      {parentCategories.map((parent) => (
+                        <div key={parent.id} className={`space-y-4 ${showScroll ? 'shrink-0 min-w-[180px]' : 'w-full'}`}>
                           <button
                             onClick={() => { setActiveTab('COLLECTIONS'); router.push(`/?category=${parent.id}`); }}
                             className="text-xs font-bold tracking-[0.2em] text-brand-brown hover:text-brand-brown-dark uppercase border-b border-brand-cream-dark pb-2 w-full text-left transition-colors cursor-pointer"
@@ -224,7 +237,7 @@ export default function Navbar() {
                     </button>
                     {isMobileCollectionsOpen && (
                       <div className="pl-4 border-l border-brand-cream-dark/65 space-y-3 mt-1 pb-2">
-                        {categories.filter(c => !c.parent_id).map((parent) => (
+                        {parentCategories.map((parent) => (
                           <div key={parent.id} className="space-y-1.5">
                             <button
                               onClick={() => { router.push(`/?category=${parent.id}`); setIsMobileMenuOpen(false); }}
