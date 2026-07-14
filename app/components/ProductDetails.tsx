@@ -32,6 +32,18 @@ const getProductImages = (product: Product) => {
   return urls;
 };
 
+const sortSizes = (sizes: string[]): string[] => {
+  const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', '3XL', '4XL'];
+  return [...sizes].sort((a, b) => {
+    const idxA = order.indexOf(a.toUpperCase().trim());
+    const idxB = order.indexOf(b.toUpperCase().trim());
+    if (idxA === -1 && idxB === -1) return a.localeCompare(b);
+    if (idxA === -1) return 1;
+    if (idxB === -1) return -1;
+    return idxA - idxB;
+  });
+};
+
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -76,13 +88,13 @@ export default function ProductDetails() {
     const variants = product?.product_variants || [];
     if (variants.length > 0) {
       const colors = Array.from(new Set(variants.map(v => v.color))).filter(Boolean);
-      const sizes = Array.from(new Set(variants.map(v => v.size))).filter(Boolean);
+      const sizes = sortSizes(Array.from(new Set(variants.map(v => v.size))).filter(Boolean));
       if (colors.length > 0) setSelectedColor(colors[0]);
       if (sizes.length > 0) setSelectedSize(sizes[0]);
     } else {
       if (product?.sizes) {
-        const sizes = product.sizes.split(',');
-        if (sizes.length > 0) setSelectedSize(sizes[0].trim());
+        const sizes = sortSizes(product.sizes.split(',').map(s => s.trim()));
+        if (sizes.length > 0) setSelectedSize(sizes[0]);
       }
       if (product?.colors) {
         const cols = product.colors.split(',');
@@ -100,7 +112,7 @@ export default function ProductDetails() {
       navigator.share({
         title: product?.title,
         url: window.location.href,
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       navigator.clipboard.writeText(window.location.href);
       alert('Link copied to clipboard!');
@@ -197,9 +209,11 @@ export default function ProductDetails() {
     ? Array.from(new Set(product.product_variants.map((v) => v.color))).filter(Boolean)
     : [];
 
-  const sizesArray = product.product_variants
-    ? Array.from(new Set(product.product_variants.map((v) => v.size))).filter(Boolean)
-    : ['S', 'M', 'L', 'XL', 'XXL'];
+  const sizesArray = sortSizes(
+    product.product_variants
+      ? Array.from(new Set(product.product_variants.map((v) => v.size))).filter(Boolean)
+      : ['S', 'M', 'L', 'XL', 'XXL']
+  );
 
   // 2. Identify the active variant matching BOTH selectedColor and selectedSize
   const activeVariant = product.product_variants?.find(
@@ -245,10 +259,11 @@ export default function ProductDetails() {
     const thumbColor = thumbnails[idx]?.color;
     if (thumbColor && thumbColor.toLowerCase() !== selectedColor.toLowerCase()) {
       setSelectedColor(thumbColor);
-      const sizeForColor = product.product_variants?.find(
+      const colVariants = product.product_variants?.filter(
         (v) => v.color.toLowerCase() === thumbColor.toLowerCase() && v.stock > 0
-      );
-      if (sizeForColor) setSelectedSize(sizeForColor.size);
+      ) || [];
+      const sortedColSizes = sortSizes(colVariants.map(v => v.size));
+      if (sortedColSizes.length > 0) setSelectedSize(sortedColSizes[0]);
     }
   };
 
@@ -295,12 +310,12 @@ export default function ProductDetails() {
     const { width, height } = container.getBoundingClientRect();
     let newX = e.clientX - dragStart.current.x;
     let newY = e.clientY - dragStart.current.y;
-    
+
     const limitX = width * LIMIT_FACTOR;
     const limitY = height * LIMIT_FACTOR;
     newX = Math.max(-limitX, Math.min(limitX, newX));
     newY = Math.max(-limitY, Math.min(limitY, newY));
-    
+
     setPanOffset({ x: newX, y: newY });
   };
 
@@ -341,12 +356,12 @@ export default function ProductDetails() {
     const { width, height } = container.getBoundingClientRect();
     let newX = touch.clientX - dragStart.current.x;
     let newY = touch.clientY - dragStart.current.y;
-    
+
     const limitX = width * LIMIT_FACTOR;
     const limitY = height * LIMIT_FACTOR;
     newX = Math.max(-limitX, Math.min(limitX, newX));
     newY = Math.max(-limitY, Math.min(limitY, newY));
-    
+
     setPanOffset({ x: newX, y: newY });
   };
 
@@ -413,8 +428,8 @@ export default function ProductDetails() {
                 alt={product.title}
                 className={`w-full h-full object-cover object-center pointer-events-none select-none transition-all duration-250 ease-out ${isDragging ? '' : 'transition-transform'} `}  //${isImageLoading ? 'opacity-45 blur-xs' : 'opacity-100 blur-none'}
                 style={{
-                  transform: isZoomed 
-                    ? `translate(${panOffset.x}px, ${panOffset.y}px) scale(${ZOOM_SCALE})` 
+                  transform: isZoomed
+                    ? `translate(${panOffset.x}px, ${panOffset.y}px) scale(${ZOOM_SCALE})`
                     : 'translate(0px, 0px) scale(1)',
                 }}
                 onLoad={() => setIsImageLoading(false)}
@@ -426,8 +441,8 @@ export default function ProductDetails() {
                 </div>
               ) : (
                 <div className="absolute bottom-4 right-4 bg-white/90 px-2.5 py-1.5 rounded-md text-[9px] font-bold text-brand-dark tracking-wider border border-brand-cream-dark shadow-sm uppercase select-none opacity-70 transition-opacity pointer-events-none">
-                  {isZoomed 
-                    ? (isTouchDevice ? 'Drag to Pan | Double Tap to Zoom Out' : 'Drag to Pan | Double Click to Zoom Out') 
+                  {isZoomed
+                    ? (isTouchDevice ? 'Drag to Pan | Double Tap to Zoom Out' : 'Drag to Pan | Double Click to Zoom Out')
                     : (isTouchDevice ? 'Double Tap to Zoom' : 'Double Click to Zoom')}
                 </div>
               )}
@@ -515,10 +530,11 @@ export default function ProductDetails() {
                         key={col}
                         onClick={() => {
                           selectColorAndScroll(col);
-                          const sizeForColor = product.product_variants?.find(
+                          const colVariants = product.product_variants?.filter(
                             (v) => v.color.toLowerCase() === col.toLowerCase() && v.stock > 0
-                          );
-                          if (sizeForColor) setSelectedSize(sizeForColor.size);
+                          ) || [];
+                          const sortedColSizes = sortSizes(colVariants.map(v => v.size));
+                          if (sortedColSizes.length > 0) setSelectedSize(sortedColSizes[0]);
                         }}
                         disabled={isDisabled}
                         className={`px-4 py-2.5 border rounded text-[11px] font-bold tracking-wider transition-all cursor-pointer ${isDisabled
