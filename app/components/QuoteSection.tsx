@@ -2,23 +2,31 @@ import React from 'react';
 
 export default function QuoteSection() {
   return (
-    <section className="py-16 bg-white flex justify-center items-center">
+    <section className="py-20 flex justify-center items-center bg-[#FAF8F5]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 w-full">
-        <div className="relative rounded-2xl overflow-hidden border border-brand-cream-dark shadow-sm grid grid-cols-1 md:grid-cols-12 bg-white">
-          <div className="md:col-span-3 bg-brand-cream flex items-center justify-center p-6 border-b md:border-b-0 md:border-r border-brand-cream-dark min-h-16">
-            <div className="w-1.5 h-16 bg-brand-brown rounded-full hidden md:block" />
+        <div className="relative border-[3px] border-black bg-white shadow-[6px_6px_0_0_#111111] grid grid-cols-1 md:grid-cols-12 rotate-[0.5deg]">
+          
+          {/* Quote Mark Left Banner */}
+          <div className="md:col-span-3 bg-[#FFCB05] flex items-center justify-center p-6 border-b-[3px] md:border-b-0 md:border-r-[3px] border-black min-h-24">
+            <span className="attiz-display text-8xl text-black select-none leading-none pt-6">“</span>
           </div>
-          <div className="md:col-span-9 bg-brand-cream/30 p-8 sm:p-12 relative flex flex-col justify-center text-center md:text-left">
-            <div className="absolute top-6 right-8 text-6xl font-serif text-brand-brown opacity-20 select-none">"</div>
-            <h3 className="font-sans text-lg sm:text-xl md:text-2xl font-bold text-brand-dark tracking-wider uppercase mb-6 leading-snug">
+
+          {/* Quote Content Right */}
+          <div className="md:col-span-9 bg-white p-8 sm:p-10 relative flex flex-col justify-center text-center md:text-left">
+            <h3 className="attiz-display text-2xl sm:text-3xl font-bold text-black tracking-wide uppercase mb-4 leading-snug">
               It is a lifestyle, a statement, a voice.
             </h3>
-            <p className="font-sans text-xs sm:text-sm leading-relaxed text-brand-dark/75 tracking-wider text-justify md:text-left max-w-2xl">
+            <p className="attiz-body text-xs sm:text-sm leading-relaxed text-black/75 tracking-wider text-justify md:text-left max-w-2xl font-light">
               Our exquisitely acclaimed garments are meticulously crafted to provide unparalleled quality and comfort, 
               trusting us to deliver the ultimate in style, luxury, and sophistication. Every stitch is a testament 
               to our dedication to modern sartorial heritage.
             </p>
+            <div className="mt-6 flex items-center justify-center md:justify-start gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E63B2E]" />
+              <span className="attiz-mono text-[9px] font-bold text-black/40 tracking-[0.2em] uppercase">Attiz Philosophy</span>
+            </div>
           </div>
+
         </div>
       </div>
     </section>

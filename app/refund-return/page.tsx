@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function RefundReturnPage() {
   return (
-    <main className="bg-white text-brand-dark">
+    <main className="text-brand-dark">
       <section className="max-w-6xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
         <div className="space-y-10">
           <div className="space-y-4">

@@ -12,7 +12,7 @@ export default function StoreLayoutShell({ children }: { children: React.ReactNo
   const isAdminPath = pathname.startsWith('/admin');
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-[#FAF8F5]">
       {!isAdminPath && <Navbar />}
       <main className="flex-grow">{children}</main>
       {!isAdminPath && <Footer />}

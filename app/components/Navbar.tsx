@@ -14,6 +14,23 @@ export default function Navbar() {
   const [isMobileCollectionsOpen, setIsMobileCollectionsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('HOME');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const [isCollectionsHovered, setIsCollectionsHovered] = useState(false);
+  const [hoverTimeoutId, setHoverTimeoutId] = useState<any>(null);
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutId) {
+      clearTimeout(hoverTimeoutId);
+      setHoverTimeoutId(null);
+    }
+    setIsCollectionsHovered(true);
+  };
+
+  const handleMouseLeave = () => {
+    const timeout = setTimeout(() => {
+      setIsCollectionsHovered(false);
+    }, 180);
+    setHoverTimeoutId(timeout);
+  };
 
   const { cartItems, setIsCartOpen } = useCart();
   const { user, logout } = useAuth();
@@ -42,7 +59,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-brand-cream-dark transition-all duration-300">
+    <header className="sticky top-0 z-50 bg-[#FAF8F5]/95 backdrop-blur-md border-b border-black/10 transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex justify-between items-center h-20">
 
@@ -62,26 +79,35 @@ export default function Navbar() {
           {/* Center Nav - Desktop */}
           <nav className="hidden lg:flex space-x-8">
             {navItems.map((item) => (
-              <div key={item.name} className={`group flex items-center ${item.hasDropdown ? '' : 'relative'}`}>
+              <div 
+                key={item.name} 
+                className={`group flex items-center ${item.hasDropdown ? '' : 'relative'}`}
+                onMouseEnter={() => item.hasDropdown && handleMouseEnter()}
+                onMouseLeave={() => item.hasDropdown && handleMouseLeave()}
+              >
                 <a
                   href={item.href}
                   onClick={(e) => handleNavClick(e, item)}
-                  className={`text-xs font-semibold tracking-widest transition-colors duration-300 py-2 flex items-center space-x-1 ${
+                  className={`attiz-mono text-[13px] font-bold tracking-widest transition-colors duration-300 py-2 flex items-center space-x-1 ${
                     activeTab === item.name
-                      ? 'text-brand-brown border-b border-brand-brown'
-                      : 'text-brand-dark hover:text-brand-brown'
+                      ? 'text-[#E63B2E] border-b-2 border-[#E63B2E]'
+                      : 'text-black/70 hover:text-black'
                   }`}
                 >
                   <span>{item.name}</span>
                   {item.hasDropdown && (
-                    <ChevronDown className="w-3.5 h-3.5 opacity-60 group-hover:rotate-180 transition-transform duration-300" />
+                    <ChevronDown className={`w-3.5 h-3.5 opacity-60 transition-transform duration-300 ${isCollectionsHovered ? 'rotate-180' : ''}`} />
                   )}
                 </a>
 
                 {item.hasDropdown && (
-                  <div className="absolute top-full left-4 right-4 mt-1 rounded-xl shadow-xl bg-white border border-brand-cream-dark opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-50 p-6">
+                  <div className={`absolute top-full left-4 right-4 mt-1 bg-white border-2 border-black shadow-[6px_6px_0_0_#111111] transition-all duration-300 transform z-50 p-6 ${
+                    isCollectionsHovered 
+                      ? 'opacity-100 visible translate-y-0' 
+                      : 'opacity-0 invisible translate-y-2 pointer-events-none'
+                  }`}>
                     <div className={showScroll
-                      ? "flex flex-row overflow-x-auto gap-8 pb-2 scrollbar-thin scrollbar-thumb-brand-brown/20 scrollbar-track-transparent"
+                      ? "flex flex-row overflow-x-auto gap-8 pb-2 scrollbar-thin scrollbar-thumb-[#E63B2E]/20 scrollbar-track-transparent"
                       : `grid gap-6 w-full ${
                           parentCategories.length === 1 ? 'grid-cols-1' :
                           parentCategories.length === 2 ? 'grid-cols-2' :
@@ -94,17 +120,17 @@ export default function Navbar() {
                       {parentCategories.map((parent) => (
                         <div key={parent.id} className={`space-y-4 ${showScroll ? 'shrink-0 min-w-[180px]' : 'w-full'}`}>
                           <button
-                            onClick={() => { setActiveTab('COLLECTIONS'); router.push(`/?category=${parent.id}`); }}
-                            className="text-xs font-bold tracking-[0.2em] text-brand-brown hover:text-brand-brown-dark uppercase border-b border-brand-cream-dark pb-2 w-full text-left transition-colors cursor-pointer"
+                            onClick={() => { setActiveTab('COLLECTIONS'); setIsCollectionsHovered(false); router.push(`/?category=${parent.id}`); }}
+                            className="attiz-display text-base tracking-wider text-black hover:text-[#E63B2E] uppercase border-b-2 border-black/15 pb-2 w-full text-left transition-colors cursor-pointer"
                           >
                             {parent.name}
                           </button>
-                          <div className="space-y-2.5 flex flex-col items-start max-h-[220px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-brand-brown/20 scrollbar-track-transparent">
+                          <div className="space-y-2.5 flex flex-col items-start max-h-[220px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-[#E63B2E]/25 scrollbar-track-transparent">
                             {categories.filter(c => c.parent_id === parent.id).map((secondary) => (
                               <button
                                 key={secondary.id}
-                                onClick={() => { setActiveTab('COLLECTIONS'); router.push(`/?category=${secondary.id}`); }}
-                                className="text-[10px] font-bold tracking-widest text-brand-dark/70 hover:text-brand-brown uppercase text-left w-full transition-colors cursor-pointer"
+                                onClick={() => { setActiveTab('COLLECTIONS'); setIsCollectionsHovered(false); router.push(`/?category=${secondary.id}`); }}
+                                className="attiz-mono text-[11px] font-bold tracking-widest text-black/55 hover:text-black uppercase text-left w-full transition-colors cursor-pointer"
                               >
                                 {secondary.name}
                               </button>
@@ -121,12 +147,12 @@ export default function Navbar() {
 
           {/* Right Utilities */}
           <div className="hidden md:flex items-center space-x-6">
-            <div className="flex items-center space-x-1 text-[11px] font-semibold tracking-wider text-brand-dark hover:text-brand-brown cursor-pointer transition-colors duration-300">
+            <div className="flex items-center space-x-1 text-[11px] attiz-mono font-bold tracking-wider text-black/70 hover:text-black cursor-pointer transition-colors duration-300">
               <span>INR (₹) | India</span>
               <ChevronDown className="w-3 h-3" />
             </div>
 
-            <button className="text-brand-dark hover:text-brand-brown transition-colors duration-300 p-1.5 rounded-full hover:bg-brand-cream/50 cursor-pointer">
+            <button className="text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer">
               <Search className="w-4.5 h-4.5" />
             </button>
 
@@ -136,17 +162,17 @@ export default function Navbar() {
                 <div>
                   <button
                     onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-                    className="flex items-center space-x-1 text-[11px] font-bold tracking-widest text-brand-brown hover:text-brand-brown-dark transition-colors cursor-pointer uppercase border-b border-dashed border-brand-brown/50"
+                    className="flex items-center space-x-1 attiz-mono text-xs font-bold tracking-widest text-[#E63B2E] hover:text-[#E63B2E]/80 transition-colors cursor-pointer uppercase border-b-2 border-dashed border-[#E63B2E]/30"
                   >
                     <span>{user.first_name}</span>
                     <ChevronDown className="w-3 h-3" />
                   </button>
                   {isProfileDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black/5 z-50">
+                    <div className="absolute right-0 mt-2 w-48 border-2 border-black bg-[#FAF8F5] shadow-[4px_4px_0_0_#111111] z-50">
                       <div className="py-1" onMouseLeave={() => setIsProfileDropdownOpen(false)}>
                         <button
                           onClick={() => { setIsProfileDropdownOpen(false); router.push('/orders'); }}
-                          className="w-full text-left flex items-center space-x-2 px-4 py-2.5 text-xs text-brand-dark hover:bg-brand-cream hover:text-brand-brown tracking-wider"
+                          className="w-full text-left flex items-center space-x-2 px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
                         >
                           <ClipboardList className="w-3.5 h-3.5" />
                           <span>My Orders</span>
@@ -154,7 +180,7 @@ export default function Navbar() {
                         {user.role === 'admin' && (
                           <button
                             onClick={() => { setIsProfileDropdownOpen(false); router.push('/admin'); }}
-                            className="w-full text-left flex items-center space-x-2 px-4 py-2.5 text-xs text-brand-dark hover:bg-brand-cream hover:text-brand-brown tracking-wider"
+                            className="w-full text-left flex items-center space-x-2 px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
                           >
                             <Database className="w-3.5 h-3.5" />
                             <span>Admin Console</span>
@@ -162,7 +188,7 @@ export default function Navbar() {
                         )}
                         <button
                           onClick={() => { setIsProfileDropdownOpen(false); logout(); router.push('/'); }}
-                          className="w-full text-left flex items-center space-x-2 px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 tracking-wider"
+                          className="w-full text-left flex items-center space-x-2 px-4 py-2.5 attiz-mono text-[11px] font-bold text-red-600 hover:bg-red-50 hover:text-red-700 tracking-wider transition-colors cursor-pointer"
                         >
                           <LogOut className="w-3.5 h-3.5" />
                           <span>Sign Out</span>
@@ -174,7 +200,7 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => router.push('/auth')}
-                  className="text-brand-dark hover:text-brand-brown transition-colors duration-300 p-1.5 rounded-full hover:bg-brand-cream/50 cursor-pointer"
+                  className="text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
                   title="Sign In"
                 >
                   <User className="w-4.5 h-4.5" />
@@ -185,12 +211,12 @@ export default function Navbar() {
             {/* Cart */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative text-brand-dark hover:text-brand-brown transition-colors duration-300 p-1.5 rounded-full hover:bg-brand-cream/50 cursor-pointer"
+              className="relative text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
               title="Shopping Cart"
             >
               <ShoppingBag className="w-4.5 h-4.5" />
               {cartCount > 0 && (
-                <span className="absolute top-0 right-0 w-4 h-4 bg-brand-brown rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                <span className="absolute top-0 right-0 w-4 h-4 bg-[#E63B2E] border border-black rounded-full text-[8px] font-bold text-white flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
@@ -199,20 +225,20 @@ export default function Navbar() {
 
           {/* Hamburger - Mobile */}
           <div className="lg:hidden flex items-center space-x-4">
-            <button className="text-brand-dark hover:text-brand-brown p-1.5">
+            <button className="text-black/75 hover:text-black p-1.5">
               <Search className="w-5 h-5" />
             </button>
-            <button onClick={() => setIsCartOpen(true)} className="relative text-brand-dark hover:text-brand-brown p-1.5">
+            <button onClick={() => setIsCartOpen(true)} className="relative text-black/75 hover:text-black p-1.5">
               <ShoppingBag className="w-5 h-5" />
               {cartCount > 0 && (
-                <span className="absolute top-0 right-0 w-4 h-4 bg-brand-brown rounded-full text-[9px] font-bold text-white flex items-center justify-center">
+                <span className="absolute top-0 right-0 w-4 h-4 bg-[#E63B2E] border border-black rounded-full text-[8px] font-bold text-white flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-brand-dark hover:text-brand-brown p-1.5"
+              className="text-black/75 hover:text-black p-1.5"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -222,7 +248,7 @@ export default function Navbar() {
 
       {/* Mobile Drawer */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden border-t border-brand-cream-dark bg-white">
+        <div className="lg:hidden border-t-2 border-black bg-[#FAF8F5]">
           <div className="px-4 pt-2 pb-6 space-y-3">
             {navItems.map((item) => (
               <div key={item.name} className="space-y-1">
@@ -230,27 +256,27 @@ export default function Navbar() {
                   <div>
                     <button
                       onClick={() => setIsMobileCollectionsOpen(!isMobileCollectionsOpen)}
-                      className="w-full flex items-center justify-between py-2 text-xs font-semibold tracking-widest text-brand-dark cursor-pointer"
+                      className="w-full flex items-center justify-between py-2.5 attiz-display text-base tracking-wider text-black cursor-pointer uppercase"
                     >
                       <span>{item.name}</span>
                       <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isMobileCollectionsOpen ? 'rotate-180' : ''}`} />
                     </button>
                     {isMobileCollectionsOpen && (
-                      <div className="pl-4 border-l border-brand-cream-dark/65 space-y-3 mt-1 pb-2">
+                      <div className="pl-4 border-l-2 border-black/15 space-y-3 mt-1 pb-2">
                         {parentCategories.map((parent) => (
                           <div key={parent.id} className="space-y-1.5">
                             <button
                               onClick={() => { router.push(`/?category=${parent.id}`); setIsMobileMenuOpen(false); }}
-                              className="text-[10px] font-bold tracking-widest text-brand-brown uppercase text-left block w-full py-1 cursor-pointer"
+                              className="text-[12px] font-bold tracking-widest text-[#E63B2E] uppercase text-left block w-full py-1 cursor-pointer"
                             >
                               {parent.name}
                             </button>
-                            <div className="pl-3 flex flex-col space-y-1.5 border-l border-brand-cream-dark/40">
+                            <div className="pl-3 flex flex-col space-y-1.5 border-l border-black/10">
                               {categories.filter(c => c.parent_id === parent.id).map((secondary) => (
                                 <button
                                   key={secondary.id}
                                   onClick={() => { router.push(`/?category=${secondary.id}`); setIsMobileMenuOpen(false); }}
-                                  className="text-[9px] font-bold tracking-widest text-brand-dark/70 hover:text-brand-brown uppercase text-left block w-full py-0.5 cursor-pointer"
+                                  className="text-[11px] font-bold tracking-widest text-black/60 hover:text-black uppercase text-left block w-full py-0.5 cursor-pointer"
                                 >
                                   {secondary.name}
                                 </button>
@@ -265,22 +291,22 @@ export default function Navbar() {
                   <a
                     href={item.href}
                     onClick={(e) => handleNavClick(e, item)}
-                    className={`block py-2 text-xs font-semibold tracking-widest ${activeTab === item.name ? 'text-brand-brown' : 'text-brand-dark'}`}
+                    className={`block py-2.5 attiz-mono text-[12px] font-bold tracking-widest uppercase transition-colors ${activeTab === item.name ? 'text-[#E63B2E]' : 'text-black/80 hover:text-black'}`}
                   >
                     {item.name}
                   </a>
                 )}
               </div>
             ))}
-            <div className="pt-4 border-t border-brand-cream-dark flex items-center justify-between text-xs font-semibold text-brand-dark">
-              <span>INR (₹) | India</span>
+            <div className="pt-4 border-t-2 border-black/10 flex items-center justify-between text-xs font-semibold text-brand-dark">
+              <span className="attiz-mono text-[11px] font-bold text-black/50 uppercase tracking-widest">INR (₹) | India</span>
               <div className="flex space-x-4">
                 {user ? (
-                  <button onClick={() => router.push('/orders')} className="text-brand-brown tracking-widest text-[10px] uppercase font-bold">
+                  <button onClick={() => { router.push('/orders'); setIsMobileMenuOpen(false); }} className="text-[#E63B2E] tracking-widest text-[11px] uppercase font-bold attiz-mono">
                     ORDERS ({user.first_name})
                   </button>
                 ) : (
-                  <button onClick={() => router.push('/auth')} className="text-brand-dark tracking-widest text-[10px] uppercase font-bold">
+                  <button onClick={() => { router.push('/auth'); setIsMobileMenuOpen(false); }} className="text-black tracking-widest text-[11px] uppercase font-bold attiz-mono">
                     SIGN IN
                   </button>
                 )}
@@ -292,3 +318,4 @@ export default function Navbar() {
     </header>
   );
 }
+

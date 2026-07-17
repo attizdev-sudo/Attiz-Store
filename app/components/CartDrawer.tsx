@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, Check, Truck } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -54,94 +54,153 @@ export default function CartDrawer() {
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-brand-dark/40 backdrop-blur-sm" onClick={() => setIsCartOpen(false)} />
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/35 backdrop-blur-xs transition-opacity" onClick={() => setIsCartOpen(false)} />
+      
       <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col h-full border-l border-brand-cream-dark">
+        <div className="w-screen max-w-md bg-white flex flex-col h-full border-l-2 border-black relative transition-all">
 
           {/* Header */}
-          <div className="px-6 py-5 border-b border-brand-cream-dark flex items-center justify-between bg-brand-cream/15">
-            <div className="flex items-center space-x-2 text-brand-dark">
-              <ShoppingBag className="w-5 h-5 text-brand-brown" />
-              <span className="font-sans text-xs font-bold tracking-[0.2em] uppercase">YOUR CART ({cartItems.length})</span>
+          <div className="px-6 py-5 border-b-2 border-black flex items-center justify-between bg-white text-black">
+            <div className="flex items-center space-x-2.5">
+              <ShoppingBag className="w-4 h-4 text-black/70" />
+              <span className="attiz-display text-sm tracking-wider uppercase text-black">Your Cart ({cartItems.length})</span>
             </div>
-            <button onClick={() => setIsCartOpen(false)} className="text-brand-dark hover:text-brand-brown p-1.5 rounded-full hover:bg-brand-cream/50 transition-colors">
+            
+            <button 
+              onClick={() => setIsCartOpen(false)} 
+              className="text-black/50 hover:text-black p-1 transition-colors cursor-pointer"
+              aria-label="Close cart"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-            {errorMsg && <div className="p-3 bg-red-50 text-red-600 rounded text-xs font-semibold tracking-wider text-center">{errorMsg}</div>}
-            {successMsg && <div className="p-3 bg-green-50 text-brand-brown rounded text-xs font-semibold tracking-wider text-center">{successMsg}</div>}
+          {/* Cart Items List */}
+          <div className="flex-1 overflow-y-auto px-6 py-2 divide-y border-b border-black/10 divide-black/10 scrollbar-thin">
+            
+            {errorMsg && (
+              <div className="p-3 bg-red-50 text-[#E63B2E] border border-[#E63B2E] text-xs font-bold tracking-wider text-center uppercase my-4">
+                {errorMsg}
+              </div>
+            )}
+            {successMsg && (
+              <div className="p-3 bg-green-50 text-black border border-black text-xs font-bold tracking-wider text-center uppercase flex items-center justify-center space-x-2 my-4">
+                <Check className="w-4 h-4 text-green-600" />
+                <span>{successMsg}</span>
+              </div>
+            )}
 
             {cartItems.length === 0 ? (
-              <div className="h-64 flex flex-col items-center justify-center space-y-4 text-brand-dark/45 text-center">
-                <ShoppingBag className="w-12 h-12 stroke-[1.2]" />
-                <p className="font-sans text-xs font-bold tracking-widest uppercase">Your cart is empty.</p>
-                <button onClick={() => setIsCartOpen(false)} className="px-6 py-2.5 rounded border border-brand-brown text-brand-brown hover:bg-brand-brown hover:text-white text-[10px] font-bold tracking-wider uppercase transition-colors">
+              <div className="h-64 flex flex-col items-center justify-center space-y-4 text-black text-center">
+                <ShoppingBag className="w-10 h-10 stroke-[1.2] text-black/30" />
+                <p className="attiz-mono text-[10px] font-bold tracking-widest uppercase text-black/55">Your cart is empty.</p>
+                <button
+                  onClick={() => setIsCartOpen(false)}
+                  className="py-2 px-5 border border-black bg-white text-black hover:bg-black hover:text-[#FFCB05] transition-all text-[9px] attiz-mono font-bold tracking-wider uppercase cursor-pointer"
+                >
                   Continue Shopping
                 </button>
               </div>
             ) : (
-              <div className="space-y-4 divide-y divide-brand-cream-dark">
-                {cartItems.map((item, idx) => (
-                  <div key={`${item.id}-${item.selectedSize}`} className={`flex items-start gap-4 ${idx > 0 ? 'pt-4' : ''}`}>
-                    <div className="relative w-20 h-24 bg-brand-cream rounded-md overflow-hidden shrink-0 border border-brand-cream-dark">
-                      <Image src={item.image} alt={item.title} fill className="object-cover" sizes="80px" />
+              cartItems.map((item) => (
+                <div key={`${item.id}-${item.selectedSize}`} className="flex items-start gap-4 py-4">
+                  {/* Product Image */}
+                  <div className="relative w-20 h-24 bg-[#F5F1E6] border border-black/10 overflow-hidden shrink-0">
+                    <Image src={item.image} alt={item.title} fill className="object-cover" sizes="80px" />
+                  </div>
+
+                  {/* Info & Action area */}
+                  <div className="grow flex flex-col justify-between h-24">
+                    <div>
+                      <h4 className="attiz-mono text-xs font-bold text-black tracking-wide line-clamp-1 uppercase">{item.title}</h4>
+                      {item.selectedSize && (
+                        <span className="attiz-mono text-[9px] text-black/50 uppercase tracking-widest block mt-0.5">
+                          Size: {item.selectedSize}
+                        </span>
+                      )}
+                      <span className="attiz-mono text-xs font-bold text-[#E63B2E] mt-1 block">₹{item.price.toLocaleString('en-IN')}</span>
                     </div>
-                    <div className="grow flex flex-col justify-between h-24">
-                      <div>
-                        <h4 className="font-sans text-[11px] font-bold text-brand-dark line-clamp-1">{item.title}</h4>
-                        {item.selectedSize && <span className="font-sans text-[10px] text-brand-dark/50 tracking-wider">Size: {item.selectedSize}</span>}
-                        <span className="font-sans text-xs font-semibold text-brand-brown mt-1 block">₹{item.price.toLocaleString('en-IN')}</span>
+
+                    <div className="flex items-center justify-between">
+                      {/* Quantity control */}
+                      <div className="flex items-center border border-black bg-white">
+                        <button 
+                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)} 
+                          className="p-1 px-2.5 text-black hover:bg-black/5 transition-colors cursor-pointer border-r border-black"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="attiz-mono text-xs font-bold px-3 text-black select-none">{item.quantity}</span>
+                        <button 
+                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)} 
+                          className="p-1 px-2.5 text-black hover:bg-black/5 transition-colors cursor-pointer border-l border-black"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center border border-brand-cream-dark rounded-md bg-brand-cream/15">
-                          <button onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)} className="p-1 px-2 text-brand-dark hover:text-brand-brown transition-colors"><Minus className="w-3 h-3" /></button>
-                          <span className="font-sans text-xs font-bold px-2 text-brand-dark select-none">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)} className="p-1 px-2 text-brand-dark hover:text-brand-brown transition-colors"><Plus className="w-3 h-3" /></button>
-                        </div>
-                        <button onClick={() => removeFromCart(item.id, item.selectedSize)} className="text-brand-dark/45 hover:text-red-500 p-1.5 transition-colors" title="Remove item"><Trash2 className="w-4 h-4" /></button>
-                      </div>
+
+                      {/* Remove button */}
+                      <button 
+                        onClick={() => removeFromCart(item.id, item.selectedSize)} 
+                        className="text-black/40 hover:text-[#E63B2E] p-1.5 transition-colors cursor-pointer" 
+                        title="Remove item"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))
             )}
           </div>
 
           {/* Bottom Panel */}
           {cartItems.length > 0 && (
-            <div className="border-t border-brand-cream-dark p-6 bg-brand-cream/15">
-              <div className="flex justify-between items-center mb-6">
-                <span className="font-sans text-xs font-bold tracking-[0.2em] text-brand-dark uppercase">TOTAL AMOUNT</span>
-                <span className="font-sans text-sm font-extrabold text-brand-brown">₹{totalAmount.toLocaleString('en-IN')}</span>
+            <div className="p-6 bg-white space-y-4">
+              
+              <div className="flex justify-between items-center">
+                <span className="attiz-mono text-[10px] font-bold tracking-widest text-black/50 uppercase">Total Amount</span>
+                <span className="attiz-mono text-sm font-bold text-black">₹{totalAmount.toLocaleString('en-IN')}</span>
               </div>
 
               {!user ? (
-                <div className="space-y-3">
-                  <p className="font-sans text-[10px] text-brand-dark/65 tracking-wide text-center leading-relaxed">You must be signed in to complete your checkout order.</p>
+                <div className="space-y-3 pt-2">
+                  <p className="attiz-body text-[10px] text-black/60 tracking-wide text-center leading-relaxed font-light">
+                    You must be signed in to complete your checkout order.
+                  </p>
                   <button
                     onClick={() => { setIsCartOpen(false); router.push('/auth'); }}
-                    className="w-full py-3.5 rounded bg-brand-brown hover:bg-brand-brown-dark text-white text-[11px] font-bold tracking-[0.2em] uppercase transition-colors shadow-sm cursor-pointer"
+                    className="w-full py-3 border-2 border-black bg-black text-[#FFCB05] hover:bg-white hover:text-black shadow-[4px_4px_0_0_#111111] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-xs attiz-display tracking-[0.15em] uppercase cursor-pointer"
                   >
                     Sign In to Checkout
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleCheckoutSubmit} className="space-y-3 border-t border-brand-cream-dark/60 pt-4 max-h-64 overflow-y-auto pr-1">
-                  <span className="block font-sans text-[10px] font-extrabold tracking-widest text-brand-dark/50 uppercase mb-2">SHIPPING DETAILS</span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input type="text" name="firstName" placeholder="First Name" required value={shippingDetails.firstName} onChange={handleInputChange} className="w-full px-3 py-2 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
-                    <input type="text" name="lastName" placeholder="Last Name" required value={shippingDetails.lastName} onChange={handleInputChange} className="w-full px-3 py-2 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+                <form onSubmit={handleCheckoutSubmit} className="space-y-3 pt-2 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+                  <div className="flex items-center gap-1 border-b border-black/10 pb-1.5 mb-2">
+                    <Truck className="w-3.5 h-3.5 text-black/60" />
+                    <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/50 uppercase">Shipping Details</span>
                   </div>
-                  <input type="tel" name="phone" placeholder="Contact Phone Number" required value={shippingDetails.phone} onChange={handleInputChange} className="w-full px-3 py-2 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
-                  <input type="text" name="address" placeholder="Delivery Street Address" required value={shippingDetails.address} onChange={handleInputChange} className="w-full px-3 py-2 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="text" name="city" placeholder="City" required value={shippingDetails.city} onChange={handleInputChange} className="w-full px-3 py-2 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
-                    <input type="text" name="zipCode" placeholder="Zip Code" required value={shippingDetails.zipCode} onChange={handleInputChange} className="w-full px-3 py-2 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+                    <input type="text" name="firstName" placeholder="FIRST NAME" required value={shippingDetails.firstName} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
+                    <input type="text" name="lastName" placeholder="LAST NAME" required value={shippingDetails.lastName} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
                   </div>
-                  <button type="submit" disabled={isSubmitting} className="w-full mt-4 py-3.5 rounded bg-brand-brown hover:bg-brand-brown-dark disabled:bg-brand-brown/40 text-white text-[11px] font-bold tracking-[0.2em] uppercase transition-colors shadow-sm cursor-pointer">
+                  <input type="tel" name="phone" placeholder="CONTACT PHONE NUMBER" required value={shippingDetails.phone} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
+                  <input type="text" name="address" placeholder="DELIVERY STREET ADDRESS" required value={shippingDetails.address} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="text" name="city" placeholder="CITY" required value={shippingDetails.city} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
+                    <input type="text" name="zipCode" placeholder="ZIP CODE" required value={shippingDetails.zipCode} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
+                  </div>
+                  
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting} 
+                    className="w-full mt-2 py-3 border-2 border-black bg-black text-[#FFCB05] hover:bg-white hover:text-black shadow-[4px_4px_0_0_#111111] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-xs attiz-display tracking-[0.15em] uppercase cursor-pointer"
+                  >
                     {isSubmitting ? 'PLACING ORDER...' : 'PLACE ORDER'}
                   </button>
                 </form>
