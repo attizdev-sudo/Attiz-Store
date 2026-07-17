@@ -4,10 +4,10 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Heart, ShoppingCart, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Heart, ShoppingBag, SlidersHorizontal, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
-import type { CartItem, Product } from '@/lib/types';
+import type { Product } from '@/lib/types';
 
 const getProductImages = (product: Product) => {
   const urls: string[] = [];
@@ -67,7 +67,6 @@ function ProductGridInner() {
     router.push(cat === 'All' ? '/' : `/?parent=${cat}`);
   };
 
-  // Helper function to get all descendants of a category (including itself)
   const getDescendantIds = (catId: string): string[] => {
     const ids = [catId];
     const queue = [catId];
@@ -102,9 +101,7 @@ function ProductGridInner() {
     if (activeFilterCatIds) {
       const pCats = product.category_ids || (product.category_id ? [product.category_id] : []);
       const matches = pCats.some((id) => activeFilterCatIds.includes(id));
-      if (!matches) {
-        return false;
-      }
+      if (!matches) return false;
     }
     return true;
   });
@@ -121,224 +118,241 @@ function ProductGridInner() {
 
   const hasFilter = !!filterParam && filterParam !== 'All';
 
-  let bannerTitle = 'OUR COLLECTIONS';
+  let bannerTitle = 'Collections';
   if (hasFilter) {
     const mainCat = activeCategoryName || filterParam || '';
     if (mainCat) {
       const lowerCat = mainCat.toLowerCase();
-      if (lowerCat.includes('polo')) bannerTitle = 'PREMIUM POLO T-SHIRTS';
-      else if (lowerCat.includes('crew') || lowerCat.includes('tee')) bannerTitle = 'PREMIUM CREW NECK T-SHIRTS';
-      else if (lowerCat.includes('jogger')) bannerTitle = 'PREMIUM JOGGER PANTS';
-      else if (lowerCat.includes('sweatshirt')) bannerTitle = 'PREMIUM SWEATSHIRTS';
-      else bannerTitle = `PREMIUM ${mainCat.toUpperCase()} SELECTIONS`;
+      if (lowerCat.includes('polo')) bannerTitle = 'Polo T-Shirts';
+      else if (lowerCat.includes('crew') || lowerCat.includes('tee')) bannerTitle = 'Crew Necks';
+      else if (lowerCat.includes('jogger')) bannerTitle = 'Jogger Pants';
+      else if (lowerCat.includes('sweatshirt')) bannerTitle = 'Sweatshirts';
+      else bannerTitle = mainCat;
     }
   }
 
   return (
-    <section id="catalog-grid" className="py-16 bg-white border-t border-brand-cream-dark scroll-mt-24">
-      {hasFilter && (
-        <div className="bg-brand-brown text-white text-center py-6 sm:py-8 tracking-[0.3em] font-serif text-sm sm:text-base font-extrabold uppercase mb-10 shadow-sm">
-          {bannerTitle.toUpperCase()}
-        </div>
-      )}
+    <section id="catalog-grid" className="bg-[#FAF8F5] text-black scroll-mt-24 relative overflow-hidden">
+      {/* Decorative Large Background Typography */}
+      <div className="absolute right-0 top-10 pointer-events-none select-none opacity-[0.02] translate-x-1/4 hidden lg:block">
+        <span className="attiz-display text-[240px] leading-none tracking-tighter uppercase">{bannerTitle}</span>
+      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {!hasFilter ? (
-          <>
-            <div className="flex flex-col items-center justify-center mb-10 text-center">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-brand-cream border border-brand-cream-dark flex items-center justify-center mb-4 shadow-sm relative">
-                <Image src="/ATTIZ.png" alt="ATTIZ" fill className="object-contain p-1" />
-              </div>
-              <h2 className="font-sans text-xs font-bold tracking-[0.25em] text-brand-dark uppercase">OUR COLLECTIONS</h2>
-              <p className="font-sans text-[10px] text-brand-dark/50 tracking-widest font-semibold uppercase mt-1">Explore premium comfort & tailored collections</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 relative z-10">
+        
+        {/* Header Layout */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 border-b border-black/10 pb-10">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E63B2E]" />
+              <span className="attiz-mono text-[11px] font-bold tracking-[0.3em] text-[#E63B2E] uppercase">Attiz Edition</span>
             </div>
+            <h2 className="attiz-display text-5xl sm:text-6xl tracking-tight uppercase leading-none">
+              {bannerTitle}
+            </h2>
+            <p className="attiz-body text-sm text-black/50 mt-4 max-w-md font-light">
+              Architected profiles engineered for comfort. Functional daily wear prioritizing modern ergonomics.
+            </p>
+          </div>
 
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-brand-cream-dark mb-10">
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => handleCategoryTabClick(cat)}
-                    className={`px-5 py-2 rounded-full text-[10px] font-bold tracking-widest uppercase transition-all cursor-pointer ${selectedCategory === cat ? 'bg-brand-brown text-white shadow-sm' : 'bg-brand-cream/40 text-brand-dark hover:bg-brand-cream hover:text-brand-brown'
-                      }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-              <div className="flex items-center space-x-3 w-full md:w-auto justify-center md:justify-end">
-                <SlidersHorizontal className="w-4 h-4 text-brand-dark/65" />
-                <span className="font-sans text-[10px] font-bold tracking-wider text-brand-dark/45 uppercase">Sort By:</span>
-                <div className="relative">
-                  <select value={selectedSort} onChange={(e) => setSelectedSort(e.target.value)} className="appearance-none bg-brand-cream/20 border border-brand-cream-dark text-brand-dark font-sans text-xs font-semibold px-4 py-2 pr-8 rounded outline-none focus:border-brand-brown cursor-pointer">
-                    <option value="latest">Latest Arrivals</option>
-                    <option value="low-high">Price: Low to High</option>
-                    <option value="high-low">Price: High to Low</option>
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-brand-dark/60 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-b border-brand-cream-dark py-4 mb-8 text-[10px] sm:text-xs font-bold tracking-widest text-brand-dark/70 uppercase">
-            <div className="flex flex-wrap items-center gap-4 md:gap-6 justify-center sm:justify-start">
-              <span className="text-brand-dark/45 font-extrabold">Filter:</span>
-              {['Availability', 'Price', 'Collections', 'Size'].map((f) => (
-                <div key={f} className="flex items-center space-x-1 cursor-pointer hover:text-brand-brown transition-colors">
-                  <span>{f}</span>
-                  <ChevronDown className="w-3 h-3 opacity-60" />
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center gap-6 mt-4 sm:mt-0 justify-center sm:justify-end">
-              <div className="flex items-center space-x-2">
-                <span className="text-brand-dark/45 font-extrabold">Sort By:</span>
-                <div className="relative flex items-center">
-                  <select value={selectedSort} onChange={(e) => setSelectedSort(e.target.value)} className="appearance-none bg-transparent border-none text-brand-dark font-sans text-[10px] sm:text-xs font-bold uppercase pr-4 outline-none cursor-pointer focus:text-brand-brown">
-                    <option value="latest">Latest Arrivals</option>
-                    <option value="low-high">Price: Low to High</option>
-                    <option value="high-low">Price: High to Low</option>
-                  </select>
-                  <ChevronDown className="w-3 h-3 text-brand-dark/60 pointer-events-none ml-0.5" />
-                </div>
-              </div>
-              <span className="text-brand-dark/45 font-extrabold">{filteredProducts.length} Products</span>
+          {/* Filtering controls unified */}
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2 px-4 py-2 bg-black/5 rounded-full border border-black/5">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-black/60" />
+              <select
+                value={selectedSort}
+                onChange={(e) => setSelectedSort(e.target.value)}
+                className="bg-transparent attiz-mono text-[11px] font-bold uppercase tracking-wider outline-none cursor-pointer pr-2"
+              >
+                <option value="latest">Latest Arrivals</option>
+                <option value="low-high">Price: Low - High</option>
+                <option value="high-low">Price: High - Low</option>
+              </select>
             </div>
           </div>
-        )}
+        </div>
 
+        {/* Categories Horizontal Navigation Slider */}
+        <div className="mb-12 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex items-center gap-3 min-w-max">
+            {categories.map((cat) => {
+              const isActive = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => handleCategoryTabClick(cat)}
+                  className={`px-5 py-2.5 attiz-mono text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none ${
+                    isActive 
+                      ? 'bg-black text-white border-black shadow-lg shadow-black/10' 
+                      : 'bg-transparent text-black/60 border-black/10 hover:border-black hover:text-black'
+                  }`}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Filter Breadcrumbs */}
         {(parentParam || secondaryParam || subcategoryParam) && (
-          <div className="mb-8 flex flex-wrap items-center justify-between bg-brand-cream/15 border border-brand-cream-dark/60 rounded-xl px-5 py-3.5 gap-3">
-            <div className="flex items-center space-x-2 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-brand-dark/50 font-sans">
-              <span>Filtering:</span>
-              <span className="text-brand-brown font-extrabold">{parentParam || 'All Collections'}</span>
-              {secondaryParam && (<><span className="text-brand-dark/25 font-light">/</span><span className="text-brand-brown font-extrabold">{secondaryParam}</span></>)}
-              {subcategoryParam && (<><span className="text-brand-dark/25 font-light">/</span><span className="text-brand-brown font-extrabold">{subcategoryParam}</span></>)}
+          <div className="mb-10 p-4 bg-black/[0.02] border border-black/5 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center flex-wrap gap-2 attiz-mono text-[11px] font-medium tracking-wide text-black/50">
+              <span className="text-black/30">Active Scope:</span>
+              <span className="text-black font-bold">{parentParam || 'All'}</span>
+              {secondaryParam && <><span className="text-black/25">→</span><span className="text-black font-bold">{secondaryParam}</span></>}
+              {subcategoryParam && <><span className="text-black/25">→</span><span className="text-black font-bold">{subcategoryParam}</span></>}
+              <span className="ml-2 px-2 py-0.5 bg-black/5 text-[10px] text-black font-normal rounded">{filteredProducts.length} items</span>
             </div>
-            <button onClick={() => router.push('/')} className="text-[9px] font-bold tracking-widest text-white bg-brand-brown hover:bg-brand-brown-dark rounded-full px-3.5 py-1.5 uppercase transition-all shadow-xs flex items-center space-x-1 cursor-pointer">
-              <span>Clear Filter</span>
-              <span>&times;</span>
+            <button
+              onClick={() => router.push('/')}
+              className="attiz-mono text-[10px] font-bold tracking-widest text-[#E63B2E] uppercase hover:underline cursor-pointer"
+            >
+              Reset Filters
             </button>
           </div>
         )}
 
+        {/* Product System Grid */}
         {dbLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="flex flex-col bg-white border border-brand-cream-dark rounded-lg overflow-hidden">
-                <div className="aspect-3/4 bg-brand-cream animate-pulse" />
-                <div className="p-3 space-y-2">
-                  <div className="h-3 bg-brand-cream animate-pulse rounded w-3/4" />
-                  <div className="h-3 bg-brand-cream animate-pulse rounded w-1/3" />
-                </div>
+              <div key={i} className="flex flex-col space-y-4">
+                <div className="aspect-[3/4] bg-black/5 animate-pulse relative" />
+                <div className="h-4 bg-black/5 animate-pulse w-3/4" />
+                <div className="h-4 bg-black/5 animate-pulse w-1/4" />
               </div>
             ))}
           </div>
         ) : sortedProducts.length === 0 ? (
-          <div className="text-center py-20 text-brand-dark/45 font-sans text-xs font-bold tracking-widest uppercase">
-            No products found matching this category.
+          <div className="text-center py-32 border border-dashed border-black/10 bg-black/[0.01]">
+            <span className="attiz-mono text-black/40 text-xs font-bold tracking-widest uppercase block mb-2">Zero Results Found</span>
+            <p className="attiz-body text-sm text-black/35 font-light">Try adjusting your selected filters or categories.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-16">
             {sortedProducts.map((product) => {
               const isLiked = wishlist[product.id] || false;
+              const images = getProductImages(product);
+              const nextImage = images[1];
+              const finalPrice = product.discount && product.discount > 0
+                ? Math.round((product.price || 0) * (1 - (product.discount || 0) / 100))
+                : (product.price || 0);
+
+              const handleQuickAdd = (e: React.MouseEvent) => {
+                e.preventDefault();
+                e.stopPropagation();
+                addToCart({
+                  ...product,
+                  price: finalPrice,
+                  quantity: 1,
+                  selectedSize: product.sizes ? product.sizes.split(',')[0].trim() : 'M',
+                } as any);
+              };
+
               return (
-                <div key={product.id} className="group flex flex-col cursor-pointer bg-white overflow-hidden border border-brand-cream-dark rounded-lg hover:shadow-md transition-shadow duration-300 relative">
-                  <Link href={`/product/${product.id}`} className="flex flex-col h-full">
-                    <div className="relative aspect-3/4 bg-brand-cream overflow-hidden">
-                      {(() => {
-                        const images = getProductImages(product);
-                        const nextImage = images[1];
-                        return (
-                          <>
-                            <Image
-                              src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
-                              alt={product.title}
-                              fill
-                              className={`object-cover object-center transition-all duration-700 ease-in-out group-hover:scale-105 ${nextImage ? 'group-hover:opacity-0' : ''}`}
-                              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                            />
-                            {nextImage && (
-                              <Image
-                                src={nextImage}
-                                alt={`${product.title} Hover`}
-                                fill
-                                className="object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-in-out group-hover:scale-105"
-                                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                              />
-                            )}
-                          </>
-                        );
-                      })()}
+                <div key={product.id} className="group relative flex flex-col justify-between">
+                  <Link href={`/product/${product.id}`} className="flex flex-col h-full relative">
+                    
+                    {/* Media container */}
+                    <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden transition-all duration-500 ease-out group-hover:shadow-xl group-hover:shadow-black/5">
+                      
+                      {/* Product Base Image */}
+                      <Image
+                        src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                        alt={product.title}
+                        fill
+                        className={`object-cover object-center transition-all duration-700 ease-out scale-100 group-hover:scale-105 ${nextImage ? 'group-hover:opacity-0' : ''}`}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      />
+
+                      {/* Product Alternative Hover Image */}
+                      {nextImage && (
+                        <Image
+                          src={nextImage}
+                          alt={`${product.title} Alternate`}
+                          fill
+                          className="object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-102 group-hover:scale-105"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        />
+                      )}
+
+                      {/* Floating Discount Badge */}
+                      {product.discount && product.discount > 0 && (
+                        <div className="absolute top-4 left-4 z-20 bg-black text-white px-2.5 py-1 attiz-mono text-[9px] font-bold tracking-widest uppercase">
+                          Save {product.discount}%
+                        </div>
+                      )}
+
+                      {/* Wishlist Button Core */}
                       <button
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product.id); }}
-                        className="absolute top-4 right-4 z-20 w-8 h-8 rounded-full bg-white/80 hover:bg-white flex items-center justify-center shadow-sm text-brand-dark hover:text-brand-brown hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
+                        className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors duration-200 cursor-pointer"
+                        aria-label="Wishlist item"
                       >
-                        <Heart className={`w-4 h-4 transition-colors duration-300 ${isLiked ? 'fill-red-500 stroke-red-500' : 'stroke-currentColor'}`} />
+                        <Heart className={`w-[16px] h-[16px] transition-colors duration-200 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
                       </button>
-                      <div className="absolute inset-x-0 bottom-0 bg-brand-dark/85 py-3 text-center transform translate-y-full group-hover:translate-y-0 transition-transform duration-400 ease-out hidden lg:block z-20">
+
+                      {/* Quick Add Overlay System (Desktop) */}
+                      <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out hidden lg:block z-20 bg-gradient-to-t from-black/60 to-transparent">
                         <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const finalPrice = product.discount && product.discount > 0 
-                              ? Math.round((product.price || 0) * (1 - (product.discount || 0) / 100)) 
-                              : (product.price || 0);
-                            addToCart({
-                              ...product,
-                              price: finalPrice,
-                              quantity: 1,
-                              selectedSize: product.sizes ? product.sizes.split(',')[0].trim() : 'M',
-                            } as any);
-                          }}
-                          className="w-full h-full text-[10px] font-bold tracking-[0.25em] text-white flex items-center justify-center space-x-1.5 cursor-pointer"
+                          onClick={handleQuickAdd}
+                          className="w-full py-3 bg-white hover:bg-black text-black hover:text-white attiz-mono text-[10px] font-bold tracking-[0.2em] flex items-center justify-center gap-2 cursor-pointer uppercase transition-all duration-300"
                         >
-                          <ShoppingCart className="w-3.5 h-3.5" />
-                          <span>ADD TO CART</span>
+                          <ShoppingBag className="w-3.5 h-3.5" />
+                          <span>Quick Add +</span>
                         </button>
                       </div>
                     </div>
-                    <div className="pt-4 pb-5 px-3 flex flex-col text-center sm:text-left grow justify-between border-t border-brand-cream-dark/50">
-                      <div className="mb-2">
-                        <h4 className="font-sans text-[11px] sm:text-xs font-semibold tracking-wider text-brand-dark hover:text-brand-brown transition-colors duration-300 line-clamp-1">{product.title}</h4>
+
+                    {/* Metadata Content */}
+                    <div className="pt-5 flex flex-col justify-between grow">
+                      <div>
+                        {/* <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="attiz-mono text-[9px] text-black/40 uppercase tracking-widest font-semibold">
+                            {product.sizes ? `Sizes: ${product.sizes}` : 'Standard Fit'}
+                          </span>
+                          <span className="w-1 h-1 bg-black/20 rounded-full group-hover:bg-[#E63B2E] transition-colors" />
+                        </div> */}
+                        <h4 className="attiz-body text-[14px] font-medium text-black/90 group-hover:text-black transition-colors line-clamp-2 leading-snug">
+                          {product.title}
+                        </h4>
                       </div>
-                      <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
-                        {product.discount && product.discount > 0 ? (
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-green-700 font-extrabold text-[10px] flex items-center shrink-0">
-                              ↓{product.discount}%
+
+                      <div className="flex items-baseline justify-between mt-3 pt-2 border-t border-black/5">
+                        <div className="flex items-baseline gap-2">
+                          {product.discount && product.discount > 0 ? (
+                            <>
+                              <span className="attiz-mono text-[15px] font-bold text-[#E63B2E]">
+                                ₹{finalPrice.toLocaleString('en-IN')}
+                              </span>
+                              <span className="attiz-body text-xs text-black/35 line-through font-light">
+                                ₹{parseFloat(String(product.price || 0)).toLocaleString('en-IN')}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="attiz-mono text-[15px] font-bold text-black">
+                              ₹{parseFloat(String(product.price || 0)).toLocaleString('en-IN')}
                             </span>
-                            <span className="font-sans text-[10px] text-brand-dark/40 line-through shrink-0">
-                              {parseFloat(String(product.price || 0)).toLocaleString('en-IN')}
-                            </span>
-                            <span className="font-sans text-xs font-bold text-brand-dark whitespace-nowrap">
-                              ₹{Math.round((product.price || 0) * (1 - (product.discount || 0) / 100)).toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="font-sans text-xs font-bold text-brand-brown">₹{parseFloat(String(product.price || 0)).toLocaleString('en-IN')}</span>
-                        )}
+                          )}
+                        </div>
+
+                        {/* Inline Interactive CTA */}
+                        <div className="flex items-center text-[11px] attiz-mono font-bold tracking-wider text-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-1 lg:flex hidden">
+                          <span>VIEW</span>
+                          <ArrowRight className="w-3 h-3 transform group-hover:translate-x-1 transition-transform" />
+                        </div>
+
+                        {/* Mobile Action Button Trigger */}
                         <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            const finalPrice = product.discount && product.discount > 0 
-                              ? Math.round((product.price || 0) * (1 - (product.discount || 0) / 100)) 
-                              : (product.price || 0);
-                            addToCart({
-                              ...product,
-                              price: finalPrice,
-                              quantity: 1,
-                              selectedSize: product.sizes ? product.sizes.split(',')[0].trim() : 'M',
-                            } as any);
-                          }}
-                          className="lg:hidden p-1.5 px-3 rounded bg-brand-brown hover:bg-brand-brown-dark text-white text-[9px] font-bold tracking-widest uppercase flex items-center space-x-1 cursor-pointer transition-colors z-20"
+                          onClick={handleQuickAdd}
+                          className="lg:hidden w-8 h-8 flex items-center justify-center bg-black text-white rounded-none cursor-pointer"
+                          aria-label="Add to cart context"
                         >
-                          <ShoppingCart className="w-3 h-3" />
-                          <span>Add</span>
+                          <ShoppingBag className="w-3.5 h-3.5" />
                         </button>
                       </div>
+
                     </div>
                   </Link>
                 </div>

@@ -33,7 +33,7 @@ export default function HeroCarousel() {
   if (slides.length === 0) return null;
 
   return (
-    <section className="relative w-full aspect-[16/7] md:aspect-[21/9] overflow-hidden bg-[#F7F3EE] border-b border-brand-cream-dark/60">
+    <section className="relative w-full aspect-[16/7] md:aspect-[21/9] overflow-hidden bg-[#FAF8F5] border-b border-black/10">
       <div className="relative w-full h-full">
         {slides.map((slide, idx) => {
           const isActive = idx === currentSlide;
@@ -41,7 +41,7 @@ export default function HeroCarousel() {
           const slideLink = slide.redirect_url;
 
           const content = (
-            <div className="relative w-full h-full select-none cursor-pointer bg-[#F7F3EE]">
+            <div className="relative w-full h-full select-none cursor-pointer bg-[#FAF8F5]">
               <Image
                 src={slideImage}
                 alt="ATTIZ Hero Banner"

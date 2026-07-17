@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Phone, Lock, ChevronRight } from 'lucide-react';
+import { Phone, Lock, ChevronRight, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AuthPage() {
@@ -65,92 +65,188 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-cream/25 flex items-center justify-center py-16 px-4">
-      <div className="w-full max-w-md bg-white border border-brand-cream-dark rounded-xl shadow-lg overflow-hidden relative">
+    <div className="min-h-screen bg-[#FAF8F5] mt-[-40px] relative overflow-hidden flex items-center justify-center py-20 px-4">
+      {/* Halftone texture background */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.04] z-0"
+        style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '16px 16px' }}
+      />
 
-        <div className="bg-brand-cream/45 p-8 border-b border-brand-cream-dark text-center">
+      <div className="w-full max-w-md border-[3px] border-black bg-white shadow-[8px_8px_0_0_#111111] rotate-[-0.5deg] relative z-10">
+
+        {/* Brand Header */}
+        <div className="bg-[#FFCB05] p-8 border-b-[3px] border-black text-center relative">
           <div className="flex justify-center mb-3">
-            <Image src="/ATTIZ.png" alt="ATTIZ Logo" width={120} height={48} className="h-12 w-auto object-contain" />
+            <Image src="/ATTIZ.png" alt="ATTIZ Logo" width={110} height={44} className="h-11 w-auto object-contain" />
           </div>
-          <p className="font-sans text-[10px] text-brand-dark/45 font-bold tracking-widest uppercase mt-1">
+          <span className="attiz-mono text-[9px] font-bold text-black tracking-[0.25em] uppercase block mt-2">
             {isLogin ? 'Welcome back' : 'Create an Account'}
-          </p>
+          </span>
         </div>
 
+        {/* Forms area */}
         <div className="p-8">
-          {errorMsg && <div className="p-3 bg-red-50 text-red-600 rounded text-xs font-semibold tracking-wider text-center mb-5">{errorMsg}</div>}
-          {successMsg && <div className="p-3 bg-green-50 text-brand-brown rounded text-xs font-semibold tracking-wider text-center mb-5">{successMsg}</div>}
+          
+          {errorMsg && (
+            <div className="p-3.5 bg-white text-[#E63B2E] border-2 border-[#E63B2E] shadow-[3px_3px_0_0_#E63B2E] text-xs font-bold tracking-widest text-center mb-6 uppercase">
+              {errorMsg}
+            </div>
+          )}
+          {successMsg && (
+            <div className="p-3.5 bg-black text-[#FFCB05] border-2 border-black shadow-[3px_3px_0_0_#E63B2E] text-xs font-bold tracking-widest text-center mb-6 uppercase flex items-center justify-center space-x-2">
+              <Check className="w-4 h-4 text-[#FFCB05]" />
+              <span>{successMsg}</span>
+            </div>
+          )}
 
           {isLogin ? (
-            <form onSubmit={handleSignInSubmit} className="space-y-4">
+            <form onSubmit={handleSignInSubmit} className="space-y-5">
+              
+              {/* Phone number */}
               <div className="space-y-1">
-                <label className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase">Phone Number</label>
-                <div className="relative flex items-center">
-                  <Phone className="w-4 h-4 text-brand-dark/40 absolute left-3" />
-                  <input type="tel" name="phone" required placeholder="9999999999" value={signInDetails.phone} onChange={handleSignInChange} className="w-full pl-10 pr-4 py-3 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+                <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Phone Number *</label>
+                <div className="relative flex items-center border-2 border-black bg-white focus-within:shadow-[3px_3px_0_0_#E63B2E] focus-within:translate-x-[-1px] focus-within:translate-y-[-1px] transition-all">
+                  <Phone className="w-4 h-4 text-black/45 absolute left-3.5" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    placeholder="9999999999"
+                    value={signInDetails.phone}
+                    onChange={handleSignInChange}
+                    className="w-full pl-11 pr-4 py-3 text-xs bg-transparent border-none outline-none attiz-body text-black placeholder-black/35 font-bold tracking-wider"
+                  />
                 </div>
               </div>
+
+              {/* Password */}
               <div className="space-y-1">
-                <label className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase">Password</label>
-                <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 text-brand-dark/40 absolute left-3" />
-                  <input type="password" name="password" required placeholder="••••••••" value={signInDetails.password} onChange={handleSignInChange} className="w-full pl-10 pr-4 py-3 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+                <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Password *</label>
+                <div className="relative flex items-center border-2 border-black bg-white focus-within:shadow-[3px_3px_0_0_#E63B2E] focus-within:translate-x-[-1px] focus-within:translate-y-[-1px] transition-all">
+                  <Lock className="w-4 h-4 text-black/45 absolute left-3.5" />
+                  <input
+                    type="password"
+                    name="password"
+                    required
+                    placeholder="••••••••"
+                    value={signInDetails.password}
+                    onChange={handleSignInChange}
+                    className="w-full pl-11 pr-4 py-3 text-xs bg-transparent border-none outline-none attiz-body text-black placeholder-black/35 font-bold"
+                  />
                 </div>
               </div>
-              <button type="submit" disabled={isLoading} className="w-full mt-6 py-3.5 rounded bg-brand-brown hover:bg-brand-brown-dark disabled:bg-brand-brown/40 text-white text-[11px] font-bold tracking-[0.2em] uppercase transition-colors shadow-sm cursor-pointer">
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-6 py-3.5 border-[3px] border-black attiz-display text-xs tracking-[0.15em] uppercase bg-black text-[#FFCB05] shadow-[4px_4px_0_0_#E63B2E] hover:bg-white hover:text-black hover:shadow-[2px_2px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer disabled:opacity-50"
+              >
                 {isLoading ? 'SIGNING IN...' : 'SIGN IN'}
               </button>
+
             </form>
           ) : (
-            <form onSubmit={handleSignUpSubmit} className="space-y-4">
+            <form onSubmit={handleSignUpSubmit} className="space-y-5">
+              
+              {/* Names split row */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase">First Name</label>
-                  <input type="text" name="firstName" required placeholder="John" value={signUpDetails.firstName} onChange={handleSignUpChange} className="w-full px-4 py-3 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+                  <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">First Name *</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    required
+                    placeholder="JOHN"
+                    value={signUpDetails.firstName}
+                    onChange={handleSignUpChange}
+                    className="w-full border-2 border-black px-4 py-3 text-xs bg-transparent outline-none attiz-body text-black placeholder-black/35 font-bold focus:shadow-[3px_3px_0_0_#E63B2E] focus:translate-x-[-1px] focus:translate-y-[-1px] transition-all uppercase"
+                  />
                 </div>
                 <div className="space-y-1">
-                  <label className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase">Last Name</label>
-                  <input type="text" name="lastName" required placeholder="Doe" value={signUpDetails.lastName} onChange={handleSignUpChange} className="w-full px-4 py-3 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+                  <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Last Name *</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    required
+                    placeholder="DOE"
+                    value={signUpDetails.lastName}
+                    onChange={handleSignUpChange}
+                    className="w-full border-2 border-black px-4 py-3 text-xs bg-transparent outline-none attiz-body text-black placeholder-black/35 font-bold focus:shadow-[3px_3px_0_0_#E63B2E] focus:translate-x-[-1px] focus:translate-y-[-1px] transition-all uppercase"
+                  />
                 </div>
               </div>
+
+              {/* Phone number */}
               <div className="space-y-1">
-                <label className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase">Phone Number</label>
-                <div className="relative flex items-center">
-                  <Phone className="w-4 h-4 text-brand-dark/40 absolute left-3" />
-                  <input type="tel" name="phone" required placeholder="9999999999" value={signUpDetails.phone} onChange={handleSignUpChange} className="w-full pl-10 pr-4 py-3 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+                <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Phone Number *</label>
+                <div className="relative flex items-center border-2 border-black bg-white focus-within:shadow-[3px_3px_0_0_#E63B2E] focus-within:translate-x-[-1px] focus-within:translate-y-[-1px] transition-all">
+                  <Phone className="w-4 h-4 text-black/45 absolute left-3.5" />
+                  <input
+                    type="tel"
+                    name="phone"
+                    required
+                    placeholder="9999999999"
+                    value={signUpDetails.phone}
+                    onChange={handleSignUpChange}
+                    className="w-full pl-11 pr-4 py-3 text-xs bg-transparent border-none outline-none attiz-body text-black placeholder-black/35 font-bold tracking-wider"
+                  />
                 </div>
               </div>
+
+              {/* Passwords split row */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase">Password</label>
-                  <div className="relative flex items-center">
-                    <Lock className="w-4 h-4 text-brand-dark/40 absolute left-3" />
-                    <input type="password" name="password" required placeholder="••••••••" value={signUpDetails.password} onChange={handleSignUpChange} className="w-full pl-10 pr-3 py-3 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+                  <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Password *</label>
+                  <div className="relative flex items-center border-2 border-black bg-white focus-within:shadow-[3px_3px_0_0_#E63B2E] focus-within:translate-x-[-1px] focus-within:translate-y-[-1px] transition-all">
+                    <Lock className="w-4 h-4 text-black/45 absolute left-3.5" />
+                    <input
+                      type="password"
+                      name="password"
+                      required
+                      placeholder="••••••••"
+                      value={signUpDetails.password}
+                      onChange={handleSignUpChange}
+                      className="w-full pl-11 pr-3 py-3 text-xs bg-transparent border-none outline-none attiz-body text-black placeholder-black/35 font-bold"
+                    />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <label className="block font-sans text-[10px] font-bold tracking-widest text-brand-dark/50 uppercase">Confirm</label>
-                  <div className="relative flex items-center">
-                    <Lock className="w-4 h-4 text-brand-dark/40 absolute left-3" />
-                    <input type="password" name="confirmPassword" required placeholder="••••••••" value={signUpDetails.confirmPassword} onChange={handleSignUpChange} className="w-full pl-10 pr-3 py-3 text-xs border border-brand-cream-dark rounded bg-white font-sans outline-none focus:border-brand-brown" />
+                  <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Confirm *</label>
+                  <div className="relative flex items-center border-2 border-black bg-white focus-within:shadow-[3px_3px_0_0_#E63B2E] focus-within:translate-x-[-1px] focus-within:translate-y-[-1px] transition-all">
+                    <Lock className="w-4 h-4 text-black/45 absolute left-3.5" />
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      required
+                      placeholder="••••••••"
+                      value={signUpDetails.confirmPassword}
+                      onChange={handleSignUpChange}
+                      className="w-full pl-11 pr-3 py-3 text-xs bg-transparent border-none outline-none attiz-body text-black placeholder-black/35 font-bold"
+                    />
                   </div>
                 </div>
               </div>
-              <button type="submit" disabled={isLoading} className="w-full mt-6 py-3.5 rounded bg-brand-brown hover:bg-brand-brown-dark disabled:bg-brand-brown/40 text-white text-[11px] font-bold tracking-[0.2em] uppercase transition-colors shadow-sm cursor-pointer">
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full mt-6 py-3.5 border-[3px] border-black attiz-display text-xs tracking-[0.15em] uppercase bg-black text-[#FFCB05] shadow-[4px_4px_0_0_#E63B2E] hover:bg-white hover:text-black hover:shadow-[2px_2px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer disabled:opacity-50"
+              >
                 {isLoading ? 'CREATING ACCOUNT...' : 'CREATE ACCOUNT'}
               </button>
+
             </form>
           )}
 
-          <div className="mt-8 pt-6 border-t border-brand-cream-dark flex items-center justify-center">
-            <button
-              onClick={() => { setIsLogin(!isLogin); setErrorMsg(''); setSuccessMsg(''); }}
-              className="text-[10px] font-bold tracking-[0.15em] text-brand-brown hover:text-brand-brown-dark transition-colors uppercase flex items-center space-x-1 cursor-pointer"
-            >
-              <span>{isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          {/* Bottom toggle */}
+          <button
+            onClick={() => { setIsLogin(!isLogin); setErrorMsg(''); setSuccessMsg(''); }}
+            className="w-full text-center flex items-center justify-center space-x-1.5 cursor-pointer pt-6 mt-8 border-t border-black/10 text-black hover:text-[#E63B2E] transition-colors uppercase attiz-mono text-[10px] font-bold tracking-[0.15em]"
+          >
+            <span>{isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+
         </div>
       </div>
     </div>

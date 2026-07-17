@@ -17,30 +17,34 @@ export default function Newsletter() {
   };
 
   return (
-    <section className="py-16 bg-brand-cream border-t border-b border-brand-cream-dark/50">
+    <section className="py-20 bg-[#FAF8F5] border-t border-b border-black/10">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-        <h2 className="font-sans text-xs font-bold tracking-[0.25em] text-brand-dark mb-4 uppercase">SUBSCRIBE TO OUR EMAILS</h2>
-        <p className="font-sans text-xs sm:text-sm text-brand-dark/70 tracking-widest mb-8 max-w-md mx-auto leading-relaxed">
-          Be the first to know about new collections and exclusive offers.
+        <div className="flex items-center justify-center gap-2 mb-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#E63B2E]" />
+          <span className="attiz-mono text-[9px] font-bold tracking-[0.3em] text-[#E63B2E] uppercase">Newsletter</span>
+        </div>
+        <h2 className="attiz-display text-3xl sm:text-4xl text-black mb-4 uppercase tracking-wide">Subscribe to our emails</h2>
+        <p className="attiz-body text-xs sm:text-sm text-black/60 tracking-widest mb-8 max-w-md mx-auto leading-relaxed font-light">
+          Be the first to know about new collections, seasonal drops, and exclusive editorial updates.
         </p>
         <form onSubmit={handleSubmit} className="max-w-md mx-auto relative">
           {isSubscribed ? (
-            <div className="bg-white/80 border border-brand-brown/50 rounded p-4 text-center text-xs font-semibold text-brand-brown tracking-wider flex items-center justify-center space-x-2">
-              <Check className="w-4 h-4 text-brand-brown" />
+            <div className="bg-black text-[#FFCB05] border-2 border-black shadow-[4px_4px_0_0_#E63B2E] p-4 text-center text-xs font-bold tracking-widest uppercase flex items-center justify-center space-x-2">
+              <Check className="w-4 h-4 text-[#FFCB05]" />
               <span>THANK YOU FOR SUBSCRIBING! WELCOME TO ATTIZ.</span>
             </div>
           ) : (
-            <div className="relative flex items-center border border-brand-cream-dark/40 bg-white rounded overflow-hidden shadow-sm focus-within:ring-1 focus-within:ring-brand-brown/40 focus-within:border-brand-brown">
+            <div className="relative flex items-center border-2 border-black bg-white shadow-[4px_4px_0_0_#111111] overflow-hidden focus-within:shadow-[5px_5px_0_0_#E63B2E] transition-all">
               <input
                 type="email"
-                placeholder="Email"
+                placeholder="YOUR EMAIL ADDRESS"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3.5 text-xs text-brand-dark placeholder-brand-dark/40 bg-transparent border-none outline-none tracking-widest font-sans"
+                className="w-full px-4 py-3 text-xs text-black placeholder-black/35 bg-transparent border-none outline-none tracking-widest font-mono uppercase"
               />
-              <button type="submit" className="px-4 text-brand-dark hover:text-brand-brown transition-colors duration-300 flex items-center justify-center cursor-pointer h-full">
-                <ArrowRight className="w-4 h-4 hover:translate-x-0.5 transition-transform duration-300" />
+              <button type="submit" className="px-5 bg-black hover:bg-[#E63B2E] text-[#FFCB05] hover:text-white transition-colors duration-200 flex items-center justify-center cursor-pointer h-12 border-l-2 border-black">
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           )}

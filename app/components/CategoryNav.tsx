@@ -70,16 +70,16 @@ export default function CategoryNav() {
   };
 
   return (
-    <section className="py-12 bg-white">
+    <section className="py-16 bg-[#FAF8F5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-center font-sans text-xs font-bold tracking-[0.25em] text-brand-dark mb-10">SHOP BY CATEGORY</h2>
-        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
+        <h2 className="text-center attiz-display text-2xl sm:text-3xl font-bold tracking-wider text-black mb-12 uppercase">Shop by Category</h2>
+        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-14">
           {categories.map((cat) => (
             <div key={cat.name} onClick={() => handleCategoryClick(cat.name)} className="flex flex-col items-center group cursor-pointer">
-              <div className="w-20 h-20 rounded-full border border-brand-cream-dark flex items-center justify-center bg-brand-cream/10 text-brand-brown hover:text-brand-brown-dark hover:border-brand-brown group-hover:bg-brand-cream/35 group-hover:scale-105 transition-all duration-300 shadow-sm">
+              <div className="w-20 h-20 border-2 border-black flex items-center justify-center bg-white text-black hover:bg-[#FFCB05] transition-all duration-300 shadow-[3px_3px_0_0_#111111] group-hover:shadow-[5px_5px_0_0_#111111] group-hover:-translate-x-[2px] group-hover:-translate-y-[2px] rotate-[-1.5deg] group-hover:rotate-0">
                 {cat.icon}
               </div>
-              <span className="mt-4 font-sans text-[10px] font-semibold tracking-widest text-brand-dark group-hover:text-brand-brown transition-colors duration-300">
+              <span className="mt-4 attiz-mono text-[10px] font-bold tracking-widest text-black/60 group-hover:text-black transition-colors duration-300 uppercase">
                 {cat.name}
               </span>
             </div>

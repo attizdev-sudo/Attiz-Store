@@ -20,21 +20,29 @@ export default function PickStyles() {
   const scrollRight = () => scrollRef.current?.scrollBy({ left: 320, behavior: 'smooth' });
 
   return (
-    <section className="py-16 bg-white border-t border-brand-cream-dark">
+    <section className="py-20 border-t border-black/10 bg-[#FAF8F5]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex flex-col items-center justify-center mb-12">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-brand-cream border border-brand-cream-dark flex items-center justify-center mb-4 shadow-sm">
-            <Image src="/ATTIZ.png" alt="ATTIZ Emblem" width={40} height={40} className="object-contain" />
+          <div className="w-12 h-12 border-2 border-black bg-white flex items-center justify-center mb-4 shadow-[2px_2px_0_0_#111111] -rotate-2">
+            <Image src="/ATTIZ.png" alt="ATTIZ Emblem" width={32} height={32} className="object-contain" />
           </div>
-          <h2 className="font-sans text-xs font-bold tracking-[0.25em] text-brand-dark">PICK YOUR STYLES</h2>
+          <h2 className="attiz-display text-2xl tracking-wider text-black uppercase">Pick Your Styles</h2>
         </div>
 
         <div className="relative group">
-          <button onClick={scrollLeft} className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-6 z-20 w-10 h-10 rounded-full border border-brand-cream-dark bg-white/90 hover:bg-brand-brown hover:text-white text-brand-dark flex items-center justify-center transition-all duration-300 shadow-sm opacity-0 group-hover:opacity-100 cursor-pointer">
-            <ChevronLeft className="w-5 h-5" />
+          <button 
+            onClick={scrollLeft} 
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 sm:-translate-x-6 z-20 w-9 h-9 bg-white hover:bg-[#FFCB05] text-black border-2 border-black flex items-center justify-center shadow-[2px_2px_0_0_#111111] transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+            aria-label="Scroll left"
+          >
+            <ChevronLeft className="w-4 h-4" />
           </button>
-          <button onClick={scrollRight} className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 sm:translate-x-6 z-20 w-10 h-10 rounded-full border border-brand-cream-dark bg-white/90 hover:bg-brand-brown hover:text-white text-brand-dark flex items-center justify-center transition-all duration-300 shadow-sm opacity-0 group-hover:opacity-100 cursor-pointer">
-            <ChevronRight className="w-5 h-5" />
+          <button 
+            onClick={scrollRight} 
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 sm:translate-x-6 z-20 w-9 h-9 bg-white hover:bg-[#FFCB05] text-black border-2 border-black flex items-center justify-center shadow-[2px_2px_0_0_#111111] transition-all cursor-pointer opacity-0 group-hover:opacity-100"
+            aria-label="Scroll right"
+          >
+            <ChevronRight className="w-4 h-4" />
           </button>
 
           <div
@@ -46,14 +54,14 @@ export default function PickStyles() {
               <div
                 key={idx}
                 onClick={() => router.push(`/?secondary=${style.category}`)}
-                className="shrink-0 w-72 sm:w-70 md:w-[18rem] snap-start border border-brand-cream-dark bg-white shadow-sm overflow-hidden flex flex-col group cursor-pointer"
+                className="shrink-0 w-72 sm:w-70 md:w-[18rem] snap-start border-2 border-black bg-white shadow-[3px_3px_0_0_#111111] hover:shadow-[6px_6px_0_0_#111111] hover:-translate-x-[2px] hover:-translate-y-[2px] transition-all duration-300 overflow-hidden flex flex-col group cursor-pointer"
               >
-                <div className="h-96 overflow-hidden bg-brand-cream relative">
+                <div className="h-96 overflow-hidden bg-[#FAF8F5] relative border-b-2 border-black">
                   <img src={style.image} alt={style.name} className="w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-brand-dark/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
-                <div className="bg-brand-brown group-hover:bg-brand-brown-dark p-3 text-center transition-colors duration-300">
-                  <span className="font-sans text-[10px] font-bold tracking-[0.2em] text-white">{style.name}</span>
+                <div className="bg-black group-hover:bg-[#E63B2E] p-3.5 text-center transition-colors duration-300">
+                  <span className="attiz-mono text-[9px] font-bold tracking-[0.2em] text-[#FFCB05] group-hover:text-white uppercase transition-colors">{style.name}</span>
                 </div>
               </div>
             ))}
