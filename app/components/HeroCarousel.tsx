@@ -6,16 +6,10 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 
-const DEFAULT_SLIDES = [
-  { image_url: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1600&q=90', redirect_url: '/' },
-  { image_url: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1600&q=90', redirect_url: '/' },
-  { image_url: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1600&q=90', redirect_url: '/' },
-];
-
 export default function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { banners } = useStore();
-  const slides = banners && banners.length > 0 ? banners : DEFAULT_SLIDES;
+  const slides = banners || [];
 
   useEffect(() => {
     if (currentSlide >= slides.length) setCurrentSlide(0);
@@ -56,9 +50,8 @@ export default function HeroCarousel() {
           return (
             <div
               key={idx}
-              className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${
-                isActive ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-95 pointer-events-none'
-              }`}
+              className={`absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out ${isActive ? 'opacity-100 z-10 scale-100' : 'opacity-0 z-0 scale-95 pointer-events-none'
+                }`}
             >
               {slideLink ? (
                 <Link href={slideLink} className="block w-full h-full">
@@ -92,9 +85,8 @@ export default function HeroCarousel() {
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  idx === currentSlide ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'
-                }`}
+                className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === currentSlide ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'
+                  }`}
               />
             ))}
           </div>

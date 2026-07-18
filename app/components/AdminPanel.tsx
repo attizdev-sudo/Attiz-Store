@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Package, Tags, ClipboardList, Image as ImageIcon, Plus } from 'lucide-react';
+import { Package, Tags, ClipboardList, Image as ImageIcon, Plus, Layers, Grid } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
 import type { Product } from '@/lib/types';
@@ -14,12 +14,14 @@ import ProductsTable from './admin/ProductsTable';
 import CategoriesManager from './admin/CategoriesManager';
 import OrdersManager from './admin/OrdersManager';
 import BannersManager from './admin/BannersManager';
+import EditorialBannersManager from './admin/EditorialBannersManager';
+import LookbookStylesManager from './admin/LookbookStylesManager';
 
 export default function AdminPanel() {
   const { user } = useAuth();
   const { refreshData } = useStore();
 
-  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'orders' | 'banners'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'categories' | 'orders' | 'banners' | 'editorial_banners' | 'lookbook_styles'>('products');
   const [mounted, setMounted] = useState(false);
 
   // Form open/close and editing state
@@ -86,6 +88,8 @@ export default function AdminPanel() {
             { key: 'categories', label: 'Categories Management', icon: <Tags className="w-4 h-4" /> },
             { key: 'orders', label: 'Customer Orders', icon: <ClipboardList className="w-4 h-4" /> },
             { key: 'banners', label: 'Hero Banners', icon: <ImageIcon className="w-4 h-4" /> },
+            { key: 'editorial_banners', label: 'Editorial Banners', icon: <Layers className="w-4 h-4" /> },
+            { key: 'lookbook_styles', label: 'Lookbook Styles', icon: <Grid className="w-4 h-4" /> },
           ] as const).map((tab) => (
             <button
               key={tab.key}
@@ -168,6 +172,14 @@ export default function AdminPanel() {
 
         {activeTab === 'banners' && (
           <BannersManager setErrorMsg={setErrorMsg} setSuccessMsg={setSuccessMsg} />
+        )}
+
+        {activeTab === 'editorial_banners' && (
+          <EditorialBannersManager setErrorMsg={setErrorMsg} setSuccessMsg={setSuccessMsg} />
+        )}
+
+        {activeTab === 'lookbook_styles' && (
+          <LookbookStylesManager setErrorMsg={setErrorMsg} setSuccessMsg={setSuccessMsg} />
         )}
       </div>
     </div>

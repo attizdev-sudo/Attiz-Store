@@ -39,6 +39,7 @@ export default function ProductForm({
     specifications: '',
     wash_care: '',
     size_chart: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800',
+    split_variants: false,
   });
 
   // 2. Active sizes & colors list
@@ -80,6 +81,7 @@ export default function ProductForm({
         specifications: editingProduct.specifications || '',
         wash_care: editingProduct.wash_care || '',
         size_chart: editingProduct.size_chart || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800',
+        split_variants: editingProduct.split_variants || false,
       });
 
       const variants = editingProduct.product_variants || [];
@@ -128,6 +130,7 @@ export default function ProductForm({
         specifications: '',
         wash_care: '',
         size_chart: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800',
+        split_variants: false,
       });
       setColors(['Black', 'Dark Wine', 'Teal']);
       setSizes(['S', 'M', 'L', 'XL', 'XXL']);
@@ -412,6 +415,7 @@ export default function ProductForm({
         wash_care: productData.wash_care.trim(),
         category_id: selectedCategoryIds[0] || null,
         size_chart: productData.size_chart,
+        split_variants: productData.split_variants,
       };
 
       const variantsPayload: any[] = [];
@@ -949,6 +953,27 @@ export default function ProductForm({
                 className={inputCls + ' h-20 resize-none'}
                 placeholder="e.g. Cold machine wash..."
               />
+            </div>
+            
+            <div className="flex items-center space-x-3 bg-brand-cream/15 p-4 border border-brand-cream-dark rounded-lg mt-4">
+              <input
+                type="checkbox"
+                id="split_variants"
+                disabled={isSubmitting}
+                checked={productData.split_variants || false}
+                onChange={(e) =>
+                  setProductData((p) => ({ ...p, split_variants: e.target.checked }))
+                }
+                className="w-4 h-4 text-brand-brown focus:ring-brand-brown border-brand-cream-dark rounded cursor-pointer"
+              />
+              <div className="flex flex-col text-left">
+                <label htmlFor="split_variants" className="text-xs font-bold text-brand-dark cursor-pointer uppercase tracking-wider">
+                  List Colors Separately in Catalog
+                </label>
+                <span className="text-[9px] text-brand-dark/45 uppercase tracking-widest leading-relaxed mt-0.5 font-sans font-medium">
+                  Display this product as multiple entries in the store grid, one for each color variant.
+                </span>
+              </div>
             </div>
           </div>
         )}

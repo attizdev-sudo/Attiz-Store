@@ -58,6 +58,7 @@ export interface Product {
   colors?: string;
   stock?: number;
   size_chart?: string;
+  split_variants?: boolean;
 }
 
 export interface Category {
@@ -84,6 +85,30 @@ export interface Banner {
   id: string;
   image_url: string;
   redirect_url: string;
+  created_at?: string;
+}
+
+export interface EditorialBanner {
+  id: string;
+  image_url: string;
+  redirect_url: string;
+  tag: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  sort_order?: number;
+  created_at?: string;
+}
+
+export interface LookbookStyle {
+  id: string;
+  name: string;
+  subtitle: string;
+  tag: string;
+  category: string;
+  image_url: string;
+  color?: string;
+  sort_order?: number;
   created_at?: string;
 }
 

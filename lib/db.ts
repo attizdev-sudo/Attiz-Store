@@ -217,7 +217,19 @@ export async function deleteUnreferencedImages(urls: string[]): Promise<void> {
       .select('*', { count: 'exact', head: true })
       .eq('image_url', url);
 
-    const totalRefs = (variantImgCount || 0) + (productSizeChartCount || 0) + (bannerImgCount || 0);
+    // Check editorial_banners image
+    const { count: editorialBannerImgCount } = await supabase
+      .from('editorial_banners')
+      .select('*', { count: 'exact', head: true })
+      .eq('image_url', url);
+
+    // Check lookbook_styles image
+    const { count: lookbookStyleImgCount } = await supabase
+      .from('lookbook_styles')
+      .select('*', { count: 'exact', head: true })
+      .eq('image_url', url);
+
+    const totalRefs = (variantImgCount || 0) + (productSizeChartCount || 0) + (bannerImgCount || 0) + (editorialBannerImgCount || 0) + (lookbookStyleImgCount || 0);
 
     if (totalRefs === 0) {
       const { error } = await supabase.storage.from(resolvedBucket).remove([filePath]);

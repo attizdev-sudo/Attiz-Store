@@ -106,7 +106,47 @@ function ProductGridInner() {
     return true;
   });
 
-  const sortedProducts = [...filteredProducts].sort((a, b) => {
+  // Split products by color variants if split_variants is checked
+  const splitProducts: (Product & { selectedColorVariant?: string; colorSpecificImage?: string; colorSpecificAltImage?: string })[] = [];
+  
+  filteredProducts.forEach((product) => {
+    if (product.split_variants && product.product_variants && product.product_variants.length > 0) {
+      const colors = Array.from(new Set(product.product_variants.map(v => v.color))).filter(Boolean);
+      if (colors.length > 0) {
+        colors.forEach((color) => {
+          const colorVariants = product.product_variants!.filter(v => v.color === color);
+          const firstColorVariant = colorVariants[0];
+          
+          const colorImages: string[] = [];
+          colorVariants.forEach((v) => {
+            v.product_variant_images?.forEach((img) => {
+              if (img.image_url && !colorImages.includes(img.image_url)) {
+                colorImages.push(img.image_url);
+              }
+            });
+          });
+          
+          const primaryImage = colorImages[0] || product.image;
+          const secondaryImage = colorImages[1] || colorImages[0] || product.image;
+          
+          splitProducts.push({
+            ...product,
+            title: `${product.title} - ${color}`,
+            price: firstColorVariant ? parseFloat(String(firstColorVariant.price)) : product.price,
+            discount: firstColorVariant ? parseFloat(String(firstColorVariant.discount || 0)) : product.discount,
+            image: primaryImage,
+            selectedColorVariant: color,
+            colorSpecificImage: primaryImage,
+            colorSpecificAltImage: secondaryImage,
+          });
+        });
+        return;
+      }
+    }
+    splitProducts.push(product);
+  });
+
+  const sortedProducts = [...splitProducts].sort((a, b) => {
     if (selectedSort === 'low-high') return parseFloat(String(a.price)) - parseFloat(String(b.price));
     if (selectedSort === 'high-low') return parseFloat(String(b.price)) - parseFloat(String(a.price));
     return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
@@ -145,7 +185,7 @@ function ProductGridInner() {
           <div>
             <div className="flex items-center gap-2 mb-3">
               <span className="w-1.5 h-1.5 rounded-full bg-[#E63B2E]" />
-              <span className="attiz-mono text-[11px] font-bold tracking-[0.3em] text-[#E63B2E] uppercase">Attiz Edition</span>
+              <span className="attiz-mono text-[11px] font-bold tracking-[0.3em] text-[#E63B2E] uppercase">Attiz</span>
             </div>
             <h2 className="attiz-display text-5xl sm:text-6xl tracking-tight uppercase leading-none">
               {bannerTitle}
@@ -233,8 +273,11 @@ function ProductGridInner() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-16">
             {sortedProducts.map((product) => {
               const isLiked = wishlist[product.id] || false;
+              const cardKey = (product as any).selectedColorVariant 
+                ? `${product.id}-${(product as any).selectedColorVariant}` 
+                : product.id;
               const images = getProductImages(product);
-              const nextImage = images[1];
+              const nextImage = (product as any).colorSpecificAltImage || images[1];
               const finalPrice = product.discount && product.discount > 0
                 ? Math.round((product.price || 0) * (1 - (product.discount || 0) / 100))
                 : (product.price || 0);
@@ -242,17 +285,30 @@ function ProductGridInner() {
               const handleQuickAdd = (e: React.MouseEvent) => {
                 e.preventDefault();
                 e.stopPropagation();
+                
+                const selectedSize = product.sizes ? product.sizes.split(',')[0].trim() : 'M';
+                const targetColor = (product as any).selectedColorVariant || '';
+                const targetVariant = product.product_variants?.find(v => 
+                  v.size === selectedSize && 
+                  (!targetColor || v.color.toLowerCase() === targetColor.toLowerCase())
+                ) || product.product_variants?.[0];
+
                 addToCart({
                   ...product,
                   price: finalPrice,
                   quantity: 1,
-                  selectedSize: product.sizes ? product.sizes.split(',')[0].trim() : 'M',
+                  selectedSize,
+                  selectedColor: targetColor || (targetVariant?.color) || '',
                 } as any);
               };
 
+              const queryColor = (product as any).selectedColorVariant 
+                ? `?color=${encodeURIComponent((product as any).selectedColorVariant)}` 
+                : '';
+
               return (
-                <div key={product.id} className="group relative flex flex-col justify-between">
-                  <Link href={`/product/${product.id}`} className="flex flex-col h-full relative">
+                <div key={cardKey} className="group relative flex flex-col justify-between">
+                  <Link href={`/product/${product.id}${queryColor}`} className="flex flex-col h-full relative">
                     
                     {/* Media container */}
                     <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden transition-all duration-500 ease-out group-hover:shadow-xl group-hover:shadow-black/5">
