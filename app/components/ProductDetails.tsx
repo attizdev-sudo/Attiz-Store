@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Image from 'next/image';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Star, CheckCircle, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -44,9 +44,11 @@ const sortSizes = (sizes: string[]): string[] => {
   });
 };
 
-export default function ProductDetails() {
+function ProductDetailsInner() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialColorParam = searchParams.get('color');
   const { addToCart, setIsCartOpen } = useCart();
   const { products, dbLoading } = useStore();
 
@@ -76,6 +78,7 @@ export default function ProductDetails() {
   const dragStart = useRef({ x: 0, y: 0 });
   const lastClickTime = useRef(0);
   const swipeStartX = useRef<number | null>(null);
+  const mainImageRef = useRef<HTMLImageElement>(null);
   const [accordionOpen, setAccordionOpen] = useState({ description: true, specifications: false, washCare: false });
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
@@ -92,7 +95,16 @@ export default function ProductDetails() {
     if (variants.length > 0) {
       const colors = Array.from(new Set(variants.map(v => v.color))).filter(Boolean);
       const sizes = sortSizes(Array.from(new Set(variants.map(v => v.size))).filter(Boolean));
-      if (colors.length > 0) setSelectedColor(colors[0]);
+      
+      const matchedColor = initialColorParam && colors.some(c => c.toLowerCase() === initialColorParam.toLowerCase())
+        ? colors.find(c => c.toLowerCase() === initialColorParam.toLowerCase()) || ''
+        : '';
+
+      if (matchedColor) {
+        setSelectedColor(matchedColor);
+      } else if (colors.length > 0) {
+        setSelectedColor(colors[0]);
+      }
       if (sizes.length > 0) setSelectedSize(sizes[0]);
     } else {
       if (product?.sizes) {
@@ -100,11 +112,18 @@ export default function ProductDetails() {
         if (sizes.length > 0) setSelectedSize(sizes[0]);
       }
       if (product?.colors) {
-        const cols = product.colors.split(',');
-        if (cols.length > 0) setSelectedColor(cols[0].trim());
+        const cols = product.colors.split(',').map(c => c.trim());
+        const matchedColor = initialColorParam && cols.some(c => c.toLowerCase() === initialColorParam.toLowerCase())
+          ? cols.find(c => c.toLowerCase() === initialColorParam.toLowerCase()) || ''
+          : '';
+        if (matchedColor) {
+          setSelectedColor(matchedColor);
+        } else if (cols.length > 0) {
+          setSelectedColor(cols[0]);
+        }
       }
     }
-  }, [id, product]);
+  }, [id, product, initialColorParam]);
 
   const toggleAccordion = (section: keyof typeof accordionOpen) => {
     setAccordionOpen((prev) => ({ ...prev, [section]: !prev[section] }));
@@ -186,8 +205,29 @@ export default function ProductDetails() {
   useEffect(() => {
     if (currentImageUrl) {
       setIsImageLoading(true);
+      // If the image is cached, DOM complete status changes immediately.
+      // A small timeout allows the browser to update status before checking.
+      const timer = setTimeout(() => {
+        if (mainImageRef.current && mainImageRef.current.complete) {
+          setIsImageLoading(false);
+        }
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [currentImageUrl]);
+
+  // Synchronize active thumbnail index when selectedColor changes
+  useEffect(() => {
+    if (selectedColor && thumbnails && thumbnails.length > 0) {
+      const currentThumb = thumbnails[activeThumbIdx];
+      if (!currentThumb || !currentThumb.color || currentThumb.color.toLowerCase() !== selectedColor.toLowerCase()) {
+        const targetIdx = thumbnails.findIndex((t) => t.color && t.color.toLowerCase() === selectedColor.toLowerCase());
+        if (targetIdx !== -1) {
+          setActiveThumbIdx(targetIdx);
+        }
+      }
+    }
+  }, [selectedColor, thumbnails, activeThumbIdx]);
 
   if (dbLoading && !product) {
     return (
@@ -268,6 +308,11 @@ export default function ProductDetails() {
         v.size.toLowerCase() === sz.toLowerCase()
     );
     return !variant || variant.stock <= 0;
+  };
+
+  const getColorImage = (col: string) => {
+    const thumb = thumbnails.find((t) => t.color.toLowerCase() === col.toLowerCase());
+    return thumb ? thumb.url : null;
   };
 
   const isColorDisabled = (col: string) => {
@@ -446,6 +491,7 @@ export default function ProductDetails() {
                             </div>
                           )}
                           <img
+                            ref={mainImageRef}
                             src={thumb.url || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
                             alt={product.title}
                             className={`w-full h-full object-cover object-center pointer-events-none select-none transition-all duration-250 ease-out ${isDragging ? '' : 'transition-transform'}`}
@@ -619,10 +665,13 @@ export default function ProductDetails() {
               {/* Colors */}
               {colorsArray.length > 0 && (
                 <div className="mb-4">
-                  <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/50 uppercase mb-1.5">Color Options</span>
-                  <div className="flex flex-wrap gap-2">
+                  <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/50 uppercase mb-1.5">
+                    Color: <span className="text-black font-extrabold">{selectedColor}</span>
+                  </span>
+                  <div className="flex flex-wrap gap-4">
                     {colorsArray.map((col) => {
                       const isDisabled = isColorDisabled(col);
+                      const colorImageUrl = getColorImage(col);
                       return (
                         <button
                           key={col}
@@ -635,14 +684,27 @@ export default function ProductDetails() {
                             if (sortedColSizes.length > 0) setSelectedSize(sortedColSizes[0]);
                           }}
                           disabled={isDisabled}
-                          className={`px-3 py-1.5 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all cursor-pointer ${isDisabled
-                            ? 'border-black/15 text-black/25 bg-black/[0.02] cursor-not-allowed line-through'
+                          title={col}
+                          className={`group/color relative w-20 h-25 border-2 overflow-hidden transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer ${isDisabled
+                            ? 'border-black/15 opacity-40 cursor-not-allowed'
                             : selectedColor === col
-                              ? 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
-                              : 'border-black/70 text-black hover:border-black bg-white'
+                              ? 'border-black bg-white shadow-[3px_3px_0_0_#E63B2E]'
+                              : 'border-black/70 hover:border-black bg-white'
                             }`}
                         >
-                          {col}
+                          {colorImageUrl ? (
+                            <Image
+                              src={colorImageUrl}
+                              alt={col}
+                              fill
+                              className="object-cover object-center"
+                              sizes="128px"
+                            />
+                          ) : (
+                            <span className="w-full h-full flex items-center justify-center text-[9px] font-bold uppercase p-0.5 text-center leading-none text-black">
+                              {col}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -931,5 +993,17 @@ export default function ProductDetails() {
 
       </div>
     </div>
+  );
+}
+
+export default function ProductDetails() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <ProductDetailsInner />
+    </Suspense>
   );
 }

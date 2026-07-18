@@ -1,15 +1,17 @@
 'use client';
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import type { Product, Category, Order, Banner } from '@/lib/types';
+import type { Product, Category, Order, Banner, EditorialBanner, LookbookStyle } from '@/lib/types';
 
-export type { Product, Category, Order, Banner };
+export type { Product, Category, Order, Banner, EditorialBanner, LookbookStyle };
 
 interface StoreContextValue {
   products: Product[];
   categories: Category[];
   orders: Order[];
   banners: Banner[];
+  editorialBanners: EditorialBanner[];
+  lookbookStyles: LookbookStyle[];
   dbLoading: boolean;
   refreshData: () => Promise<void>;
   addProduct: (data: Partial<Product>) => Promise<{ data: unknown; error: unknown }>;
@@ -20,6 +22,10 @@ interface StoreContextValue {
   deleteCategory: (id: string) => Promise<{ data: unknown; error: unknown }>;
   addBanner: (data: Partial<Banner>) => Promise<{ data: unknown; error: unknown }>;
   deleteBanner: (id: string) => Promise<{ data: unknown; error: unknown }>;
+  addEditorialBanner: (data: Partial<EditorialBanner>) => Promise<{ data: unknown; error: unknown }>;
+  deleteEditorialBanner: (id: string) => Promise<{ data: unknown; error: unknown }>;
+  addLookbookStyle: (data: Partial<LookbookStyle>) => Promise<{ data: unknown; error: unknown }>;
+  deleteLookbookStyle: (id: string) => Promise<{ data: unknown; error: unknown }>;
   updateOrderStatus: (orderId: string, nextStatus: string) => Promise<{ data: unknown; error: unknown }>;
 }
 
@@ -54,23 +60,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [banners, setBanners] = useState<Banner[]>([]);
+  const [editorialBanners, setEditorialBanners] = useState<EditorialBanner[]>([]);
+  const [lookbookStyles, setLookbookStyles] = useState<LookbookStyle[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
 
   const refreshData = async () => {
     try {
       setDbLoading(true);
       const sessionToken = getSessionToken();
-      const [prodRes, catRes, ordRes, banRes] = await Promise.all([
+      const [prodRes, catRes, ordRes, banRes, edBanRes, lbStyleRes] = await Promise.all([
         fetch('/api/products', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
         fetch('/api/categories', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
         fetch('/api/orders', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
         fetch('/api/banners', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
+        fetch('/api/editorial-banners', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
+        fetch('/api/lookbook-styles', { credentials: 'include', headers: sessionToken ? { 'x-attiz-session': sessionToken } : undefined }),
       ]);
-      const [prodData, catData, ordData, banData] = await Promise.all([
+      const [prodData, catData, ordData, banData, edBanData, lbStyleData] = await Promise.all([
         prodRes.json(),
         catRes.json(),
         ordRes.json(),
         banRes.json(),
+        edBanRes.json(),
+        lbStyleRes.json(),
       ]);
       const enrichedProducts = Array.isArray(prodData)
         ? prodData.map((p: any) => {
@@ -109,6 +121,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setCategories(Array.isArray(catData) ? catData : []);
       setOrders(Array.isArray(ordData) ? ordData : []);
       setBanners(Array.isArray(banData) ? banData : []);
+      setEditorialBanners(Array.isArray(edBanData) ? edBanData : []);
+      setLookbookStyles(Array.isArray(lbStyleData) ? lbStyleData : []);
     } catch (e) {
       console.error('Error fetching store data:', e);
     } finally {
@@ -166,6 +180,30 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return result;
   };
 
+  const addEditorialBanner = async (data: Partial<EditorialBanner>) => {
+    const result = await apiFetch('/api/editorial-banners', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!result.error) await refreshData();
+    return result;
+  };
+
+  const deleteEditorialBanner = async (id: string) => {
+    const result = await apiFetch(`/api/editorial-banners/${id}`, { method: 'DELETE' });
+    if (!result.error) await refreshData();
+    return result;
+  };
+
+  const addLookbookStyle = async (data: Partial<LookbookStyle>) => {
+    const result = await apiFetch('/api/lookbook-styles', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    if (!result.error) await refreshData();
+    return result;
+  };
+
+  const deleteLookbookStyle = async (id: string) => {
+    const result = await apiFetch(`/api/lookbook-styles/${id}`, { method: 'DELETE' });
+    if (!result.error) await refreshData();
+    return result;
+  };
+
   const updateOrderStatus = async (orderId: string, nextStatus: string) => {
     const result = await apiFetch(`/api/orders/${orderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: nextStatus }) });
     if (!result.error) await refreshData();
@@ -174,10 +212,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <StoreContext.Provider value={{
-      products, categories, orders, banners, dbLoading, refreshData,
+      products, categories, orders, banners, editorialBanners, lookbookStyles, dbLoading, refreshData,
       addProduct, editProduct, deleteProduct,
       addCategory, updateCategory, deleteCategory,
       addBanner, deleteBanner,
+      addEditorialBanner, deleteEditorialBanner,
+      addLookbookStyle, deleteLookbookStyle,
       updateOrderStatus,
     }}>
       {children}

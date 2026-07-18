@@ -35,19 +35,20 @@ const SLIDE_INFO = [
 
 export default function EditorialHero() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { banners } = useStore();
+  const { editorialBanners } = useStore();
   
-  const rawSlides = banners && banners.length > 0 ? banners : DEFAULT_SLIDES;
-  const slides = rawSlides.map((slide, idx) => {
-    const info = SLIDE_INFO[idx % SLIDE_INFO.length];
-    return {
-      ...slide,
-      title: (slide as any).title || info.title,
-      subtitle: (slide as any).subtitle || info.subtitle,
-      tag: (slide as any).tag || info.tag,
-      description: (slide as any).description || info.description,
-    };
-  });
+  const slides = editorialBanners && editorialBanners.length > 0
+    ? editorialBanners
+    : DEFAULT_SLIDES.map((slide, idx) => {
+        const info = SLIDE_INFO[idx % SLIDE_INFO.length];
+        return {
+          ...slide,
+          title: info.title,
+          subtitle: info.subtitle,
+          tag: info.tag,
+          description: info.description,
+        };
+      });
 
   useEffect(() => {
     if (currentSlide >= slides.length) setCurrentSlide(0);
