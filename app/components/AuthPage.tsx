@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Phone, Lock, ChevronRight, Check, Mail, RefreshCw, MailCheck, Eye, EyeOff } from 'lucide-react';
+import { Phone, Lock, ChevronRight, Check, Mail, RefreshCw, MailCheck, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 // ── Google Brand Icon ─────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ function Field({
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'login' | 'signup' }) {
-  const { signin, signup, resendVerification, user } = useAuth();
+  const { signin, signup, resendVerification, user, sessionLoading } = useAuth();
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(defaultMode === 'login');
 
@@ -86,6 +86,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [emailNotVerified, setEmailNotVerified] = useState(false);
   const [pendingVerification, setPendingVerification] = useState<{ email: string; message: string } | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -99,11 +100,19 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
     }
   }, [user, router]);
 
-  // Handle URL error parameters from Google OAuth redirect
+  // Handle URL parameters from Google OAuth redirect
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const error = params.get('error');
+      const google = params.get('google');
+
+      if (google === 'success') {
+        // Coming back from successful Google OAuth — show spinner while session loads
+        setGoogleLoading(true);
+        return;
+      }
+
       if (error) {
         const messages: Record<string, string> = {
           google_auth_not_configured: 'Google Sign-In is not configured on the server.',
@@ -119,6 +128,13 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
       }
     }
   }, []);
+
+  // Once session finishes loading, stop the google spinner
+  useEffect(() => {
+    if (!sessionLoading) {
+      setGoogleLoading(false);
+    }
+  }, [sessionLoading]);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -183,7 +199,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
   };
 
   const handleGoogleSignIn = () => {
-    setIsLoading(true);
+    setGoogleLoading(true);
     window.location.href = '/api/auth/google';
   };
 
@@ -238,6 +254,34 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
             >
               Back to Sign In
             </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Session Loading Screen (shown while checking session after Google OAuth) ──
+  if (sessionLoading || googleLoading) {
+    return (
+      <div className="min-h-screen bg-[#FAF8F5] mt-[-40px] flex items-center justify-center px-4 py-8">
+        <div
+          className="pointer-events-none fixed inset-0 opacity-[0.03] z-0"
+          style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '18px 18px' }}
+        />
+        <div className="w-full max-w-sm border-[3px] border-black bg-white shadow-[8px_8px_0_0_#111111] rotate-[-0.5deg] relative z-10">
+          <div className="bg-[#111111] px-6 py-5 border-b-[3px] border-black flex items-center justify-between">
+            <Image src="/ATTIZ.png" alt="ATTIZ" width={80} height={32} className="h-8 w-auto object-contain" />
+            <span className="bg-[#FFCB05] text-black attiz-mono text-[8px] font-bold tracking-[0.2em] uppercase px-2.5 py-1">
+              {googleLoading ? 'Google' : 'Loading'}
+            </span>
+          </div>
+          <div className="p-10 flex flex-col items-center justify-center gap-4">
+            <div className="w-12 h-12 border-[3px] border-black bg-black flex items-center justify-center shadow-[4px_4px_0_0_#FFCB05]">
+              <Loader2 className="w-6 h-6 text-[#FFCB05] animate-spin" />
+            </div>
+            <p className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase text-center">
+              {googleLoading ? 'Signing you in with Google...' : 'Checking your session...'}
+            </p>
           </div>
         </div>
       </div>
@@ -300,11 +344,13 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
             type="button"
             id="google-signin-btn"
             onClick={handleGoogleSignIn}
-            disabled={isLoading}
+            disabled={isLoading || googleLoading}
             className="w-full py-3 border-[3px] border-black bg-white text-black shadow-[4px_4px_0_0_#4285F4] hover:shadow-[2px_2px_0_0_#4285F4] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2.5"
           >
-            <GoogleIcon />
-            <span className="attiz-body text-[13px] font-semibold tracking-wide">Continue with Google</span>
+            {googleLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <GoogleIcon />}
+            <span className="attiz-body text-[13px] font-semibold tracking-wide">
+              {googleLoading ? 'Signing in...' : 'Continue with Google'}
+            </span>
           </button>
 
           <Divider label="or" />

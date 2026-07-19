@@ -298,19 +298,74 @@ export default function Navbar() {
                 )}
               </div>
             ))}
-            <div className="pt-4 border-t-2 border-black/10 flex items-center justify-between text-xs font-semibold text-brand-dark">
-              <span className="attiz-mono text-[11px] font-bold text-black/50 uppercase tracking-widest">INR (₹) | India</span>
-              <div className="flex space-x-4">
-                {user ? (
-                  <button onClick={() => { router.push('/orders'); setIsMobileMenuOpen(false); }} className="text-[#E63B2E] tracking-widest text-[11px] uppercase font-bold attiz-mono">
-                    ORDERS ({user.first_name})
+            {/* ── Mobile User Section ── */}
+            <div className="pt-4 border-t-2 border-black/10 space-y-2">
+              <span className="attiz-mono text-[9px] font-bold text-black/35 uppercase tracking-widest block">INR (₹) | India</span>
+
+              {user ? (
+                <div className="border-2 border-black bg-white shadow-[3px_3px_0_0_#111111] overflow-hidden">
+                  {/* Profile header */}
+                  <div className="flex items-center gap-3 px-4 py-3 bg-[#111111]">
+                    <div className="w-9 h-9 bg-[#FFCB05] border-2 border-[#FFCB05] flex items-center justify-center shrink-0">
+                      <span className="attiz-display text-base font-bold text-black">
+                        {user.first_name?.[0]?.toUpperCase() ?? 'U'}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="attiz-display text-[13px] tracking-wider text-white truncate">
+                        {user.first_name} {user.last_name}
+                      </p>
+                      <span className={`attiz-mono text-[8px] font-bold tracking-widest uppercase px-1.5 py-0.5 inline-block mt-0.5 ${user.role === 'admin' ? 'bg-[#E63B2E] text-white' : 'bg-[#FFCB05] text-black'}`}>
+                        {user.role}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Action links */}
+                  <div className="divide-y divide-black/10">
+                    <button
+                      onClick={() => { router.push('/orders'); setIsMobileMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 attiz-mono text-[11px] font-bold tracking-wider text-black/80 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                    >
+                      <ClipboardList className="w-4 h-4 shrink-0 text-black/40" />
+                      <span>My Orders</span>
+                    </button>
+
+                    {user.role === 'admin' && (
+                      <button
+                        onClick={() => { router.push('/admin'); setIsMobileMenuOpen(false); }}
+                        className="w-full flex items-center gap-3 px-4 py-3 attiz-mono text-[11px] font-bold tracking-wider text-black/80 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                      >
+                        <Database className="w-4 h-4 shrink-0 text-black/40" />
+                        <span>Admin Console</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => { setIsMobileMenuOpen(false); logout().then(() => router.push('/')); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 attiz-mono text-[11px] font-bold tracking-wider text-[#E63B2E] hover:bg-red-50 transition-colors cursor-pointer uppercase text-left"
+                    >
+                      <LogOut className="w-4 h-4 shrink-0" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2.5 pt-1">
+                  <button
+                    onClick={() => { router.push('/login'); setIsMobileMenuOpen(false); }}
+                    className="py-3 border-[3px] border-black bg-white text-black attiz-mono text-[10px] font-bold tracking-widest uppercase shadow-[3px_3px_0_0_#111111] hover:bg-black hover:text-white transition-all cursor-pointer"
+                  >
+                    Sign In
                   </button>
-                ) : (
-                  <button onClick={() => { router.push('/auth'); setIsMobileMenuOpen(false); }} className="text-black tracking-widest text-[11px] uppercase font-bold attiz-mono">
-                    SIGN IN
+                  <button
+                    onClick={() => { router.push('/signup'); setIsMobileMenuOpen(false); }}
+                    className="py-3 border-[3px] border-black bg-black text-[#FFCB05] attiz-mono text-[10px] font-bold tracking-widest uppercase shadow-[3px_3px_0_0_#E63B2E] hover:bg-white hover:text-black transition-all cursor-pointer"
+                  >
+                    Sign Up
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
