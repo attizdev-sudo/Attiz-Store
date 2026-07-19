@@ -5,6 +5,7 @@ import type { SessionUser } from '@/lib/types';
 
 interface AuthContextValue {
   user: SessionUser | null;
+  sessionLoading: boolean;
   signin: (email: string, password: string) => Promise<{ success: boolean; message?: string; code?: string; user?: SessionUser }>;
   signup: (firstName: string, lastName: string, email: string, phone: string, password: string, acceptTerms: boolean) => Promise<{ success: boolean; pending?: boolean; message?: string; user?: SessionUser }>;
   resendVerification: (email: string) => Promise<{ ok: boolean }>;
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
 
   useEffect(() => {
     async function checkSession() {
@@ -22,14 +24,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch('/api/auth/session');
         if (res.ok) {
           const json = await res.json();
-          if (json.user) {
-            setUser(json.user);
-          } else {
-            setUser(null);
-          }
+          setUser(json.user ?? null);
+        } else {
+          setUser(null);
         }
       } catch {
         setUser(null);
+      } finally {
+        setSessionLoading(false);
       }
     }
     checkSession();
@@ -90,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, signin, signup, resendVerification, logout }}>
+    <AuthContext.Provider value={{ user, sessionLoading, signin, signup, resendVerification, logout }}>
       {children}
     </AuthContext.Provider>
   );
