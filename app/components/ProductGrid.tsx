@@ -43,15 +43,67 @@ function ProductGridInner() {
   const subcategoryParam = searchParams.get('subcategory');
   const categoryParam = searchParams.get('category');
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedCategory, setSelectedCategory] = useState('All Collections');
   const [selectedSort, setSelectedSort] = useState('latest');
   const [wishlist, setWishlist] = useState<Record<string, boolean>>({});
 
-  const categories = ['All', ...allCategories.filter(c => !c.parent_id).map(c => c.name)];
+  const categories = ['All Collections', ...allCategories.filter(c => !c.parent_id).map(c => c.name)];
+
+  const activeParentCategory = allCategories.find(c => c.name === selectedCategory && !c.parent_id);
+  const subcategories = activeParentCategory 
+    ? allCategories.filter(c => c.parent_id === activeParentCategory.id)
+    : [];
+
+  const activeSubCatId = categoryParam || secondaryParam || subcategoryParam;
+  const activeSubcategory = subcategories.find(
+    (sub) => sub.id === activeSubCatId || sub.name.toLowerCase() === (activeSubCatId || '').toLowerCase()
+  );
+
+  const handleSubcategoryTabClick = (subCatId: string | null) => {
+    if (!subCatId) {
+      router.push(`/?parent=${selectedCategory}`);
+    } else {
+      router.push(`/?parent=${selectedCategory}&category=${subCatId}`);
+    }
+  };
 
   useEffect(() => {
-    setSelectedCategory(parentParam || 'All');
-  }, [parentParam]);
+    if (parentParam) {
+      const lowerParent = parentParam.toLowerCase();
+      if (lowerParent === 'all' || lowerParent === 'all collections') {
+        setSelectedCategory('All Collections');
+        return;
+      }
+      const matchingParent = allCategories.find(
+        (c) => !c.parent_id && (c.name.toLowerCase() === lowerParent || c.id === parentParam)
+      );
+      if (matchingParent) {
+        setSelectedCategory(matchingParent.name);
+      } else {
+        setSelectedCategory(parentParam);
+      }
+      return;
+    }
+
+    const activeCatId = categoryParam || secondaryParam || subcategoryParam;
+    if (activeCatId) {
+      const currentCat = allCategories.find(
+        (c) => c.id === activeCatId || c.name.toLowerCase() === activeCatId.toLowerCase()
+      );
+      if (currentCat) {
+        let parentCat = currentCat;
+        while (parentCat.parent_id) {
+          const nextParent = allCategories.find((c) => c.id === parentCat.parent_id);
+          if (!nextParent) break;
+          parentCat = nextParent;
+        }
+        setSelectedCategory(parentCat.name);
+        return;
+      }
+    }
+
+    setSelectedCategory('All Collections');
+  }, [parentParam, categoryParam, secondaryParam, subcategoryParam, allCategories]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hash === '#catalog-grid') {
@@ -64,7 +116,7 @@ function ProductGridInner() {
   }, [searchParams]);
 
   const handleCategoryTabClick = (cat: string) => {
-    router.push(cat === 'All' ? '/' : `/?parent=${cat}`);
+    router.push(cat === 'All Collections' ? '/?parent=All+Collections' : `/?parent=${cat}`);
   };
 
   const getDescendantIds = (catId: string): string[] => {
@@ -87,7 +139,7 @@ function ProductGridInner() {
   let activeFilterCatIds: string[] | null = null;
   let activeCategoryName = '';
 
-  if (filterParam && filterParam !== 'All') {
+  if (filterParam && filterParam !== 'All' && filterParam !== 'All Collections') {
     const matchingCat = allCategories.find(
       (c) => c.id === filterParam || c.name.toLowerCase() === filterParam.toLowerCase()
     );
@@ -156,9 +208,11 @@ function ProductGridInner() {
     setWishlist((prev) => ({ ...prev, [productId]: !prev[productId] }));
   };
 
-  const hasFilter = !!filterParam && filterParam !== 'All';
+  const hasFilter = !!filterParam && filterParam !== 'All' && filterParam !== 'All Collections';
+  const isAllCollectionsActive = parentParam === 'All Collections' || filterParam === 'All Collections';
+  const hasActiveFilter = (parentParam && parentParam !== 'All Collections') || secondaryParam || subcategoryParam || categoryParam;
 
-  let bannerTitle = 'Collections';
+  let bannerTitle = isAllCollectionsActive ? 'All Collections' : 'Collections';
   if (hasFilter) {
     const mainCat = activeCategoryName || filterParam || '';
     if (mainCat) {
@@ -214,38 +268,72 @@ function ProductGridInner() {
 
         {/* Categories Horizontal Navigation Slider */}
         <div className="mb-12 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex items-center gap-3 min-w-max">
-            {categories.map((cat) => {
-              const isActive = selectedCategory === cat;
-              return (
+          <div className="flex flex-col gap-4 min-w-max">
+            <div className="flex items-center gap-3">
+              {categories.map((cat) => {
+                const isActive = selectedCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => handleCategoryTabClick(cat)}
+                    className={`px-5 py-2.5 attiz-mono text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none cursor-pointer ${
+                      isActive 
+                        ? 'bg-black text-white border-black shadow-lg shadow-black/10' 
+                        : 'bg-transparent text-black/60 border-black/10 hover:border-black hover:text-black'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+
+            {subcategories.length > 0 && (
+              <div className="flex items-center gap-2 border-t border-black/5 pt-4 animate-fadeIn">
+                <span className="attiz-mono text-[9px] font-bold tracking-[0.2em] text-black/35 uppercase mr-2">Subcategories:</span>
                 <button
-                  key={cat}
-                  onClick={() => handleCategoryTabClick(cat)}
-                  className={`px-5 py-2.5 attiz-mono text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none ${
-                    isActive 
-                      ? 'bg-black text-white border-black shadow-lg shadow-black/10' 
-                      : 'bg-transparent text-black/60 border-black/10 hover:border-black hover:text-black'
+                  onClick={() => handleSubcategoryTabClick(null)}
+                  className={`px-3 py-1.5 attiz-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200 border rounded-none cursor-pointer ${
+                    !activeSubcategory
+                      ? 'bg-black text-[#FFCB05] border-black shadow-[2px_2px_0_0_#111111] translate-x-[-1px] translate-y-[-1px]'
+                      : 'bg-white text-black/60 border-black/10 hover:border-black hover:text-black'
                   }`}
                 >
-                  {cat}
+                  All {selectedCategory}
                 </button>
-              );
-            })}
+                {subcategories.map((sub) => {
+                  const isActive = activeSubcategory?.id === sub.id;
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => handleSubcategoryTabClick(sub.id)}
+                      className={`px-3 py-1.5 attiz-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200 border rounded-none cursor-pointer ${
+                        isActive
+                          ? 'bg-black text-[#FFCB05] border-black shadow-[2px_2px_0_0_#111111] translate-x-[-1px] translate-y-[-1px]'
+                          : 'bg-white text-black/60 border-black/10 hover:border-black hover:text-black'
+                      }`}
+                    >
+                      {sub.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
         {/* Filter Breadcrumbs */}
-        {(parentParam || secondaryParam || subcategoryParam) && (
+        {hasActiveFilter && (
           <div className="mb-10 p-4 bg-black/[0.02] border border-black/5 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center flex-wrap gap-2 attiz-mono text-[11px] font-medium tracking-wide text-black/50">
               <span className="text-black/30">Active Scope:</span>
-              <span className="text-black font-bold">{parentParam || 'All'}</span>
+              <span className="text-black font-bold">{parentParam || 'All Collections'}</span>
               {secondaryParam && <><span className="text-black/25">→</span><span className="text-black font-bold">{secondaryParam}</span></>}
               {subcategoryParam && <><span className="text-black/25">→</span><span className="text-black font-bold">{subcategoryParam}</span></>}
               <span className="ml-2 px-2 py-0.5 bg-black/5 text-[10px] text-black font-normal rounded">{filteredProducts.length} items</span>
             </div>
             <button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/?parent=All+Collections')}
               className="attiz-mono text-[10px] font-bold tracking-widest text-[#E63B2E] uppercase hover:underline cursor-pointer"
             >
               Reset Filters

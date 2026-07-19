@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabase } from '@/lib/db';
-import { verifySession } from '@/lib/session';
+import { validateSession } from '@/lib/auth/session';
 
 /** GET /api/orders — list orders (filtered by user unless admin) */
 export async function GET() {
@@ -11,14 +11,15 @@ export async function GET() {
     return NextResponse.json([]);
   }
 
-  const session = await verifySession(sessionCookie);
-  if (!session) {
+  const sessionData = await validateSession(sessionCookie);
+  if (!sessionData) {
     return NextResponse.json([]);
   }
+  const { user } = sessionData;
 
   let query = supabase.from('orders').select('*');
-  if (session.role !== 'admin') {
-    query = query.eq('user_id', session.id);
+  if (user.role !== 'admin') {
+    query = query.eq('user_id', user.id);
   }
 
   const { data, error } = await query.order('created_at', { ascending: false });
@@ -34,14 +35,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
   }
 
-  const session = await verifySession(sessionCookie);
-  if (!session) {
+  const sessionData = await validateSession(sessionCookie);
+  if (!sessionData) {
     return NextResponse.json({ error: 'Unauthorized. Invalid session.' }, { status: 401 });
   }
+  const { user } = sessionData;
 
   const body = await request.json();
-  if (session.role !== 'admin') {
-    body.user_id = session.id;
+  if (user.role !== 'admin') {
+    body.user_id = user.id;
   }
 
   const { data, error } = await supabase.from('orders').insert(body).select();

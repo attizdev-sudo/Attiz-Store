@@ -6,49 +6,12 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
 
-const DEFAULT_SLIDES = [
-  { image_url: 'https://images.unsplash.com/photo-1617137968427-85924c800a22?w=1000&q=80', redirect_url: '/#catalog-grid' },
-  { image_url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=1000&q=80', redirect_url: '/?secondary=Polos#catalog-grid' },
-  { image_url: 'https://images.unsplash.com/photo-1618886614638-80e3c103d31a?w=1000&q=80', redirect_url: '/?secondary=Joggers#catalog-grid' },
-];
-
-const SLIDE_INFO = [
-  {
-    tag: 'Attiz Season 01',
-    title: 'Sartorial Heritage',
-    subtitle: 'Modern Streetwear Redefined',
-    description: 'Exquisitely crafted garments blending architectural profiles, functional daily wear, and premium heavy-knit fabrics.',
-  },
-  {
-    tag: 'New Arrivals',
-    title: 'Tailored Comfort',
-    subtitle: 'Premium Knit Heavyweights',
-    description: 'Explore our latest collection of structured drop-shoulder tees, heavyweight hoodies, and tailored utility trousers.',
-  },
-  {
-    tag: 'Classic Essentials',
-    title: 'Urban Silhouette',
-    subtitle: 'Engineered Daily Profiles',
-    description: 'Minimal designs engineered for modern ergonomics. Styled for clean aesthetics and maximum comfort.',
-  },
-];
-
 export default function EditorialHero() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { editorialBanners } = useStore();
+  const { editorialBanners, dbLoading } = useStore();
+  const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
   
-  const slides = editorialBanners && editorialBanners.length > 0
-    ? editorialBanners
-    : DEFAULT_SLIDES.map((slide, idx) => {
-        const info = SLIDE_INFO[idx % SLIDE_INFO.length];
-        return {
-          ...slide,
-          title: info.title,
-          subtitle: info.subtitle,
-          tag: info.tag,
-          description: info.description,
-        };
-      });
+  const slides = editorialBanners || [];
 
   useEffect(() => {
     if (currentSlide >= slides.length) setCurrentSlide(0);
@@ -63,7 +26,45 @@ export default function EditorialHero() {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  if (slides.length === 0) return null;
+  if (slides.length === 0) {
+    if (dbLoading) {
+      return (
+        <section className="relative w-full min-h-[620px] lg:min-h-[680px] bg-[#FAF8F5] overflow-hidden flex items-center border-b border-black/10">
+          {/* Halftone texture background */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.03] z-0 animate-pulse"
+            style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '16px 16px' }}
+          />
+          
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 w-full relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center w-full">
+              {/* Left Content Skeleton */}
+              <div className="lg:col-span-6 flex flex-col items-start text-left space-y-6">
+                <div className="h-6 bg-black/10 w-24 skew-x-6 animate-pulse" />
+                <div className="h-16 bg-black/10 w-3/4 animate-pulse" />
+                <div className="h-4 bg-black/10 w-1/2 animate-pulse" />
+                <div className="h-20 bg-black/10 w-5/6 animate-pulse" />
+                <div className="h-12 bg-black/10 w-40 animate-pulse border border-black" />
+              </div>
+              {/* Right Card Skeleton */}
+              <div className="lg:col-span-6 flex justify-center">
+                <div className="relative w-full max-w-[360px] sm:max-w-[400px] aspect-3/4 bg-black/[0.02] border-[3px] border-black shadow-[8px_8px_0_0_#111111] rotate-[-1.5deg]">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full animate-shimmer pointer-events-none" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="relative w-10 h-10 flex items-center justify-center">
+                      <div className="absolute inset-0 rounded-full border-2 border-dashed border-black/25 animate-spin" style={{ animationDuration: '6s' }} />
+                      <div className="w-6 h-6 rounded-full border-2 border-black border-t-transparent animate-spin" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+    return null;
+  }
 
   return (
     <section className="relative w-full min-h-[620px] lg:min-h-[680px] bg-[#FAF8F5] overflow-hidden flex items-center border-b border-black/10">
@@ -124,10 +125,24 @@ export default function EditorialHero() {
                           src={slideImage}
                           alt={slide.title}
                           fill
-                          className="object-cover object-center transition-transform duration-700 hover:scale-105"
+                          className={`object-cover object-center transition-all duration-700 hover:scale-105 ${
+                            loadedImages[idx] ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+                          }`}
                           sizes="(max-width: 768px) 100vw, 50vw"
                           priority={idx === 0}
+                          onLoad={() => setLoadedImages((prev) => ({ ...prev, [idx]: true }))}
                         />
+                        {!loadedImages[idx] && (
+                          <div className="absolute inset-0 bg-[#FAF8F5] flex items-center justify-center z-10">
+                            {/* Shimmer */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.03] to-transparent -translate-x-full animate-shimmer pointer-events-none" />
+                            {/* Spinning loader */}
+                            <div className="relative w-8 h-8 flex items-center justify-center">
+                              <div className="absolute inset-0 rounded-full border-2 border-dashed border-black/20 animate-spin" style={{ animationDuration: '6s' }} />
+                              <div className="w-5 h-5 rounded-full border-2 border-black border-t-transparent animate-spin" />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </Link>
                   </div>
@@ -144,14 +159,14 @@ export default function EditorialHero() {
           {/* Nav arrows - Refined Neobrutalist Style */}
           <button
             onClick={prevSlide}
-            className="absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white hover:bg-[#FFCB05] text-black border-2 border-black flex items-center justify-center transition-all duration-200 cursor-pointer shadow-[2px_2px_0_0_#111111] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#111111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+            className="absolute left-4 lg:left-8 top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white hover:bg-[#FFCB05] text-black border-2 border-black flex items-center justify-center transition-all duration-200 cursor-pointer shadow-[2px_2px_0_0_#111111] hover:ml-[1px] hover:mt-[1px] hover:shadow-[1px_1px_0_0_#111111] active:ml-[2px] active:mt-[2px] active:shadow-none"
             aria-label="Previous slide"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={nextSlide}
-            className="absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white hover:bg-[#FFCB05] text-[#111111] border-2 border-black flex items-center justify-center transition-all duration-200 cursor-pointer shadow-[2px_2px_0_0_#111111] hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0_0_#111111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+            className="absolute right-4 lg:right-8 top-1/2 -translate-y-1/2 z-20 w-9 h-9 bg-white hover:bg-[#FFCB05] text-[#111111] border-2 border-black flex items-center justify-center transition-all duration-200 cursor-pointer shadow-[2px_2px_0_0_#111111] hover:ml-[1px] hover:mt-[1px] hover:shadow-[1px_1px_0_0_#111111] active:ml-[2px] active:mt-[2px] active:shadow-none"
             aria-label="Next slide"
           >
             <ChevronRight className="w-4 h-4" />

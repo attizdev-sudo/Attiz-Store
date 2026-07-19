@@ -8,7 +8,7 @@ import { useStore } from '@/context/StoreContext';
 
 export default function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { banners } = useStore();
+  const { banners, dbLoading } = useStore();
   const slides = banners || [];
 
   useEffect(() => {
@@ -24,7 +24,40 @@ export default function HeroCarousel() {
     return () => clearInterval(timer);
   }, [slides.length]);
 
-  if (slides.length === 0) return null;
+  if (slides.length === 0) {
+    if (dbLoading) {
+      return (
+        <section className="relative w-full aspect-[16/7] md:aspect-[21/9] overflow-hidden bg-[#FAF8F5] border-b border-black/10 flex items-center justify-center">
+          {/* Halftone texture background */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.03] z-0 animate-pulse"
+            style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '16px 16px' }}
+          />
+          
+          {/* Shimmer overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full animate-shimmer pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col items-center gap-3 text-center">
+            {/* Neobrutalist custom loading indicator */}
+            <div className="relative w-12 h-12 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-2 border-dashed border-black/20 animate-spin" style={{ animationDuration: '6s' }} />
+              <div className="w-8 h-8 rounded-full border-[3px] border-black border-t-transparent animate-spin" />
+            </div>
+            
+            <div className="flex flex-col items-center gap-1">
+              <span className="inline-flex items-center bg-black text-[#FFCB05] attiz-mono text-[9px] font-bold tracking-[0.3em] uppercase px-2 py-0.5 -skew-x-6">
+                <span className="skew-x-6">ATTIZ</span>
+              </span>
+              <p className="attiz-mono text-[9px] font-bold text-black/35 tracking-[0.25em] uppercase animate-pulse">
+                Loading Banners...
+              </p>
+            </div>
+          </div>
+        </section>
+      );
+    }
+    return null;
+  }
 
   return (
     <section className="relative w-full aspect-[16/7] md:aspect-[21/9] overflow-hidden bg-[#FAF8F5] border-b border-black/10">

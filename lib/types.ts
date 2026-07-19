@@ -113,10 +113,11 @@ export interface LookbookStyle {
 }
 
 export interface ShippingDetails {
-  firstName: string;
-  lastName: string;
+  recipientName: string;
   phone: string;
   address: string;
   city: string;
-  zipCode: string;
+  state: string;
+  postalCode: string;
+  country: string;
 }

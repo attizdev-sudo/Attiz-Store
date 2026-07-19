@@ -1,30 +1,29 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { verifySession } from '@/lib/session';
+import { validateSession } from '@/lib/auth/session';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const sessionCookie = request.cookies.get('attiz_session')?.value;
+  const sessionToken = request.cookies.get('attiz_session')?.value;
 
-  // ── Protect /admin ────────────────────────────────────────────────────────
-  if (pathname.startsWith('/admin')) {
-    if (!sessionCookie) {
-      return NextResponse.redirect(new URL('/auth', request.url));
-    }
-    const session = await verifySession(sessionCookie);
-    if (!session || session.role !== 'admin') {
-      return NextResponse.redirect(new URL('/auth', request.url));
-    }
-  }
+  const protectedPaths = ['/admin', '/account', '/profile', '/orders', '/wishlist', '/checkout'];
+  const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
 
-  // ── Protect /orders ───────────────────────────────────────────────────────
-  if (pathname.startsWith('/orders')) {
-    if (!sessionCookie) {
-      return NextResponse.redirect(new URL('/auth', request.url));
+  if (isProtected) {
+    if (!sessionToken) {
+      return NextResponse.redirect(new URL('/login', request.url));
     }
-    const session = await verifySession(sessionCookie);
-    if (!session) {
-      return NextResponse.redirect(new URL('/auth', request.url));
+
+    const sessionData = await validateSession(sessionToken);
+    if (!sessionData) {
+      const redirectResponse = NextResponse.redirect(new URL('/login', request.url));
+      redirectResponse.cookies.delete('attiz_session');
+      return redirectResponse;
+    }
+
+    // Restrict /admin access to admin roles only
+    if (pathname.startsWith('/admin') && sessionData.user.role !== 'admin') {
+      return NextResponse.redirect(new URL('/', request.url));
     }
   }
 
@@ -32,6 +31,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/orders/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/account/:path*',
+    '/profile/:path*',
+    '/orders/:path*',
+    '/wishlist/:path*',
+    '/checkout/:path*',
+  ],
 };
 

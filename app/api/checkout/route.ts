@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabase } from '@/lib/db';
-import { verifySession } from '@/lib/session';
+import { validateSession } from '@/lib/auth/session';
 
 interface CheckoutBody {
   userId: string;
   shippingDetails: {
-    firstName: string;
-    lastName: string;
+    recipientName: string;
     phone: string;
     address: string;
     city: string;
-    zipCode: string;
+    state: string;
+    postalCode: string;
+    country: string;
   };
   cartItems: Array<{
     id: string;
@@ -34,10 +35,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
   }
 
-  const session = await verifySession(sessionCookie);
-  if (!session) {
+  const sessionData = await validateSession(sessionCookie);
+  if (!sessionData) {
     return NextResponse.json({ error: 'Unauthorized. Invalid session.' }, { status: 401 });
   }
+  const { user } = sessionData;
 
   let body: CheckoutBody;
   try {
@@ -52,8 +54,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'User details, shipping details and cart items are required.' }, { status: 400 });
   }
 
+  const { recipientName, phone, address, city, state, postalCode, country } = shippingDetails;
+  if (!recipientName || !phone || !address || !city || !state || !postalCode || !country) {
+    return NextResponse.json({ error: 'All shipping details fields are required.' }, { status: 400 });
+  }
+
   // Prevent ordering on behalf of other users
-  if (session.role !== 'admin' && userId !== session.id) {
+  if (user.role !== 'admin' && userId !== user.id) {
     return NextResponse.json({ error: 'Forbidden. User ID mismatch.' }, { status: 403 });
   }
 
@@ -62,12 +69,32 @@ export async function POST(request: Request) {
     0
   );
 
+  // If this is the user's first shipping address, save it to the addresses table
+  const { count, error: countError } = await supabase
+    .from('addresses')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  if (!countError && count === 0) {
+    await supabase.from('addresses').insert({
+      user_id: userId,
+      recipient_name: recipientName,
+      phone,
+      address_line1: address,
+      city,
+      state,
+      postal_code: postalCode,
+      country,
+      is_default: true,
+    });
+  }
+
   // Invoke atomic stored transaction on database side
   const { data, error: rpcError } = await supabase.rpc('process_checkout', {
     user_id_param: userId,
-    customer_name_param: `${shippingDetails.firstName} ${shippingDetails.lastName}`,
-    customer_phone_param: shippingDetails.phone,
-    shipping_address_param: `${shippingDetails.address}, ${shippingDetails.city}, ${shippingDetails.zipCode}`,
+    customer_name_param: recipientName,
+    customer_phone_param: phone,
+    shipping_address_param: `${address}, ${city}, ${state}, ${postalCode}, ${country}`,
     items_param: cartItems,
     total_price_param: totalPrice,
   });

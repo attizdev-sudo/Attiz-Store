@@ -5,52 +5,45 @@ import type { SessionUser } from '@/lib/types';
 
 interface AuthContextValue {
   user: SessionUser | null;
-  signin: (phoneOrEmail: string, password: string) => Promise<{ success: boolean; message?: string; user?: SessionUser }>;
-  signup: (firstName: string, lastName: string, phone: string, password: string) => Promise<{ success: boolean; message?: string; user?: SessionUser }>;
-  logout: () => void;
+  signin: (email: string, password: string) => Promise<{ success: boolean; message?: string; code?: string; user?: SessionUser }>;
+  signup: (firstName: string, lastName: string, email: string, phone: string, password: string, acceptTerms: boolean) => Promise<{ success: boolean; pending?: boolean; message?: string; user?: SessionUser }>;
+  resendVerification: (email: string) => Promise<{ ok: boolean }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-function clearSessionCookie() {
-  document.cookie = 'attiz_session=; path=/; max-age=0; SameSite=Strict';
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
 
   useEffect(() => {
-    try {
-      const hasCookie = document.cookie.split(';').some((c) => c.trim().startsWith('attiz_session='));
-      if (!hasCookie) {
-        localStorage.removeItem('auth_session');
+    async function checkSession() {
+      try {
+        const res = await fetch('/api/auth/session');
+        if (res.ok) {
+          const json = await res.json();
+          if (json.user) {
+            setUser(json.user);
+          } else {
+            setUser(null);
+          }
+        }
+      } catch {
         setUser(null);
-        return;
       }
-      const saved = localStorage.getItem('auth_session');
-      if (saved) setUser(JSON.parse(saved));
-    } catch { /* ignore */ }
+    }
+    checkSession();
   }, []);
 
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('auth_session', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('auth_session');
-      clearSessionCookie();
-    }
-  }, [user]);
-
-
-  const signin = async (phoneOrEmail: string, password: string) => {
+  const signin = async (email: string, password: string) => {
     try {
-      const res = await fetch('/api/auth/signin', {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phoneOrEmail, password }),
+        body: JSON.stringify({ email, password }),
       });
       const json = await res.json();
-      if (!res.ok) return { success: false, message: json.error || 'Sign in failed.' };
+      if (!res.ok) return { success: false, message: json.error || 'Sign in failed.', code: json.code };
       setUser(json.user);
       return { success: true, user: json.user as SessionUser };
     } catch {
@@ -58,15 +51,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signup = async (firstName: string, lastName: string, phone: string, password: string) => {
+  const signup = async (firstName: string, lastName: string, email: string, phone: string, password: string, acceptTerms: boolean) => {
     try {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName, lastName, phone, password }),
+        body: JSON.stringify({ firstName, lastName, email, phone, password, acceptTerms }),
       });
       const json = await res.json();
       if (!res.ok) return { success: false, message: json.error || 'Registration failed.' };
+      // pending = true means email verification is required, no auto-login
+      if (json.pending) return { success: true, pending: true, message: json.message };
       if (json.user) setUser(json.user as SessionUser);
       return { success: true, user: json.user as SessionUser };
     } catch {
@@ -74,10 +69,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const logout = () => setUser(null);
+  const resendVerification = async (email: string) => {
+    try {
+      await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+    } catch { /* silent */ }
+    return { ok: true };
+  };
+
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Error during logout fetch:', err);
+    }
+    setUser(null);
+  };
 
   return (
-    <AuthContext.Provider value={{ user, signin, signup, logout }}>
+    <AuthContext.Provider value={{ user, signin, signup, resendVerification, logout }}>
       {children}
     </AuthContext.Provider>
   );

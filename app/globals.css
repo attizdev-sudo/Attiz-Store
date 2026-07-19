@@ -32,6 +32,17 @@
   --color-brand-cream: #fefdf0;
   --color-brand-cream-dark: #fde047;
   --color-brand-dark: #0a0a0a;
+
+  --animate-shimmer: shimmer 2s infinite linear;
+
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
 }
 
 html {
