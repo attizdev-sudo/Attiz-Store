@@ -1,8 +1,9 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'no-reply@attiz.in';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+// NOTE: Resend is instantiated lazily inside each function so that
+// process.env is read at request time (runtime), not at module load (build time).
+const FROM_EMAIL = () => process.env.RESEND_FROM_EMAIL || 'no-reply@attiz.in';
+const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 // ──────────────────────────────────────────────────────────────────────────────
 // HTML Email Template — Verification
@@ -105,10 +106,12 @@ export async function sendVerificationEmail(
   token: string,
   firstName: string
 ): Promise<void> {
-  const verifyUrl = `${APP_URL}/api/auth/verify-email?token=${token}`;
+  // Instantiate lazily so env vars are read at runtime, not build time
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const verifyUrl = `${APP_URL()}/api/auth/verify-email?token=${token}`;
 
   const { error } = await resend.emails.send({
-    from: `ATTIZ <${FROM_EMAIL}>`,
+    from: `ATTIZ <${FROM_EMAIL()}>`,
     to: toEmail,
     subject: 'Verify your ATTIZ account email',
     html: buildVerificationEmailHtml(firstName, verifyUrl),
