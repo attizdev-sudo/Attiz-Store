@@ -267,9 +267,9 @@ function ProductGridInner() {
         </div>
 
         {/* Categories Horizontal Navigation Slider */}
-        <div className="mb-12 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex flex-col gap-4 min-w-max">
-            <div className="flex items-center gap-3">
+        <div className="mb-12">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-3">
               {categories.map((cat) => {
                 const isActive = selectedCategory === cat;
                 return (
@@ -289,7 +289,7 @@ function ProductGridInner() {
             </div>
 
             {subcategories.length > 0 && (
-              <div className="flex items-center gap-2 border-t border-black/5 pt-4 animate-fadeIn">
+              <div className="flex flex-wrap items-center gap-2 border-t border-black/5 pt-4 animate-fadeIn">
                 <span className="attiz-mono text-[9px] font-bold tracking-[0.2em] text-black/35 uppercase mr-2">Subcategories:</span>
                 <button
                   onClick={() => handleSubcategoryTabClick(null)}
