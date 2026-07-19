@@ -13,7 +13,7 @@ export default function OrdersPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) router.push('/auth');
+    if (!user) router.push('/login');
   }, [user, router]);
 
   const userOrders = allOrders.filter((o) => o.user_id === user?.id);

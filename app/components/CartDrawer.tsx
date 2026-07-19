@@ -13,12 +13,13 @@ export default function CartDrawer() {
   const router = useRouter();
 
   const [shippingDetails, setShippingDetails] = useState({
-    firstName: user?.first_name || '',
-    lastName: user?.last_name || '',
+    recipientName: user ? `${user.first_name} ${user.last_name}`.trim() : '',
     phone: user?.phone || '',
     address: '',
     city: '',
-    zipCode: '',
+    state: '',
+    postalCode: '',
+    country: 'India',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -172,7 +173,7 @@ export default function CartDrawer() {
                     You must be signed in to complete your checkout order.
                   </p>
                   <button
-                    onClick={() => { setIsCartOpen(false); router.push('/auth'); }}
+                    onClick={() => { setIsCartOpen(false); router.push('/login'); }}
                     className="w-full py-3 border-2 border-black bg-black text-[#FFCB05] hover:bg-white hover:text-black shadow-[4px_4px_0_0_#111111] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-xs attiz-display tracking-[0.15em] uppercase cursor-pointer"
                   >
                     Sign In to Checkout
@@ -185,15 +186,76 @@ export default function CartDrawer() {
                     <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/50 uppercase">Shipping Details</span>
                   </div>
 
+                  <input
+                    type="text"
+                    name="recipientName"
+                    placeholder="RECIPIENT NAME *"
+                    required
+                    value={shippingDetails.recipientName}
+                    onChange={handleInputChange}
+                    className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
+                  />
+
+                  <input
+                    type="tel"
+                    name="phone"
+                    placeholder="CONTACT PHONE NUMBER *"
+                    required
+                    value={shippingDetails.phone}
+                    onChange={handleInputChange}
+                    className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
+                  />
+
+                  <input
+                    type="text"
+                    name="address"
+                    placeholder="SHIPPING STREET ADDRESS *"
+                    required
+                    value={shippingDetails.address}
+                    onChange={handleInputChange}
+                    className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
+                  />
+
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="text" name="firstName" placeholder="FIRST NAME" required value={shippingDetails.firstName} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
-                    <input type="text" name="lastName" placeholder="LAST NAME" required value={shippingDetails.lastName} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
+                    <input
+                      type="text"
+                      name="city"
+                      placeholder="CITY *"
+                      required
+                      value={shippingDetails.city}
+                      onChange={handleInputChange}
+                      className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
+                    />
+                    <input
+                      type="text"
+                      name="state"
+                      placeholder="STATE *"
+                      required
+                      value={shippingDetails.state}
+                      onChange={handleInputChange}
+                      className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
+                    />
                   </div>
-                  <input type="tel" name="phone" placeholder="CONTACT PHONE NUMBER" required value={shippingDetails.phone} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
-                  <input type="text" name="address" placeholder="DELIVERY STREET ADDRESS" required value={shippingDetails.address} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
+
                   <div className="grid grid-cols-2 gap-2">
-                    <input type="text" name="city" placeholder="CITY" required value={shippingDetails.city} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
-                    <input type="text" name="zipCode" placeholder="ZIP CODE" required value={shippingDetails.zipCode} onChange={handleInputChange} className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase" />
+                    <input
+                      type="text"
+                      name="postalCode"
+                      placeholder="POSTAL CODE *"
+                      required
+                      value={shippingDetails.postalCode}
+                      onChange={handleInputChange}
+                      className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
+                    />
+                    <input
+                      type="text"
+                      name="country"
+                      placeholder="COUNTRY *"
+                      required
+                      value={shippingDetails.country}
+                      onChange={handleInputChange}
+                      className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
+                    />
                   </div>
                   
                   <button 

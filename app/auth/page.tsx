@@ -1,7 +1,5 @@
-import AuthPage from '@/app/components/AuthPage';
-
-export const metadata = { title: 'Sign In / Sign Up — ATTIZ' };
+import { redirect } from 'next/navigation';
 
 export default function AuthRoute() {
-  return <AuthPage />;
+  redirect('/login');
 }

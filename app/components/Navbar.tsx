@@ -199,7 +199,7 @@ export default function Navbar() {
                 </div>
               ) : (
                 <button
-                  onClick={() => router.push('/auth')}
+                  onClick={() => router.push('/login')}
                   className="text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
                   title="Sign In"
                 >
