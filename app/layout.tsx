@@ -8,6 +8,9 @@ import StoreLayoutShell from '@/app/components/StoreLayoutShell';
 export const metadata: Metadata = {
   title: 'ATTIZ — Premium Clothing',
   description: 'Exquisitely crafted garments for modern sartorial heritage.',
+  icons: {
+    icon: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

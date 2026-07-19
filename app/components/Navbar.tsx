@@ -66,7 +66,7 @@ export default function Navbar() {
           {/* Brand Logo */}
           <div className="shrink-0 flex items-center cursor-pointer" onClick={() => router.push('/')}>
             <Image
-              src="/logo.png"
+              src="/ATTIZ.png"
               alt="ATTIZ Logo"
               width={120}
               height={48}
