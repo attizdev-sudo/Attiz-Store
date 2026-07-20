@@ -47,7 +47,7 @@ export default function Navbar() {
     { name: 'COLLECTIONS', href: '#', hasDropdown: true },
     { name: 'ABOUT US', href: '/about' },
     { name: 'CONTACT US', href: '/contact' },
-    { name: 'TRACK ORDERS', href: '/orders' },
+    ...(user ? [{ name: 'TRACK ORDERS', href: '/orders' }] : []),
   ];
 
   const handleNavClick = (e: React.MouseEvent, item: { name: string; href: string }) => {

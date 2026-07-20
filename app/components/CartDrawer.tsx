@@ -58,8 +58,8 @@ export default function CartDrawer() {
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/35 backdrop-blur-xs transition-opacity" onClick={() => setIsCartOpen(false)} />
       
-      <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-white flex flex-col h-full border-l-2 border-black relative transition-all">
+      <div className="absolute inset-y-0 right-0 w-full sm:max-w-md flex">
+        <div className="w-full bg-white flex flex-col h-full border-l-2 border-black relative transition-all">
 
           {/* Header */}
           <div className="px-6 py-5 border-b-2 border-black flex items-center justify-between bg-white text-black">
@@ -128,18 +128,18 @@ export default function CartDrawer() {
                       <div className="flex items-center border border-black bg-white">
                         <button 
                           onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)} 
-                          className="p-1 px-2.5 text-black hover:bg-black/5 transition-colors cursor-pointer border-r border-black"
+                          className="p-2 px-3 text-black hover:bg-black/5 transition-colors cursor-pointer border-r border-black"
                           aria-label="Decrease quantity"
                         >
-                          <Minus className="w-3 h-3" />
+                          <Minus className="w-3.5 h-3.5" />
                         </button>
                         <span className="attiz-mono text-xs font-bold px-3 text-black select-none">{item.quantity}</span>
                         <button 
                           onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)} 
-                          className="p-1 px-2.5 text-black hover:bg-black/5 transition-colors cursor-pointer border-l border-black"
+                          className="p-2 px-3 text-black hover:bg-black/5 transition-colors cursor-pointer border-l border-black"
                           aria-label="Increase quantity"
                         >
-                          <Plus className="w-3 h-3" />
+                          <Plus className="w-3.5 h-3.5" />
                         </button>
                       </div>
 
@@ -180,7 +180,7 @@ export default function CartDrawer() {
                   </button>
                 </div>
               ) : (
-                <form onSubmit={handleCheckoutSubmit} className="space-y-3 pt-2 max-h-60 overflow-y-auto pr-1 scrollbar-thin">
+                <form onSubmit={handleCheckoutSubmit} className="space-y-3 pt-2 max-h-72 sm:max-h-60 overflow-y-auto pr-1 scrollbar-thin">
                   <div className="flex items-center gap-1 border-b border-black/10 pb-1.5 mb-2">
                     <Truck className="w-3.5 h-3.5 text-black/60" />
                     <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/50 uppercase">Shipping Details</span>

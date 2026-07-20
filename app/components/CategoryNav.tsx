@@ -4,53 +4,11 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 
 const categories = [
-  {
-    name: 'SHOP ALL',
-    icon: (
-      <svg className="w-10 h-10 stroke-[1.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-      </svg>
-    ),
-  },
-  {
-    name: 'POLOS',
-    icon: (
-      <svg className="w-10 h-10 stroke-[1.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 22V9l3-2 3 2 3-2 3 2v13H6z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 7v4m6-4v4" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v5" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6 9h12" />
-      </svg>
-    ),
-  },
-  {
-    name: 'CREWS',
-    icon: (
-      <svg className="w-10 h-10 stroke-[1.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 9h3v13h10V9h3l-2-4H6L4 9z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10 5a2 2 0 004 0" />
-      </svg>
-    ),
-  },
-  {
-    name: 'JOGGERS',
-    icon: (
-      <svg className="w-10 h-10 stroke-[1.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 3h8v2l2 15h-4l-2-8-2 8H6L8 5V3z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 6h8" />
-      </svg>
-    ),
-  },
-  {
-    name: 'SWEATSHIRTS',
-    icon: (
-      <svg className="w-10 h-10 stroke-[1.2]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8h4v14h10V8h4L19 4H5L3 8z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7 8a5 5 0 0110 0" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l4 2m14-2l-4 2" />
-      </svg>
-    ),
-  },
+  { name: 'SHOP ALL', src: '/Artboard 2.svg' },
+  { name: 'POLOS',    src: '/Artboard 3.svg' },
+  { name: 'CREWS',    src: '/Artboard 4.svg' },
+  { name: 'JOGGERS',  src: '/Artboard 5.svg' },
+  { name: 'SWEATSHIRTS', src: '/Artboard 6.svg' },
 ];
 
 export default function CategoryNav() {
@@ -70,19 +28,44 @@ export default function CategoryNav() {
   };
 
   return (
-    <section className="py-16 bg-[#FAF8F5]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-center attiz-display text-2xl sm:text-3xl font-bold tracking-wider text-black mb-12 uppercase">Shop by Category</h2>
-        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-14">
-          {categories.map((cat) => (
-            <div key={cat.name} onClick={() => handleCategoryClick(cat.name)} className="flex flex-col items-center group cursor-pointer">
-              <div className="w-20 h-20 border-2 border-black flex items-center justify-center bg-white text-black hover:bg-[#FFCB05] transition-all duration-300 shadow-[3px_3px_0_0_#111111] group-hover:shadow-[5px_5px_0_0_#111111] group-hover:-translate-x-[2px] group-hover:-translate-y-[2px] rotate-[-1.5deg] group-hover:rotate-0">
-                {cat.icon}
+    <section className="py-4 sm:py-16 bg-[#FAF8F5]">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-center attiz-display text-lg sm:text-2xl md:text-3xl font-bold tracking-wider text-black mb-2 sm:mb-12 uppercase">
+          Shop by Category
+        </h2>
+
+        {/* Category Row - horizontally scrollable on mobile */}
+        <div className="flex items-center justify-center overflow-x-auto scrollbar-none -mx-4 px-1 sm:mx-0 sm:px-0 sm:flex-wrap sm:justify-center sm:gap-0 pb-1 sm:pb-0">
+          {categories.map((cat, i) => (
+            <React.Fragment key={cat.name}>
+              {/* Category item */}
+              <div
+                onClick={() => handleCategoryClick(cat.name)}
+                className="flex flex-col items-center group cursor-pointer px-1 sm:px-4 shrink-0 active:scale-95 transition-transform duration-150"
+              >
+                {/* Icon */}
+                <div className="w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center transition-all duration-300 group-hover:opacity-100 group-hover:scale-[1.08]">
+                  <img
+                    src={cat.src}
+                    alt={cat.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+
+                {/* Label */}
+                <span className="mt-1 attiz-mono text-[7px] sm:text-[9px] md:text-[10px] font-bold tracking-[0.15em] sm:tracking-[0.2em] text-black/40 group-hover:text-black transition-colors duration-300 uppercase text-center leading-tight">
+                  {cat.name}
+                </span>
+
+                {/* Underline indicator */}
+                <span className="mt-1 sm:mt-2 block w-0 group-hover:w-full h-[1.5px] bg-black transition-all duration-300 ease-out" />
               </div>
-              <span className="mt-4 attiz-mono text-[10px] font-bold tracking-widest text-black/60 group-hover:text-black transition-colors duration-300 uppercase">
-                {cat.name}
-              </span>
-            </div>
+
+              {/* Vertical divider between items */}
+              {i < categories.length - 1 && (
+                <div className="hidden sm:block self-center h-10 w-px bg-black/10 flex-shrink-0" />
+              )}
+            </React.Fragment>
           ))}
         </div>
       </div>
