@@ -83,8 +83,17 @@ function ProductDetailsInner() {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [isImageLoading, setIsImageLoading] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(false);
+
   useEffect(() => {
     setIsTouchDevice(typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
+    
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -356,13 +365,25 @@ function ProductDetailsInner() {
     // Double tap detection for touch devices
     const currentTime = Date.now();
     const timeDiff = currentTime - lastClickTime.current;
-    if (timeDiff < 300) {
+    if (timeDiff < 100) {
+      e.preventDefault(); // Prevents synthetic mouse/dblclick events
       if (isZoomed) {
         setIsZoomed(false);
         setPanOffset({ x: 0, y: 0 });
       } else {
+        const touch = e.touches[0];
+        const container = e.currentTarget;
+        const rect = container.getBoundingClientRect();
+        const touchX = touch.clientX - rect.left - rect.width / 2;
+        const touchY = touch.clientY - rect.top - rect.height / 2;
+
+        const limitX = rect.width * LIMIT_FACTOR;
+        const limitY = rect.height * LIMIT_FACTOR;
+        const targetX = Math.max(-limitX, Math.min(limitX, -touchX * (ZOOM_SCALE - 1)));
+        const targetY = Math.max(-limitY, Math.min(limitY, -touchY * (ZOOM_SCALE - 1)));
+
         setIsZoomed(true);
-        setPanOffset({ x: 0, y: 0 });
+        setPanOffset({ x: targetX, y: targetY });
       }
       lastClickTime.current = 0;
       setIsDragging(false);
@@ -409,15 +430,25 @@ function ProductDetailsInner() {
     setIsDragging(false);
   };
 
-  const handleDoubleClick = (e: React.MouseEvent) => {
+  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (isOutOfStock) return;
     if (isZoomed) {
       setIsZoomed(false);
       setPanOffset({ x: 0, y: 0 });
     } else {
+      const container = e.currentTarget;
+      const rect = container.getBoundingClientRect();
+      const clickX = e.clientX - rect.left - rect.width / 2;
+      const clickY = e.clientY - rect.top - rect.height / 2;
+
+      const limitX = rect.width * LIMIT_FACTOR;
+      const limitY = rect.height * LIMIT_FACTOR;
+      const targetX = Math.max(-limitX, Math.min(limitX, -clickX * (ZOOM_SCALE - 1)));
+      const targetY = Math.max(-limitY, Math.min(limitY, -clickY * (ZOOM_SCALE - 1)));
+
       setIsZoomed(true);
-      setPanOffset({ x: 0, y: 0 });
+      setPanOffset({ x: targetX, y: targetY });
     }
   };
 
@@ -431,6 +462,20 @@ function ProductDetailsInner() {
   const getCardStyle = (idx: number): React.CSSProperties => {
     const total = thumbnails.length;
     const relative = (idx - activeThumbIdx + total) % total;
+    
+    if (isMobile) {
+      if (relative === 0) {
+        return { transform: 'translate(0px, 0px) rotate(0deg) scale(1)', zIndex: 40, opacity: 1 };
+      }
+      if (relative === 1) {
+        return { transform: 'translate(0px, 8px) rotate(1.5deg) scale(0.97)', zIndex: 30, opacity: 0.95 };
+      }
+      if (relative === 2) {
+        return { transform: 'translate(0px, 16px) rotate(3deg) scale(0.94)', zIndex: 20, opacity: 0.85 };
+      }
+      return { transform: 'translate(0px, 24px) rotate(4deg) scale(0.91)', zIndex: 10, opacity: 0, pointerEvents: 'none' };
+    }
+
     if (relative === 0) {
       return { transform: 'translate(0px, 0px) rotate(0deg) scale(1)', zIndex: 40, opacity: 1 };
     }
@@ -444,7 +489,7 @@ function ProductDetailsInner() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] pt-2 pb-24 md:pb-12 px-4 sm:px-6 lg:px-8 relative">
+    <div className="min-h-screen bg-[#FAF8F5] pt-2 pb-24 md:pb-12 px-4 sm:px-6 lg:px-8 relative overflow-x-hidden">
       {/* faint halftone dot texture, very subtle */}
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.05] z-0"
@@ -470,7 +515,7 @@ function ProductDetailsInner() {
                     >
                       {isFront ? (
                         <div
-                          className={`relative w-full h-full select-none touch-none ${getCursorClass()}`}
+                           className={`relative w-full h-full select-none touch-none ${getCursorClass()}`}
                           onMouseDown={handleMouseDown}
                           onMouseMove={handleMouseMove}
                           onMouseUp={handleMouseUp}
@@ -537,20 +582,20 @@ function ProductDetailsInner() {
                 {/* Nav arrows */}
                 {thumbnails.length > 1 && (
                   <>
-                    <div className="absolute z-50 left-[-14px] top-1/2 -translate-y-1/2">
+                    <div className="absolute z-50 left-1 sm:left-[-14px] top-1/2 -translate-y-1/2">
                       <button
                         onClick={() => goToCard(-1)}
                         aria-label="Previous image"
-                        className="w-9 h-9 flex items-center justify-center bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] hover:bg-[#FFCB05] hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer"
+                        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] hover:bg-[#FFCB05] hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer"
                       >
                         <ChevronLeft className="w-4 h-4 text-black" />
                       </button>
                     </div>
-                    <div className="absolute z-50 right-[-14px] top-1/2 -translate-y-1/2">
+                    <div className="absolute z-50 right-1 sm:right-[-14px] top-1/2 -translate-y-1/2">
                       <button
                         onClick={() => goToCard(1)}
                         aria-label="Next image"
-                        className="w-9 h-9 flex items-center justify-center bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] hover:bg-[#FFCB05] hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer"
+                        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] hover:bg-[#FFCB05] hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer"
                       >
                         <ChevronRight className="w-4 h-4 text-black" />
                       </button>

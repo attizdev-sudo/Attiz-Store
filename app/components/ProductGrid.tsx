@@ -46,6 +46,8 @@ function ProductGridInner() {
   const [selectedCategory, setSelectedCategory] = useState('All Collections');
   const [selectedSort, setSelectedSort] = useState('latest');
   const [wishlist, setWishlist] = useState<Record<string, boolean>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 16;
 
   const categories = ['All Collections', ...allCategories.filter(c => !c.parent_id).map(c => c.name)];
 
@@ -204,6 +206,21 @@ function ProductGridInner() {
     return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
   });
 
+  // Reset to page 1 whenever filters or sort change
+  useEffect(() => { setCurrentPage(1); }, [filterParam, selectedSort, selectedCategory]);
+
+  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = sortedProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page);
+    const gridEl = document.getElementById('catalog-grid');
+    if (gridEl) gridEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const toggleWishlist = (productId: string) => {
     setWishlist((prev) => ({ ...prev, [productId]: !prev[productId] }));
   };
@@ -250,8 +267,8 @@ function ProductGridInner() {
           </div>
 
           {/* Filtering controls unified */}
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2 px-4 py-2 bg-black/5 rounded-full border border-black/5">
+          <div className="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-black/5 border border-black/10">
               <SlidersHorizontal className="w-3.5 h-3.5 text-black/60" />
               <select
                 value={selectedSort}
@@ -267,16 +284,17 @@ function ProductGridInner() {
         </div>
 
         {/* Categories Horizontal Navigation Slider */}
-        <div className="mb-12">
+        <div className="mb-10 sm:mb-12">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-center gap-3">
+            {/* Scrollable pill row on mobile */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:gap-3">
               {categories.map((cat) => {
                 const isActive = selectedCategory === cat;
                 return (
                   <button
                     key={cat}
                     onClick={() => handleCategoryTabClick(cat)}
-                    className={`px-5 py-2.5 attiz-mono text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none cursor-pointer ${
+                    className={`px-4 py-2.5 attiz-mono text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none cursor-pointer shrink-0 ${
                       isActive 
                         ? 'bg-black text-white border-black shadow-lg shadow-black/10' 
                         : 'bg-transparent text-black/60 border-black/10 hover:border-black hover:text-black'
@@ -324,17 +342,17 @@ function ProductGridInner() {
 
         {/* Filter Breadcrumbs */}
         {hasActiveFilter && (
-          <div className="mb-10 p-4 bg-black/[0.02] border border-black/5 flex flex-wrap items-center justify-between gap-4">
+          <div className="mb-8 p-4 bg-black/[0.02] border border-black/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center flex-wrap gap-2 attiz-mono text-[11px] font-medium tracking-wide text-black/50">
               <span className="text-black/30">Active Scope:</span>
               <span className="text-black font-bold">{parentParam || 'All Collections'}</span>
               {secondaryParam && <><span className="text-black/25">→</span><span className="text-black font-bold">{secondaryParam}</span></>}
               {subcategoryParam && <><span className="text-black/25">→</span><span className="text-black font-bold">{subcategoryParam}</span></>}
-              <span className="ml-2 px-2 py-0.5 bg-black/5 text-[10px] text-black font-normal rounded">{filteredProducts.length} items</span>
+              <span className="ml-1 px-2 py-0.5 bg-black/5 text-[10px] text-black font-normal">{filteredProducts.length} items</span>
             </div>
             <button
               onClick={() => router.push('/?parent=All+Collections')}
-              className="attiz-mono text-[10px] font-bold tracking-widest text-[#E63B2E] uppercase hover:underline cursor-pointer"
+              className="attiz-mono text-[10px] font-bold tracking-widest text-[#E63B2E] uppercase hover:underline cursor-pointer self-start sm:self-auto"
             >
               Reset Filters
             </button>
@@ -358,8 +376,9 @@ function ProductGridInner() {
             <p className="attiz-body text-sm text-black/35 font-light">Try adjusting your selected filters or categories.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-16">
-            {sortedProducts.map((product) => {
+          <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-16">
+            {paginatedProducts.map((product) => {
               const isLiked = wishlist[product.id] || false;
               const cardKey = (product as any).selectedColorVariant 
                 ? `${product.id}-${(product as any).selectedColorVariant}` 
@@ -423,8 +442,9 @@ function ProductGridInner() {
 
                       {/* Floating Discount Badge */}
                       {product.discount && product.discount > 0 && (
-                        <div className="absolute top-4 left-4 z-20 bg-black text-white px-2.5 py-1 attiz-mono text-[9px] font-bold tracking-widest uppercase">
-                          Save {product.discount}%
+                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 bg-black text-white px-1.5 py-0.5 sm:px-2.5 sm:py-1 attiz-mono text-[8px] sm:text-[9px] font-bold tracking-wider sm:tracking-widest uppercase">
+                          <span className="inline sm:hidden">-{product.discount}%</span>
+                          <span className="hidden sm:inline">Save {product.discount}%</span>
                         </div>
                       )}
 
@@ -503,6 +523,96 @@ function ProductGridInner() {
               );
             })}
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="mt-12 sm:mt-16 border-t-[3px] border-black pt-8 sm:pt-10">
+              {/* Mobile: compact Prev / counter / Next */}
+              <div className="flex items-center justify-between gap-3 sm:hidden">
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`flex items-center gap-1.5 px-4 py-3 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${
+                    currentPage === 1
+                      ? 'border-black/10 text-black/25 cursor-not-allowed'
+                      : 'border-black bg-white text-black shadow-[3px_3px_0_0_#111111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer'
+                  }`}
+                >
+                  ← Prev
+                </button>
+                <span className="attiz-mono text-[10px] font-bold text-black/50 tracking-widest uppercase text-center">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`flex items-center gap-1.5 px-4 py-3 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${
+                    currentPage === totalPages
+                      ? 'border-black/10 text-black/25 cursor-not-allowed'
+                      : 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer'
+                  }`}
+                >
+                  Next →
+                </button>
+              </div>
+
+              {/* Desktop: full pill row + Prev/Next */}
+              <div className="hidden sm:flex items-center justify-between gap-6">
+                <div className="flex items-center gap-3">
+                  <span className="attiz-mono text-[9px] font-bold text-black/35 tracking-widest uppercase">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <span className="w-px h-4 bg-black/15" />
+                  <span className="attiz-mono text-[9px] font-bold text-black/35 tracking-widest uppercase">
+                    {sortedProducts.length} Products
+                  </span>
+                </div>
+
+                {/* Page number pills */}
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      className={`w-9 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all duration-200 cursor-pointer ${
+                        currentPage === page
+                          ? 'bg-black text-[#FFCB05] border-black shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
+                          : 'bg-white text-black border-black/30 hover:border-black hover:shadow-[2px_2px_0_0_#111111] hover:-translate-x-[1px] hover:-translate-y-[1px]'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => goToPage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`flex items-center gap-2 px-5 py-2.5 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${
+                      currentPage === 1
+                        ? 'border-black/10 text-black/25 cursor-not-allowed'
+                        : 'border-black bg-white text-black shadow-[3px_3px_0_0_#111111] hover:bg-black hover:text-[#FFCB05] hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer'
+                    }`}
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    onClick={() => goToPage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className={`flex items-center gap-2 px-5 py-2.5 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${
+                      currentPage === totalPages
+                        ? 'border-black/10 text-black/25 cursor-not-allowed'
+                        : 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] hover:bg-white hover:text-black hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer'
+                    }`}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          </>
         )}
       </div>
     </section>

@@ -27,7 +27,7 @@ export default function HeroCarousel() {
   if (slides.length === 0) {
     if (dbLoading) {
       return (
-        <section className="relative w-full aspect-[16/7] md:aspect-[21/9] overflow-hidden bg-[#FAF8F5] border-b border-black/10 flex items-center justify-center">
+        <section className="relative w-full aspect-[3/2] sm:aspect-[16/7] md:aspect-[21/9] overflow-hidden bg-[#FAF8F5] border-b border-black/10 flex items-center justify-center">
           {/* Halftone texture background */}
           <div
             className="pointer-events-none absolute inset-0 opacity-[0.03] z-0 animate-pulse"
@@ -60,7 +60,7 @@ export default function HeroCarousel() {
   }
 
   return (
-    <section className="relative w-full aspect-[16/7] md:aspect-[21/9] overflow-hidden bg-[#FAF8F5] border-b border-black/10">
+    <section className="relative w-full aspect-[3/2] sm:aspect-[16/7] md:aspect-[21/9] overflow-hidden bg-[#FAF8F5] border-b border-black/10">
       <div className="relative w-full h-full">
         {slides.map((slide, idx) => {
           const isActive = idx === currentSlide;
@@ -73,7 +73,7 @@ export default function HeroCarousel() {
                 src={slideImage}
                 alt="ATTIZ Hero Banner"
                 fill
-                className="object-contain object-center"
+                className="object-cover sm:object-contain object-center"
                 sizes="100vw"
                 priority={idx === 0}
               />
@@ -102,23 +102,23 @@ export default function HeroCarousel() {
         <>
           <button
             onClick={prevSlide}
-            className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/40 bg-black/15 hover:bg-white hover:text-brand-dark text-white flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md group"
+            className="hidden sm:flex absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/40 bg-black/15 hover:bg-white hover:text-brand-dark text-white items-center justify-center transition-all duration-300 cursor-pointer shadow-md group"
           >
             <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 group-hover:-translate-x-0.5 transition-transform duration-300" />
           </button>
           <button
             onClick={nextSlide}
-            className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/40 bg-black/15 hover:bg-white hover:text-brand-dark text-white flex items-center justify-center transition-all duration-300 cursor-pointer shadow-md group"
+            className="hidden sm:flex absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-white/40 bg-black/15 hover:bg-white hover:text-brand-dark text-white items-center justify-center transition-all duration-300 cursor-pointer shadow-md group"
           >
             <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 group-hover:translate-x-0.5 transition-transform duration-300" />
           </button>
 
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex space-x-2.5 bg-black/10 hover:bg-black/15 px-3 py-1.5 rounded-full backdrop-blur-xs transition-colors">
+          <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 z-20 flex space-x-2 sm:space-x-2.5 bg-black/25 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-full backdrop-blur-xs">
             {slides.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${idx === currentSlide ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'
+                className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all duration-300 ${idx === currentSlide ? 'bg-white scale-125' : 'bg-white/40 hover:bg-white/70'
                   }`}
               />
             ))}

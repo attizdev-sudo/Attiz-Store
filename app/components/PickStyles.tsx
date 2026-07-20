@@ -56,7 +56,7 @@ export default function PickStyles() {
     : styles;
 
   return (
-    <section className="py-24 border-t border-b border-black/10 bg-[#FAF8F5] relative overflow-hidden">
+    <section className="py-14 sm:py-24 border-t border-b border-black/10 bg-[#FAF8F5] relative overflow-hidden">
       {/* Subtle halftone background */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.03] z-0"
@@ -65,15 +65,15 @@ export default function PickStyles() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header */}
-        <div className="flex flex-col items-center justify-center mb-16 text-center">
+        <div className="flex flex-col items-center justify-center mb-10 sm:mb-16 text-center">
           <span className="inline-block bg-black text-[#FFCB05] attiz-mono text-[9px] font-bold tracking-[0.25em] uppercase px-3 py-1 -skew-x-6 border-2 border-black mb-4">
             <span className="inline-block skew-x-6">LOOKBOOK</span>
           </span>
-          <h2 className="attiz-display text-3xl sm:text-4xl tracking-tight text-black uppercase">
-            Pick Your Style
+          <h2 className="attiz-display text-2xl sm:text-3xl md:text-4xl tracking-tight text-black uppercase">
+            Wear Your Attitude
           </h2>
-          <p className="attiz-mono text-[10px] sm:text-xs font-bold text-black/55 tracking-[0.15em] uppercase mt-2">
-            Engineered silhouettes curated for modern ergonomics
+          <p className="attiz-mono text-[10px] sm:text-xs font-bold text-black/55 tracking-[0.15em] uppercase mt-2 max-w-xs sm:max-w-none">
+            Streetwear engineered for those who stand apart - not for everyone.
           </p>
         </div>
 
@@ -142,12 +142,12 @@ export default function PickStyles() {
         </div>
 
         {/* Mobile Layout */}
-        <div className="flex md:hidden flex-col gap-6">
-          {styles.map((style, idx) => (
+        <div className="flex md:hidden overflow-x-auto scrollbar-none -mx-4 px-4 gap-4 pb-4">
+          {slides.map((style, idx) => (
             <div
               key={idx}
               onClick={() => router.push(`/?secondary=${style.category}#catalog-grid`)}
-              className="relative aspect-video border-[3px] border-black bg-black shadow-[6px_6px_0_0_#111111] overflow-hidden group cursor-pointer"
+              className="relative w-[240px] xs:w-[280px] aspect-[4/5] border-[3px] border-black bg-black shadow-[4px_4px_0_0_#111111] overflow-hidden group cursor-pointer shrink-0 active:scale-[0.99] transition-transform"
             >
               {/* Background Image */}
               <img
@@ -156,24 +156,30 @@ export default function PickStyles() {
                 className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-102"
               />
 
-              {/* Overlay */}
-              <div className="absolute inset-0 bg-black/50 z-10" />
+              {/* Gradient overlay — stronger at bottom */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10 z-10" />
+
+              {/* Accent color bar at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 h-1.5 z-20" style={{ backgroundColor: style.color }} />
 
               {/* Content Panel */}
-              <div className="absolute inset-0 p-5 flex flex-col justify-between z-20 text-white select-none">
+              <div className="absolute inset-0 p-4 sm:p-5 flex flex-col justify-between z-20 text-white select-none">
                 <div className="flex justify-between items-start">
-                  <span className="bg-[#FFCB05] text-black border-2 border-black px-2.5 py-0.5 attiz-mono text-[8px] font-bold tracking-wider uppercase">
+                  <span className="bg-[#FFCB05] text-black border-2 border-black px-2 py-0.5 attiz-mono text-[8px] font-bold tracking-wider uppercase">
                     {style.tag}
                   </span>
                 </div>
 
-                <div className="flex flex-col items-start text-left">
-                  <h3 className="attiz-display text-2xl text-[#FFCB05] uppercase tracking-wide leading-none">
+                <div className="flex flex-col items-start text-left gap-1">
+                  <h3 className="attiz-display text-lg sm:text-2xl text-[#FFCB05] uppercase tracking-wide leading-none">
                     {style.name}
                   </h3>
-                  <p className="attiz-mono text-[8px] font-bold tracking-widest text-white/70 uppercase mt-1">
+                  <p className="attiz-mono text-[8px] font-bold tracking-widest text-white/70 uppercase">
                     {style.subtitle}
                   </p>
+                  <span className="mt-2 flex items-center gap-1.5 attiz-mono text-[8px] font-bold tracking-widest uppercase text-white/60 border border-white/30 px-2 py-0.5">
+                    Explore →
+                  </span>
                 </div>
               </div>
             </div>
