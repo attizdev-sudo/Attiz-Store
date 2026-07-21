@@ -35,27 +35,27 @@ const sections = [
     num: '01', icon: <Clock className="w-4 h-4" />, title: 'Order Processing', color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">All orders are processed after successful payment verification.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">All orders are processed after successful payment verification.</p>
         <BulletList items={[
           'Orders are typically processed within 1–3 business days.',
           'Orders placed on weekends or public holidays will be processed on the next business day.',
           'During launches, promotions, or peak seasons, processing times may be slightly longer.',
         ]} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-4">Once your order is shipped, you will receive a confirmation email or SMS with tracking details.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-4">Once your order is shipped, you will receive a confirmation email or SMS with tracking details.</p>
       </>
     ),
   },
   {
     num: '02', icon: <Globe className="w-4 h-4" />, title: 'Shipping Coverage', color: '#FFCB05',
     content: (
-      <p className="attiz-body text-sm text-black/70 font-light">ATTIZ currently ships across <strong className="text-black">India</strong>. We are continuously working to expand our delivery network and may offer international shipping in the future. Future availability will be announced through official ATTIZ channels.</p>
+      <p className="attiz-body text-sm text-black/90 font-light">ATTIZ currently ships across <strong className="text-black">India</strong>. We are continuously working to expand our delivery network and may offer international shipping in the future. Future availability will be announced through official ATTIZ channels.</p>
     ),
   },
   {
     num: '03', icon: <Clock className="w-4 h-4" />, title: 'Estimated Delivery Time', color: '#111111',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">Delivery times may vary depending on your location. Standard delivery timelines:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">Delivery times may vary depending on your location. Standard delivery timelines:</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           {[
             { zone: 'Metro Cities', time: '2–5 Business Days' },
@@ -63,12 +63,12 @@ const sections = [
             { zone: 'Remote Locations', time: '5–10 Business Days' },
           ].map((row) => (
             <div key={row.zone} className="border-2 border-black p-3 bg-[#FAF8F5]">
-              <span className="block attiz-mono text-[8px] font-bold text-black/40 tracking-widest uppercase mb-1">{row.zone}</span>
+              <span className="block attiz-mono text-[8px] font-bold text-black/85 tracking-widest uppercase mb-1">{row.zone}</span>
               <span className="attiz-display text-sm text-black">{row.time}</span>
             </div>
           ))}
         </div>
-        <p className="attiz-body text-sm text-black/70 font-light">These timelines are estimates and may vary due to courier operations and external factors.</p>
+        <p className="attiz-body text-sm text-black/90 font-light">These timelines are estimates and may vary due to courier operations and external factors.</p>
       </>
     ),
   },
@@ -76,7 +76,7 @@ const sections = [
     num: '04', icon: <Tag className="w-4 h-4" />, title: 'Shipping Charges', color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-3">Shipping charges, if applicable, will be displayed during checkout before payment.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-3">Shipping charges, if applicable, will be displayed during checkout before payment.</p>
         <div className="border-2 border-black p-4 bg-black text-white flex items-center gap-3">
           <span className="attiz-mono text-[9px] font-bold text-[#FFCB05] tracking-widest uppercase">Free Shipping</span>
           <span className="w-px h-4 bg-white/20" />
@@ -89,9 +89,9 @@ const sections = [
     num: '05', icon: <Search className="w-4 h-4" />, title: 'Order Tracking', color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">Once your order has been dispatched, you will receive:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">Once your order has been dispatched, you will receive:</p>
         <BulletList items={['Tracking Number', 'Courier Partner Information', 'Shipment Updates via email or SMS']} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-4">You can use the tracking information provided to monitor your delivery status in real-time.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-4">You can use the tracking information provided to monitor your delivery status in real-time.</p>
       </>
     ),
   },
@@ -99,9 +99,9 @@ const sections = [
     num: '06', icon: <MapPin className="w-4 h-4" />, title: 'Delivery Attempts', color: '#111111',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-3">Our courier partners will make delivery attempts at the shipping address provided. If delivery cannot be completed due to:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-3">Our courier partners will make delivery attempts at the shipping address provided. If delivery cannot be completed due to:</p>
         <BulletList items={['Incorrect address', 'Unavailability of recipient', 'Refusal to accept delivery']} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-3">Additional delivery attempts or return procedures may apply. Customers are responsible for providing accurate delivery information.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-3">Additional delivery attempts or return procedures may apply. Customers are responsible for providing accurate delivery information.</p>
       </>
     ),
   },
@@ -109,9 +109,9 @@ const sections = [
     num: '07', icon: <CloudRain className="w-4 h-4" />, title: 'Delayed Deliveries', color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">While we strive to deliver within the estimated timeframe, delays may occur due to:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">While we strive to deliver within the estimated timeframe, delays may occur due to:</p>
         <BulletList items={['Weather conditions', 'Public holidays', 'Natural disasters', 'Transportation disruptions', 'Courier service delays', 'High order volumes']} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-4">ATTIZ shall not be held responsible for delays caused by circumstances beyond our reasonable control.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-4">ATTIZ shall not be held responsible for delays caused by circumstances beyond our reasonable control.</p>
       </>
     ),
   },
@@ -119,13 +119,13 @@ const sections = [
     num: '08', icon: <PackageX className="w-4 h-4" />, title: 'Damaged Packages', color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">If you receive a package that appears damaged during transit:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">If you receive a package that appears damaged during transit:</p>
         <StepList items={[
           'Take clear photos of the package before opening.',
           'Record an unboxing video if possible.',
           'Contact our customer support team within 48 hours of delivery.',
         ]} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-4">Our team will investigate and assist with the appropriate resolution.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-4">Our team will investigate and assist with the appropriate resolution.</p>
       </>
     ),
   },
@@ -133,9 +133,9 @@ const sections = [
     num: '09', icon: <MapPinOff className="w-4 h-4" />, title: 'Incorrect Shipping Info', color: '#111111',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-3">Customers are responsible for ensuring all shipping details are accurate at the time of purchase. ATTIZ is not responsible for delivery issues arising from:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-3">Customers are responsible for ensuring all shipping details are accurate at the time of purchase. ATTIZ is not responsible for delivery issues arising from:</p>
         <BulletList items={['Incorrect addresses', 'Incomplete information', 'Invalid contact details']} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-3">Additional shipping charges may apply if re-delivery is required.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-3">Additional shipping charges may apply if re-delivery is required.</p>
       </>
     ),
   },
@@ -143,33 +143,33 @@ const sections = [
     num: '10', icon: <AlertCircle className="w-4 h-4" />, title: 'Lost Shipments', color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-3">If your order tracking has not been updated for an extended period or your package appears lost:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-3">If your order tracking has not been updated for an extended period or your package appears lost:</p>
         <BulletList items={[
           'Contact our customer support team immediately.',
           'We will coordinate with the courier partner to investigate the shipment.',
         ]} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-3">Resolution timelines may vary depending on the courier's investigation process.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-3">Resolution timelines may vary depending on the courier's investigation process.</p>
       </>
     ),
   },
   {
     num: '11', icon: <Ship className="w-4 h-4" />, title: 'International Shipping', color: '#FFCB05',
     content: (
-      <p className="attiz-body text-sm text-black/70 font-light">International shipping is currently <strong className="text-black">unavailable</strong> unless otherwise stated on the website. Future availability will be announced through official ATTIZ channels.</p>
+      <p className="attiz-body text-sm text-black/90 font-light">International shipping is currently <strong className="text-black">unavailable</strong> unless otherwise stated on the website. Future availability will be announced through official ATTIZ channels.</p>
     ),
   },
   {
     num: '12', icon: <Mail className="w-4 h-4" />, title: 'Contact Us', color: '#111111',
     content: (
       <div className="space-y-2">
-        <p className="attiz-body text-sm text-black/70 font-light">For shipping, delivery, or tracking-related assistance:</p>
+        <p className="attiz-body text-sm text-black/90 font-light">For shipping, delivery, or tracking-related assistance:</p>
         <div className="flex items-center gap-3 pt-1">
           <Diamond />
           <a href="mailto:support@attiz.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">support@attiz.com</a>
         </div>
         <div className="flex items-center gap-3">
           <Diamond />
-          <span className="attiz-mono text-[10px] font-bold text-black/50 tracking-widest uppercase">Mon – Sat &nbsp;·&nbsp; 9:00 AM – 6:00 PM IST</span>
+          <span className="attiz-mono text-[10px] font-bold text-black/85 tracking-widest uppercase">Mon – Sat &nbsp;·&nbsp; 9:00 AM – 6:00 PM IST</span>
         </div>
       </div>
     ),

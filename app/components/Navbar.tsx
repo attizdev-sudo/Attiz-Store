@@ -91,7 +91,7 @@ export default function Navbar() {
                   className={`attiz-mono text-[13px] font-bold tracking-widest transition-colors duration-300 py-2 flex items-center space-x-1 ${
                     activeTab === item.name
                       ? 'text-[#E63B2E] border-b-2 border-[#E63B2E]'
-                      : 'text-black/70 hover:text-black'
+                      : 'text-black/90 hover:text-black'
                   }`}
                 >
                   <span>{item.name}</span>
@@ -130,7 +130,7 @@ export default function Navbar() {
                               <button
                                 key={secondary.id}
                                 onClick={() => { setActiveTab('COLLECTIONS'); setIsCollectionsHovered(false); router.push(`/?category=${secondary.id}`); }}
-                                className="attiz-mono text-[11px] font-bold tracking-widest text-black/55 hover:text-black uppercase text-left w-full transition-colors cursor-pointer"
+                                className="attiz-mono text-[11px] font-bold tracking-widest text-black/85 hover:text-black uppercase text-left w-full transition-colors cursor-pointer"
                               >
                                 {secondary.name}
                               </button>
@@ -147,7 +147,7 @@ export default function Navbar() {
 
           {/* Right Utilities */}
           <div className="hidden md:flex items-center space-x-6">
-            <div className="flex items-center space-x-1 text-[11px] attiz-mono font-bold tracking-wider text-black/70 hover:text-black cursor-pointer transition-colors duration-300">
+            <div className="flex items-center space-x-1 text-[11px] attiz-mono font-bold tracking-wider text-black/90 hover:text-black cursor-pointer transition-colors duration-300">
               <span>INR (₹) | India</span>
               <ChevronDown className="w-3 h-3" />
             </div>
@@ -180,7 +180,7 @@ export default function Navbar() {
                         {user.role === 'admin' && (
                           <button
                             onClick={() => { setIsProfileDropdownOpen(false); router.push('/admin'); }}
-                            className="w-full text-left flex items-center space-x-2 px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
+                            className="w-full text-left flex items-center space-x-2 px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/95 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
                           >
                             <Database className="w-3.5 h-3.5" />
                             <span>Admin Console</span>
@@ -200,7 +200,7 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => router.push('/login')}
-                  className="text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
+                  className="text-black/95 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
                   title="Sign In"
                 >
                   <User className="w-4.5 h-4.5" />
@@ -211,7 +211,7 @@ export default function Navbar() {
             {/* Cart */}
             <button
               onClick={() => setIsCartOpen(true)}
-              className="relative text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
+              className="relative text-black/95 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
               title="Shopping Cart"
             >
               <ShoppingBag className="w-4.5 h-4.5" />
@@ -225,10 +225,10 @@ export default function Navbar() {
 
           {/* Hamburger - Mobile */}
           <div className="lg:hidden flex items-center space-x-4">
-            <button className="text-black/75 hover:text-black p-1.5">
+            <button className="text-black/95 hover:text-black p-1.5">
               <Search className="w-5 h-5" />
             </button>
-            <button onClick={() => setIsCartOpen(true)} className="relative text-black/75 hover:text-black p-1.5">
+            <button onClick={() => setIsCartOpen(true)} className="relative text-black/95 hover:text-black p-1.5">
               <ShoppingBag className="w-5 h-5" />
               {cartCount > 0 && (
                 <span className="absolute top-0 right-0 w-4 h-4 bg-[#E63B2E] border border-black rounded-full text-[8px] font-bold text-white flex items-center justify-center">
@@ -238,7 +238,7 @@ export default function Navbar() {
             </button>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-black/75 hover:text-black p-1.5"
+              className="text-black/95 hover:text-black p-1.5"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -276,7 +276,7 @@ export default function Navbar() {
                                 <button
                                   key={secondary.id}
                                   onClick={() => { router.push(`/?category=${secondary.id}`); setIsMobileMenuOpen(false); }}
-                                  className="text-[11px] font-bold tracking-widest text-black/60 hover:text-black uppercase text-left block w-full py-0.5 cursor-pointer"
+                                  className="text-[11px] font-bold tracking-widest text-black/85 hover:text-black uppercase text-left block w-full py-0.5 cursor-pointer"
                                 >
                                   {secondary.name}
                                 </button>

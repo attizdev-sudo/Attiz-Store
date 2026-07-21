@@ -36,9 +36,9 @@ export default function AboutPage() {
             {/* Left: Our Story Card */}
             <div className="lg:col-span-7 space-y-8">
               <div className="relative border-[3px] border-black bg-white shadow-[6px_6px_0_0_#111111] p-8 md:p-10 rotate-[-0.5deg] hover:rotate-0 transition-transform duration-300">
-                <span className="attiz-mono text-[9px] font-bold text-black/45 tracking-[0.2em] uppercase block mb-2">The Genesis</span>
+                <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-[0.2em] uppercase block mb-2">The Genesis</span>
                 <h2 className="attiz-display text-3xl font-bold tracking-wide uppercase text-black mb-6">Our Story</h2>
-                <div className="space-y-4 attiz-body text-sm text-black/70 leading-relaxed font-light">
+                <div className="space-y-4 attiz-body text-sm text-black/90 leading-relaxed font-light">
                   <p>
                     ATTIZ was founded with a simple vision: to create streetwear that feels premium, looks distinctive, and remains accessible to the next generation of fashion enthusiasts.
                   </p>
@@ -84,7 +84,7 @@ export default function AboutPage() {
                       <span className="w-2.5 h-2.5 border-2 border-black bg-[#FFCB05] rotate-45 mt-1.5 shrink-0" />
                       <div>
                         <h4 className="attiz-mono text-[11px] font-bold text-black uppercase tracking-wider">{val.title}</h4>
-                        <p className="attiz-body text-xs text-black/60 font-light mt-0.5">{val.desc}</p>
+                        <p className="attiz-body text-xs text-black/85 font-light mt-0.5">{val.desc}</p>
                       </div>
                     </li>
                   ))}
@@ -108,9 +108,9 @@ export default function AboutPage() {
               ].map((item, idx) => (
                 <div key={idx} className="border-2 border-black bg-white p-6 shadow-[3px_3px_0_0_#111111] hover:shadow-[5px_5px_0_0_#E63B2E] hover:-translate-x-[2px] hover:-translate-y-[2px] transition-all duration-300 flex flex-col justify-between">
                   <div className="space-y-3">
-                    <span className="attiz-mono text-[9px] font-bold text-black/45 tracking-widest uppercase">0{idx + 1} / Pillar</span>
+                    <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase">0{idx + 1} / Pillar</span>
                     <h3 className="attiz-mono text-xs font-bold text-black uppercase tracking-wider">{item.title}</h3>
-                    <p className="attiz-body text-xs text-black/65 leading-relaxed font-light">{item.desc}</p>
+                    <p className="attiz-body text-xs text-black/90 leading-relaxed font-light">{item.desc}</p>
                   </div>
                 </div>
               ))}

@@ -69,7 +69,7 @@ export default function OrdersPage() {
         {/* Back button */}
         <button
           onClick={() => router.push('/')}
-          className="mb-10 flex items-center space-x-2 attiz-mono text-[10px] font-bold tracking-widest text-black/50 hover:text-black transition-colors uppercase cursor-pointer group"
+          className="mb-10 flex items-center space-x-2 attiz-mono text-[10px] font-bold tracking-widest text-black/85 hover:text-black transition-colors uppercase cursor-pointer group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" />
           <span>Back to Home</span>
@@ -83,7 +83,7 @@ export default function OrdersPage() {
           <h1 className="attiz-display text-3xl sm:text-4xl md:text-5xl uppercase leading-[0.95] tracking-tight text-black mb-3">
             Track Orders
           </h1>
-          <p className="attiz-mono text-[10px] font-bold tracking-[0.25em] text-black/35 uppercase">
+          <p className="attiz-mono text-[10px] font-bold tracking-[0.25em] text-black/85 uppercase">
             {userOrders.length > 0
               ? `${userOrders.length} order${userOrders.length > 1 ? 's' : ''} placed`
               : 'Your order history'}
@@ -94,7 +94,7 @@ export default function OrdersPage() {
         {dbLoading ? (
           <div className="flex flex-col items-center justify-center py-28 space-y-4">
             <div className="w-9 h-9 rounded-full border-[3px] border-black border-t-[#E63B2E] animate-spin" />
-            <span className="attiz-mono text-[10px] font-bold tracking-[0.35em] uppercase text-black/50">
+            <span className="attiz-mono text-[10px] font-bold tracking-[0.35em] uppercase text-black/85">
               Loading your orders…
             </span>
           </div>
@@ -105,7 +105,7 @@ export default function OrdersPage() {
             <ClipboardList className="w-14 h-14 text-black/15 stroke-[1.2]" />
             <div>
               <h3 className="attiz-display text-xl text-black uppercase mb-1">No Orders Yet</h3>
-              <p className="attiz-mono text-[10px] font-bold tracking-widest text-black/40 uppercase leading-relaxed">
+              <p className="attiz-mono text-[10px] font-bold tracking-widest text-black/85 uppercase leading-relaxed">
                 You haven&apos;t placed any orders yet.<br />Start shopping to see them here.
               </p>
             </div>
@@ -213,7 +213,7 @@ export default function OrdersPage() {
                             <h4 className="attiz-display text-xs sm:text-sm text-black uppercase leading-tight line-clamp-2 mb-0.5">
                               {item.title}
                             </h4>
-                            <span className="attiz-mono text-[9px] font-bold text-black/40 tracking-widest uppercase">
+                            <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase">
                               Qty: {item.quantity} × ₹{item.price.toLocaleString('en-IN')}
                             </span>
                           </div>
@@ -231,7 +231,7 @@ export default function OrdersPage() {
                     <div className="flex items-start gap-2 max-w-sm">
                       <MapPin className="w-3.5 h-3.5 text-black/40 mt-0.5 shrink-0" />
                       <div>
-                        <span className="block attiz-mono text-[8px] font-bold text-black/35 tracking-widest uppercase mb-0.5">Shipping To</span>
+                        <span className="block attiz-mono text-[8px] font-bold text-black/85 tracking-widest uppercase mb-0.5">Shipping To</span>
                         <p className="attiz-body text-[12px] text-black/65 leading-relaxed tracking-wide">{order.shipping_address}</p>
                       </div>
                     </div>

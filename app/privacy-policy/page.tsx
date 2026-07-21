@@ -11,7 +11,7 @@ const BulletList = ({ items }: { items: string[] }) => (
     {items.map((item, i) => (
       <li key={i} className="flex items-start gap-3">
         <Diamond />
-        <span className="attiz-body text-sm text-black/70 font-light">{item}</span>
+        <span className="attiz-body text-sm text-black/90 font-light">{item}</span>
       </li>
     ))}
   </ul>
@@ -29,7 +29,7 @@ const sections = [
     num: '01', icon: <Database className="w-4 h-4" />, title: 'What We Collect', color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">We collect only the information necessary to operate our services, including:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">We collect only the information necessary to operate our services, including:</p>
         <BulletList items={[
           'Name, email address, phone number, and shipping address when you create an account or place an order.',
           'Payment information — processed securely through trusted payment partners. We do not store complete card details on our servers.',
@@ -43,7 +43,7 @@ const sections = [
     num: '02', icon: <Eye className="w-4 h-4" />, title: 'How We Use Your Data', color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">Your information is used solely for:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">Your information is used solely for:</p>
         <BulletList items={[
           'Processing and fulfilling your orders.',
           'Communicating order confirmations, shipping updates, and support responses.',
@@ -62,13 +62,13 @@ const sections = [
           <span className="attiz-display text-sm text-[#FFCB05] uppercase block mb-1">Our Promise</span>
           <span className="attiz-body text-xs text-white/80 font-light">ATTIZ never sells or rents your personal information to third parties.</span>
         </div>
-        <p className="attiz-body text-sm text-black/70 font-light mb-3">We may share limited information only with trusted service providers who help us operate:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-3">We may share limited information only with trusted service providers who help us operate:</p>
         <BulletList items={[
           'Payment processors (to handle your transactions securely)',
           'Shipping and logistics partners (to deliver your orders)',
           'Technology and analytics providers (to run our website)',
         ]} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-3">All third parties are bound by strict confidentiality and data protection obligations.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-3">All third parties are bound by strict confidentiality and data protection obligations.</p>
       </>
     ),
   },
@@ -76,14 +76,14 @@ const sections = [
     num: '04', icon: <Lock className="w-4 h-4" />, title: 'Data Security', color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">We implement industry-standard security measures to safeguard your data, including:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">We implement industry-standard security measures to safeguard your data, including:</p>
         <BulletList items={[
           'SSL/TLS encryption for all data transmitted through our website.',
           'Secure servers with restricted access controls.',
           'Regular security audits and monitoring.',
           'Trusted payment gateway integration — we never store raw payment card data.',
         ]} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-3">While no online platform can guarantee absolute security, we continuously work to maintain a safe and reliable environment for our customers.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-3">While no online platform can guarantee absolute security, we continuously work to maintain a safe and reliable environment for our customers.</p>
       </>
     ),
   },
@@ -91,7 +91,7 @@ const sections = [
     num: '05', icon: <UserCheck className="w-4 h-4" />, title: 'Your Rights', color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">You have the right to:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">You have the right to:</p>
         <BulletList items={[
           'Access the personal information we hold about you.',
           'Request corrections to inaccurate or incomplete data.',
@@ -99,7 +99,7 @@ const sections = [
           'Opt out of marketing communications at any time.',
           'Withdraw consent where processing is based on consent.',
         ]} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-3">To exercise any of these rights, contact us at <a href="mailto:support@attiz.com" className="text-[#E63B2E] hover:text-black underline underline-offset-2 transition-colors">support@attiz.com</a>.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-3">To exercise any of these rights, contact us at <a href="mailto:support@attiz.com" className="text-[#E63B2E] hover:text-black underline underline-offset-2 transition-colors">support@attiz.com</a>.</p>
       </>
     ),
   },
@@ -107,27 +107,27 @@ const sections = [
     num: '06', icon: <Shield className="w-4 h-4" />, title: 'Cookies & Tracking', color: '#111111',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">We use cookies and similar tracking technologies to:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">We use cookies and similar tracking technologies to:</p>
         <BulletList items={[
           'Keep you signed in and maintain your shopping cart.',
           'Understand how visitors use our website (analytics).',
           'Personalize content and product recommendations.',
         ]} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-3">You can manage cookie preferences through your browser settings. Disabling cookies may affect certain website features.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-3">You can manage cookie preferences through your browser settings. Disabling cookies may affect certain website features.</p>
       </>
     ),
   },
   {
     num: '07', icon: <RefreshCw className="w-4 h-4" />, title: 'Policy Updates', color: '#E63B2E',
     content: (
-      <p className="attiz-body text-sm text-black/70 font-light">By using our website, you agree to the collection and use of your information as outlined in this Privacy Policy. If we make any updates, the revised version will be published on this page with an updated effective date. We encourage you to review this policy periodically.</p>
+      <p className="attiz-body text-sm text-black/90 font-light">By using our website, you agree to the collection and use of your information as outlined in this Privacy Policy. If we make any updates, the revised version will be published on this page with an updated effective date. We encourage you to review this policy periodically.</p>
     ),
   },
   {
     num: '08', icon: <Mail className="w-4 h-4" />, title: 'Contact & Questions', color: '#FFCB05',
     content: (
       <div className="space-y-2">
-        <p className="attiz-body text-sm text-black/70 font-light">If you have any questions or concerns regarding our Privacy Policy or the way your personal information is handled, our team is always happy to assist you.</p>
+        <p className="attiz-body text-sm text-black/90 font-light">If you have any questions or concerns regarding our Privacy Policy or the way your personal information is handled, our team is always happy to assist you.</p>
         <div className="flex items-center gap-3 pt-2">
           <Diamond />
           <a href="mailto:support@attiz.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">support@attiz.com</a>
@@ -157,10 +157,10 @@ export default function PrivacyPolicyPage() {
               Privacy<br />Policy
             </h1>
             <div className="h-1 w-24 bg-[#E63B2E] my-4 mx-auto md:mx-0" />
-            <span className="attiz-mono text-[9px] font-bold text-black/40 tracking-widest uppercase border-2 border-black/10 px-3 py-1 inline-block">
+            <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase border-2 border-black/10 px-3 py-1 inline-block">
               Effective: June 2026
             </span>
-            <p className="attiz-body text-base leading-8 text-black/70 max-w-3xl font-light">
+            <p className="attiz-body text-base leading-8 text-black/90 max-w-3xl font-light">
               At ATTIZ, your privacy is one of our highest priorities. We are committed to protecting your personal information and ensuring that your data is collected, used, and stored responsibly.
             </p>
           </div>
@@ -169,7 +169,7 @@ export default function PrivacyPolicyPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-[3px] border-black">
             {keyPoints.map((kp, i) => (
               <div key={i} className={`p-5 text-center ${i < keyPoints.length - 1 ? 'border-r-2 border-black/20' : ''}`}>
-                <span className="block attiz-mono text-[8px] font-bold text-black/35 tracking-widest uppercase mb-2">{kp.label}</span>
+                <span className="block attiz-mono text-[8px] font-bold text-black/85 tracking-widest uppercase mb-2">{kp.label}</span>
                 <span className="attiz-display text-sm text-black uppercase">{kp.value}</span>
               </div>
             ))}

@@ -23,7 +23,7 @@ function Divider({ label }: { label: string }) {
   return (
     <div className="relative flex items-center my-4">
       <div className="flex-1 border-t border-black/10" />
-      <span className="px-3 attiz-mono text-[9px] font-bold tracking-widest text-black/35 uppercase">
+      <span className="px-3 attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase">
         {label}
       </span>
       <div className="flex-1 border-t border-black/10" />
@@ -59,7 +59,7 @@ function Field({
         {label}
       </label>
       <div className="relative flex items-center border-2 border-black bg-white focus-within:shadow-[3px_3px_0_0_#E63B2E] focus-within:translate-x-[-1px] focus-within:translate-y-[-1px] transition-all">
-        <span className="absolute left-3 text-black/40">{icon}</span>
+        <span className="absolute left-3 text-black/85">{icon}</span>
         <input
           type={type}
           name={name}
@@ -228,11 +228,11 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
               <MailCheck className="w-6 h-6 text-[#FFCB05]" />
             </div>
             <h2 className="attiz-display text-base tracking-wider uppercase text-black mb-2">Check Your Inbox</h2>
-            <p className="attiz-mono text-[9px] text-black/60 tracking-wide leading-relaxed mb-1">Verification link sent to:</p>
+            <p className="attiz-mono text-[9px] text-black/85 tracking-wide leading-relaxed mb-1">Verification link sent to:</p>
             <p className="attiz-display text-sm text-black border-2 border-black bg-[#FFCB05]/30 py-2 px-4 mb-4 tracking-wider">
               {pendingVerification.email}
             </p>
-            <p className="attiz-mono text-[9px] text-black/45 tracking-wide leading-relaxed mb-4">
+            <p className="attiz-mono text-[9px] text-black/85 tracking-wide leading-relaxed mb-4">
               Click the link to activate your account. Expires in 24 hours.
             </p>
             {resendSent && (
@@ -250,7 +250,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
             </button>
             <button
               onClick={() => { setPendingVerification(null); setIsLogin(true); }}
-              className="mt-3 attiz-mono text-[9px] font-bold tracking-widest text-black/45 hover:text-black uppercase underline cursor-pointer block w-full text-center"
+              className="mt-3 attiz-mono text-[9px] font-bold tracking-widest text-black/85 hover:text-black uppercase underline cursor-pointer block w-full text-center"
             >
               Back to Sign In
             </button>
@@ -279,7 +279,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
             <div className="w-12 h-12 border-[3px] border-black bg-black flex items-center justify-center shadow-[4px_4px_0_0_#FFCB05]">
               <Loader2 className="w-6 h-6 text-[#FFCB05] animate-spin" />
             </div>
-            <p className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase text-center">
+            <p className="attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase text-center">
               {googleLoading ? 'Signing you in with Google...' : 'Checking your session...'}
             </p>
           </div>
@@ -315,7 +315,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
               {emailNotVerified && (
                 <div className="mt-2">
                   {resendSent ? (
-                    <span className="flex items-center justify-center gap-1 text-black/60 text-[9px]">
+                    <span className="flex items-center justify-center gap-1 text-black/85 text-[9px]">
                       <Check className="w-3 h-3 text-green-600" /> Sent! Check your inbox.
                     </span>
                   ) : (
@@ -378,7 +378,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
                 onChange={handleSignInChange}
                 required
                 suffix={
-                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-black/40 hover:text-black transition-colors cursor-pointer">
+                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="text-black/85 hover:text-black transition-colors cursor-pointer">
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 }
@@ -395,7 +395,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
             <form onSubmit={handleSignUpSubmit} className="space-y-3">
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <label className="attiz-mono text-[8px] font-bold tracking-widest text-black/50 uppercase block">First Name *</label>
+                  <label className="attiz-mono text-[8px] font-bold tracking-widest text-black/85 uppercase block">First Name *</label>
                   <input
                     type="text" name="firstName" required placeholder="JOHN"
                     value={signUpDetails.firstName} onChange={handleSignUpChange}
@@ -403,7 +403,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="attiz-mono text-[8px] font-bold tracking-widest text-black/50 uppercase block">Last Name *</label>
+                  <label className="attiz-mono text-[8px] font-bold tracking-widest text-black/85 uppercase block">Last Name *</label>
                   <input
                     type="text" name="lastName" required placeholder="DOE"
                     value={signUpDetails.lastName} onChange={handleSignUpChange}
@@ -420,9 +420,9 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
               />
 
               <div className="space-y-1">
-                <label className="attiz-mono text-[8px] font-bold tracking-widest text-black/50 uppercase block">Phone (Optional)</label>
+                <label className="attiz-mono text-[8px] font-bold tracking-widest text-black/85 uppercase block">Phone (Optional)</label>
                 <div className="relative flex items-center border-2 border-black bg-white focus-within:shadow-[3px_3px_0_0_#E63B2E] focus-within:translate-x-[-1px] focus-within:translate-y-[-1px] transition-all">
-                  <Phone className="w-3.5 h-3.5 text-black/40 absolute left-3" />
+                  <Phone className="w-3.5 h-3.5 text-black/85 absolute left-3" />
                   <input
                     type="tel" name="phone" placeholder="9999999999"
                     value={signUpDetails.phone} onChange={handleSignUpChange}
@@ -433,7 +433,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <label className="attiz-mono text-[8px] font-bold tracking-widest text-black/50 uppercase block">Password *</label>
+                  <label className="attiz-mono text-[8px] font-bold tracking-widest text-black/85 uppercase block">Password *</label>
                   <div className="relative flex items-center border-2 border-black bg-white focus-within:shadow-[3px_3px_0_0_#E63B2E] focus-within:translate-x-[-1px] focus-within:translate-y-[-1px] transition-all">
                     <Lock className="w-3.5 h-3.5 text-black/40 absolute left-3" />
                     <input
@@ -441,7 +441,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
                       value={signUpDetails.password} onChange={handleSignUpChange}
                       className="w-full pl-9 pr-8 py-2.5 text-xs bg-transparent border-none outline-none attiz-body text-black placeholder-black/30 font-bold"
                     />
-                    <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 text-black/40 hover:text-black transition-colors cursor-pointer">
+                    <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-2 text-black/85 hover:text-black transition-colors cursor-pointer">
                       {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                     </button>
                   </div>

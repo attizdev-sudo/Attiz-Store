@@ -16,12 +16,12 @@ export default function QuoteSection() {
             <h3 className="attiz-display text-2xl sm:text-3xl font-bold text-black tracking-wide uppercase mb-4 leading-snug">
               WE DON'T FOLLOW TRENDS. WE CREATE THEM.
             </h3>
-            <p className="attiz-body text-xs sm:text-sm leading-relaxed text-black/75 tracking-wider text-justify md:text-left max-w-2xl font-light">
+            <p className="attiz-body text-xs sm:text-sm leading-relaxed text-black/95 tracking-wider text-justify md:text-left max-w-2xl font-light">
               Every ATTIZ piece is designed with purpose, crafted with premium fabrics, and finished with uncompromising attention to detail. More than clothing, it's confidence you wear—built for those who choose authenticity over approval.
             </p>
             <div className="mt-6 flex items-center justify-center md:justify-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-[#E63B2E]" />
-              <span className="attiz-mono text-[9px] font-bold text-black/40 tracking-[0.2em] uppercase">TEAM ATTIZ</span>
+              <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-[0.2em] uppercase">TEAM ATTIZ</span>
             </div>
           </div>
 

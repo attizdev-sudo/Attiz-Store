@@ -32,7 +32,7 @@ export default function Footer() {
             <ul className="space-y-3">
               {shopLinks.map((link) => (
                 <li key={link.name}>
-                  <a href={link.href} className="attiz-mono text-[11px] sm:text-[12px] font-bold text-black/60 hover:text-black tracking-widest transition-colors duration-200 uppercase">
+                  <a href={link.href} className="attiz-mono text-[11px] sm:text-[12px] font-bold text-black/85 hover:text-black tracking-widest transition-colors duration-200 uppercase">
                     {link.name}
                   </a>
                 </li>
@@ -45,12 +45,12 @@ export default function Footer() {
             <h3 className="attiz-display text-sm tracking-wider text-black mb-5 uppercase">CONNECT WITH US</h3>
             <ul className="space-y-4">
               <li>
-                <span className="block attiz-mono text-[10px] text-black/45 tracking-widest font-bold uppercase mb-1">Hotline</span>
+                <span className="block attiz-mono text-[10px] text-black/75 tracking-widest font-bold uppercase mb-1">Hotline</span>
                 <a href="tel:+917845351604" className="attiz-mono text-[12px] sm:text-[13px] font-bold text-black hover:text-[#E63B2E] transition-colors duration-200">+91 7845351604</a>
               </li>
               <li>
-                <span className="block attiz-mono text-[10px] text-black/45 tracking-widest font-bold uppercase mb-1">Mail</span>
-                <a href="mailto:admin@attizclothing.com" className="attiz-mono text-[11px] sm:text-[12px] font-bold text-black hover:text-[#E63B2E] tracking-wider transition-colors duration-200 break-all">admin@attizclothing.com</a>
+                <span className="block attiz-mono text-[10px] text-black/75 tracking-widest font-bold uppercase mb-1">Mail</span>
+                <a href="mailto:teamattiz.in@gmail.com" className="attiz-mono text-[11px] sm:text-[12px] font-bold text-black hover:text-[#E63B2E] tracking-wider transition-colors duration-200 break-all">teamattiz.in@gmail.com</a>
               </li>
             </ul>
           </div>
@@ -62,11 +62,11 @@ export default function Footer() {
               {policyLinks.map((link) => (
                 <li key={link.name}>
                   {link.href.startsWith('/') ? (
-                    <Link href={link.href} className="attiz-mono text-[11px] sm:text-[12px] font-bold text-black/60 hover:text-black tracking-widest transition-colors duration-200 uppercase">
+                    <Link href={link.href} className="attiz-mono text-[11px] sm:text-[12px] font-bold text-black/85 hover:text-black tracking-widest transition-colors duration-200 uppercase">
                       {link.name}
                     </Link>
                   ) : (
-                    <a href={link.href} className="attiz-mono text-[11px] sm:text-[12px] font-bold text-black/60 hover:text-black tracking-widest transition-colors duration-200 uppercase">
+                    <a href={link.href} className="attiz-mono text-[11px] sm:text-[12px] font-bold text-black/85 hover:text-black tracking-widest transition-colors duration-200 uppercase">
                       {link.name}
                     </a>
                   )}
@@ -96,7 +96,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-black/10 pt-8 text-center">
-          <p className="attiz-mono text-[11px] font-bold tracking-[0.25em] text-black/40 uppercase">
+          <p className="attiz-mono text-[11px] font-bold tracking-[0.25em] text-black/70 uppercase">
             © 2026, ATTIZ. POWERED BY Kryvos Technologies
           </p>
         </div>

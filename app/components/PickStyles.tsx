@@ -72,7 +72,7 @@ export default function PickStyles() {
           <h2 className="attiz-display text-2xl sm:text-3xl md:text-4xl tracking-tight text-black uppercase">
             Wear Your Attitude
           </h2>
-          <p className="attiz-mono text-[10px] sm:text-xs font-bold text-black/55 tracking-[0.15em] uppercase mt-2 max-w-xs sm:max-w-none">
+          <p className="attiz-mono text-[10px] sm:text-xs font-bold text-black/85 tracking-[0.15em] uppercase mt-2 max-w-xs sm:max-w-none">
             Streetwear engineered for those who stand apart - not for everyone.
           </p>
         </div>

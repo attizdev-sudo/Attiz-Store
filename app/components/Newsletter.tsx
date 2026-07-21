@@ -24,7 +24,7 @@ export default function Newsletter() {
           <span className="attiz-mono text-[9px] font-bold tracking-[0.3em] text-[#E63B2E] uppercase">Newsletter</span>
         </div>
         <h2 className="attiz-display text-3xl sm:text-4xl text-black mb-4 uppercase tracking-wide">Subscribe to our emails</h2>
-        <p className="attiz-body text-xs sm:text-sm text-black/60 tracking-widest mb-8 max-w-md mx-auto leading-relaxed font-light">
+        <p className="attiz-body text-xs sm:text-sm text-black/85 tracking-widest mb-8 max-w-md mx-auto leading-relaxed font-light">
           Be the first to know about new collections, seasonal drops, and exclusive editorial updates.
         </p>
         <form onSubmit={handleSubmit} className="max-w-md mx-auto relative">
