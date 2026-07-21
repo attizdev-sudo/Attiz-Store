@@ -23,7 +23,7 @@ const sections = [
     color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-3">To place an order through our website, you must:</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-3">To place an order through our website, you must:</p>
         <ul className="space-y-2">
           {[
             'Be at least 18 years of age or have parental/guardian consent.',
@@ -46,7 +46,7 @@ const sections = [
     color: '#111111',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-3">We strive to ensure all product descriptions, images, pricing, and availability information are accurate. However:</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-3">We strive to ensure all product descriptions, images, pricing, and availability information are accurate. However:</p>
         <ul className="space-y-2">
           {[
             'Product colors may vary slightly due to screen settings and photography.',
@@ -70,7 +70,7 @@ const sections = [
     color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-3">When you place an order:</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-3">When you place an order:</p>
         <ul className="space-y-2 mb-3">
           {[
             'You agree that all information provided is accurate.',
@@ -83,7 +83,7 @@ const sections = [
             </li>
           ))}
         </ul>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">If your order is canceled after payment, the applicable refund will be processed according to our refund policy.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">If your order is canceled after payment, the applicable refund will be processed according to our refund policy.</p>
       </>
     ),
   },
@@ -94,9 +94,9 @@ const sections = [
     color: '#111111',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-2">We accept approved payment methods displayed at checkout.</p>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-2">By submitting payment information, you authorize us to charge the applicable amount for your purchase, including taxes and shipping fees where applicable.</p>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">ATTIZ does not store complete payment card details on our servers.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-2">We accept approved payment methods displayed at checkout.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-2">By submitting payment information, you authorize us to charge the applicable amount for your purchase, including taxes and shipping fees where applicable.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">ATTIZ does not store complete payment card details on our servers.</p>
       </>
     ),
   },
@@ -107,7 +107,7 @@ const sections = [
     color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-3">Shipping times are estimates and may vary. ATTIZ is not responsible for delays caused by:</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-3">Shipping times are estimates and may vary. ATTIZ is not responsible for delays caused by:</p>
         <ul className="space-y-2 mb-3">
           {['Shipping carriers', 'Customs processing', 'Incorrect shipping information provided by customers', 'Events beyond our reasonable control'].map((item, i) => (
             <li key={i} className="flex items-start gap-3">
@@ -116,7 +116,7 @@ const sections = [
             </li>
           ))}
         </ul>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">Customers are responsible for providing accurate delivery information.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">Customers are responsible for providing accurate delivery information.</p>
       </>
     ),
   },
@@ -127,7 +127,7 @@ const sections = [
     color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-3">Returns and exchanges are subject to our Return Policy. Generally:</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-3">Returns and exchanges are subject to our Return Policy. Generally:</p>
         <ul className="space-y-2 mb-3">
           {[
             'Items must be unused, unworn, and in original condition.',
@@ -140,7 +140,7 @@ const sections = [
             </li>
           ))}
         </ul>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">Refunds will be processed according to the original payment method after inspection and approval.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">Refunds will be processed according to the original payment method after inspection and approval.</p>
       </>
     ),
   },
@@ -151,8 +151,8 @@ const sections = [
     color: '#111111',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-3">All content on this website — including logos, graphics, product designs, images, text, branding, and website content — is the property of ATTIZ and is protected by applicable intellectual property laws.</p>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">Unauthorized reproduction, distribution, modification, or commercial use is strictly prohibited.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-3">All content on this website — including logos, graphics, product designs, images, text, branding, and website content — is the property of ATTIZ and is protected by applicable intellectual property laws.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">Unauthorized reproduction, distribution, modification, or commercial use is strictly prohibited.</p>
       </>
     ),
   },
@@ -163,7 +163,7 @@ const sections = [
     color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-3">You agree not to:</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-3">You agree not to:</p>
         <ul className="space-y-2 mb-3">
           {[
             'Use the website for unlawful purposes.',
@@ -178,7 +178,7 @@ const sections = [
             </li>
           ))}
         </ul>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">Violation of these terms may result in account suspension or legal action.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">Violation of these terms may result in account suspension or legal action.</p>
       </>
     ),
   },
@@ -189,7 +189,7 @@ const sections = [
     color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light mb-3">To the maximum extent permitted by law, ATTIZ shall not be liable for any indirect, incidental, consequential, or special damages arising from:</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light mb-3">To the maximum extent permitted by law, ATTIZ shall not be liable for any indirect, incidental, consequential, or special damages arising from:</p>
         <ul className="space-y-2 mb-3">
           {['Use of the website', 'Product purchases', 'Service interruptions', 'Technical issues', 'Third-party actions'].map((item, i) => (
             <li key={i} className="flex items-start gap-3">
@@ -198,7 +198,7 @@ const sections = [
             </li>
           ))}
         </ul>
-        <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">Our total liability shall not exceed the amount paid for the purchased product.</p>
+        <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">Our total liability shall not exceed the amount paid for the purchased product.</p>
       </>
     ),
   },
@@ -208,7 +208,7 @@ const sections = [
     title: 'Third-Party Links',
     color: '#111111',
     content: (
-      <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">Our website may contain links to third-party websites for convenience. ATTIZ is not responsible for the content, policies, or practices of external websites. Users access such websites at their own risk.</p>
+      <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">Our website may contain links to third-party websites for convenience. ATTIZ is not responsible for the content, policies, or practices of external websites. Users access such websites at their own risk.</p>
     ),
   },
   {
@@ -217,7 +217,7 @@ const sections = [
     title: 'Privacy',
     color: '#FFCB05',
     content: (
-      <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">Your use of our website is also governed by our <Link href="/privacy-policy" className="text-[#E63B2E] hover:text-black underline underline-offset-2 transition-colors">Privacy Policy</Link>, which explains how we collect, use, and protect customer information.</p>
+      <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">Your use of our website is also governed by our <Link href="/privacy-policy" className="text-[#E63B2E] hover:text-black underline underline-offset-2 transition-colors">Privacy Policy</Link>, which explains how we collect, use, and protect customer information.</p>
     ),
   },
   {
@@ -226,7 +226,7 @@ const sections = [
     title: 'Modifications to Terms',
     color: '#E63B2E',
     content: (
-      <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">ATTIZ reserves the right to update, modify, or replace these Terms &amp; Conditions at any time without prior notice. Changes become effective immediately upon publication on this website. Customers are encouraged to review this page periodically.</p>
+      <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">ATTIZ reserves the right to update, modify, or replace these Terms & Conditions at any time without prior notice. Changes become effective immediately upon publication on this website. Customers are encouraged to review this page periodically.</p>
     ),
   },
   {
@@ -235,7 +235,7 @@ const sections = [
     title: 'Governing Law',
     color: '#111111',
     content: (
-      <p className="attiz-body text-sm text-black/70 leading-relaxed font-light">These Terms &amp; Conditions shall be governed and interpreted in accordance with the laws applicable in the jurisdiction where ATTIZ operates. Any disputes arising from the use of this website shall be subject to the jurisdiction of the appropriate courts.</p>
+      <p className="attiz-body text-sm text-black/90 leading-relaxed font-light">These Terms & Conditions shall be governed and interpreted in accordance with the laws applicable in the jurisdiction where ATTIZ operates. Any disputes arising from the use of this website shall be subject to the jurisdiction of the appropriate courts.</p>
     ),
   },
   {
@@ -245,7 +245,7 @@ const sections = [
     color: '#FFCB05',
     content: (
       <div className="space-y-2">
-        <p className="attiz-body text-sm text-black/70 font-light">For questions regarding these Terms &amp; Conditions, reach out to us:</p>
+        <p className="attiz-body text-sm text-black/90 font-light">For questions regarding these Terms & Conditions, reach out to us:</p>
         <div className="flex items-center gap-3 pt-1">
           <span className="w-2 h-2 border-2 border-black bg-[#FFCB05] rotate-45 shrink-0" />
           <a href="mailto:support@attiz.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">support@attiz.com</a>

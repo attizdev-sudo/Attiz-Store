@@ -53,7 +53,7 @@ export default function CategoryNav() {
                 </div>
 
                 {/* Label */}
-                <span className="mt-1 attiz-mono text-[7px] sm:text-[9px] md:text-[10px] font-bold tracking-[0.15em] sm:tracking-[0.2em] text-black/40 group-hover:text-black transition-colors duration-300 uppercase text-center leading-tight">
+                <span className="mt-1 attiz-mono text-[7px] sm:text-[9px] md:text-[10px] font-bold tracking-[0.15em] sm:tracking-[0.2em] text-black/85 group-hover:text-black transition-colors duration-300 uppercase text-center leading-tight">
                   {cat.name}
                 </span>
 

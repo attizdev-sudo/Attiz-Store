@@ -19,7 +19,7 @@ export default function ValueProps() {
               </div>
               <div className="flex flex-col">
                 <h4 className="attiz-display text-sm tracking-widest text-black mb-1 group-hover:text-[#E63B2E] transition-colors">{item.title}</h4>
-                <p className="attiz-body text-[10px] text-black/55 tracking-wider font-light leading-normal">{item.description}</p>
+                <p className="attiz-body text-[10px] text-black/85 tracking-wider font-light leading-normal">{item.description}</p>
               </div>
             </div>
           ))}

@@ -36,7 +36,7 @@ export default function ContactPage() {
               Contact Us
             </h1>
             <div className="h-1 w-24 bg-black my-4 mx-auto md:mx-0" />
-            <p className="attiz-body text-base leading-8 text-black/75 max-w-3xl font-light">
+            <p className="attiz-body text-base leading-8 text-black/95 max-w-3xl font-light">
               We'd love to hear from you. Whether you have a question about an order, product details, sizing, shipping, returns, collaborations, or anything else, the ATTIZ team is here to help.
             </p>
           </div>
@@ -59,11 +59,11 @@ export default function ContactPage() {
                     Email: <a href="mailto:support@attiz.com" className="attiz-mono text-xs font-bold text-[#E63B2E] hover:underline">support@attiz.com</a>
                   </p>
                   <div className="pt-2 border-t border-black/5 flex gap-2">
-                    <Clock className="w-3.5 h-3.5 mt-0.5 text-black/40 shrink-0" />
+                    <Clock className="w-3.5 h-3.5 mt-0.5 text-black/85 shrink-0" />
                     <div>
                       <p className="font-medium text-black">Customer Care Hours:</p>
                       <p>Monday – Saturday: 9:00 AM – 6:00 PM (IST)</p>
-                      <p className="text-black/50 text-[10px] mt-0.5">Response Time: 24–48 business hours.</p>
+                      <p className="text-black/85 text-[10px] mt-0.5">Response Time: 24–48 business hours.</p>
                     </div>
                   </div>
                 </div>
@@ -135,7 +135,7 @@ export default function ContactPage() {
                     
                     {/* Name input */}
                     <div className="space-y-1">
-                      <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Full Name *</label>
+                      <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase block">Full Name *</label>
                       <input
                         type="text"
                         required
@@ -148,7 +148,7 @@ export default function ContactPage() {
 
                     {/* Email input */}
                     <div className="space-y-1">
-                      <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Email Address *</label>
+                      <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase block">Email Address *</label>
                       <input
                         type="email"
                         required
@@ -161,7 +161,7 @@ export default function ContactPage() {
 
                     {/* Phone input */}
                     <div className="space-y-1">
-                      <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Phone Number (Optional)</label>
+                      <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase block">Phone Number (Optional)</label>
                       <input
                         type="tel"
                         value={formData.phone}
@@ -173,7 +173,7 @@ export default function ContactPage() {
 
                     {/* Subject input */}
                     <div className="space-y-1">
-                      <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/60 uppercase block">Subject</label>
+                      <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase block">Subject</label>
                       <input
                         type="text"
                         value={formData.subject}

@@ -13,7 +13,7 @@ export default function FloatingWidgets() {
   }, []);
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-  const openWhatsApp = () => window.open('https://wa.me/8270320393', '_blank');
+  const openWhatsApp = () => window.open('https://wa.me/7845351604', '_blank');
 
   return (
     <>
@@ -28,12 +28,12 @@ export default function FloatingWidgets() {
       </button>
 
       <div className="fixed bottom-6 right-6 z-40 flex flex-col space-y-3">
-        <button
+        {/* <button
           className="w-12 h-12 rounded-full bg-brand-dark hover:bg-brand-brown text-white shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer group"
           title="Customer support chat"
-        >
-          <MessageSquare className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" />
-        </button>
+        > */}
+          {/* <MessageSquare className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" /> */}
+        {/* </button> */}
         <button
           onClick={openWhatsApp}
           className="w-12 h-12 rounded-full bg-[#25D366] hover:bg-[#128C7E] text-white shadow-lg flex items-center justify-center transition-all duration-300 hover:scale-110 cursor-pointer group"

@@ -134,10 +134,10 @@ export default function EditorialHero() {
                     <h1 className="attiz-display text-3xl sm:text-5xl lg:text-6xl leading-[0.95] tracking-tight uppercase text-black mb-3 lg:mb-4">
                       {slide.title}
                     </h1>
-                    <p className="attiz-mono text-[9px] sm:text-[10px] font-bold text-black/55 tracking-[0.2em] uppercase mb-4 lg:mb-5">
+                    <p className="attiz-mono text-[9px] sm:text-[10px] font-bold text-black/85 tracking-[0.2em] uppercase mb-4 lg:mb-5">
                       {slide.subtitle}
                     </p>
-                    <p className="hidden lg:block attiz-body text-xs sm:text-sm text-black/70 leading-relaxed tracking-wide mb-6 lg:mb-8 max-w-md font-light">
+                    <p className="hidden lg:block attiz-body text-xs sm:text-sm text-black/90 leading-relaxed tracking-wide mb-6 lg:mb-8 max-w-md font-light">
                       {slide.description}
                     </p>
                     <Link

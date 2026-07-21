@@ -44,12 +44,12 @@ const sections = [
       <>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           <div className="border-2 border-black p-4">
-            <span className="block attiz-mono text-[9px] font-bold text-black/40 tracking-widest uppercase mb-2">Before Shipment</span>
-            <p className="attiz-body text-sm text-black/70 font-light">You may cancel your order <strong className="text-black">before it has been shipped</strong> by contacting our customer support. If approved, a full refund will be processed to your original payment method within <strong className="text-black">2–5 business days</strong>.</p>
+            <span className="block attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase mb-2">Before Shipment</span>
+            <p className="attiz-body text-sm text-black/90 font-light">You may cancel your order <strong className="text-black">before it has been shipped</strong> by contacting our customer support. If approved, a full refund will be processed to your original payment method within <strong className="text-black">2–5 business days</strong>.</p>
           </div>
           <div className="border-2 border-black p-4 bg-[#FAF8F5]">
-            <span className="block attiz-mono text-[9px] font-bold text-black/40 tracking-widest uppercase mb-2">After Shipment</span>
-            <p className="attiz-body text-sm text-black/70 font-light">Once dispatched, the order <strong className="text-black">cannot be canceled</strong>. If you no longer wish to keep the product, you may request a return after delivery, subject to our Return Policy.</p>
+            <span className="block attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase mb-2">After Shipment</span>
+            <p className="attiz-body text-sm text-black/90 font-light">Once dispatched, the order <strong className="text-black">cannot be canceled</strong>. If you no longer wish to keep the product, you may request a return after delivery, subject to our Return Policy.</p>
           </div>
         </div>
       </>
@@ -59,7 +59,7 @@ const sections = [
     num: '02', icon: <CheckSquare className="w-4 h-4" />, title: 'Return Eligibility', color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">A return will be accepted if all of the following conditions are met:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">A return will be accepted if all of the following conditions are met:</p>
         <BulletList items={[
           <>The return request is made within <strong className="text-black">7 days</strong> of receiving your order.</>,
           <>The product is <strong className="text-black">unused, unwashed, unworn</strong>, and in its original condition.</>,
@@ -73,7 +73,7 @@ const sections = [
     num: '03', icon: <Ban className="w-4 h-4" />, title: 'Non-Returnable Items', color: '#111111',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">The following items are <strong className="text-black">not eligible for return</strong>:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">The following items are <strong className="text-black">not eligible for return</strong>:</p>
         <BulletList items={[
           'Customized or personalized products.',
           'Gift cards or promotional vouchers.',
@@ -88,14 +88,14 @@ const sections = [
     num: '04', icon: <AlertTriangle className="w-4 h-4" />, title: 'Damaged, Defective or Incorrect', color: '#E63B2E',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">If you receive a product that is damaged, defective, or different from what you ordered, contact us within <strong className="text-black">48 hours of delivery</strong> with:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">If you receive a product that is damaged, defective, or different from what you ordered, contact us within <strong className="text-black">48 hours of delivery</strong> with:</p>
         <BulletList items={[
           'Your Order Number',
           'Clear photos of the product',
           'Photos of the packaging',
           'An unboxing video (strongly recommended)',
         ]} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-4">After verification, we will arrange a <strong className="text-black">replacement, exchange, or refund</strong> at no additional cost.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-4">After verification, we will arrange a <strong className="text-black">replacement, exchange, or refund</strong> at no additional cost.</p>
       </>
     ),
   },
@@ -103,13 +103,13 @@ const sections = [
     num: '05', icon: <ArrowLeftRight className="w-4 h-4" />, title: 'Exchange Policy', color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">We offer exchanges for:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">We offer exchanges for:</p>
         <BulletList items={[
           'Incorrect size (subject to stock availability)',
           'Defective products',
           'Incorrect items received',
         ]} />
-        <p className="attiz-body text-sm text-black/70 font-light mt-4">If the requested product or size is unavailable, we may offer a <strong className="text-black">refund or store credit</strong>.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-4">If the requested product or size is unavailable, we may offer a <strong className="text-black">refund or store credit</strong>.</p>
       </>
     ),
   },
@@ -124,7 +124,7 @@ const sections = [
             { label: 'Shipping Charges', value: 'Non-Refundable*' },
           ].map((card) => (
             <div key={card.label} className="border-2 border-black p-3 bg-[#FAF8F5]">
-              <span className="block attiz-mono text-[8px] font-bold text-black/40 tracking-widest uppercase mb-1">{card.label}</span>
+              <span className="block attiz-mono text-[8px] font-bold text-black/85 tracking-widest uppercase mb-1">{card.label}</span>
               <span className="attiz-display text-sm text-black">{card.value}</span>
             </div>
           ))}
@@ -149,7 +149,7 @@ const sections = [
     num: '08', icon: <ClipboardList className="w-4 h-4" />, title: 'How to Request a Return', color: '#FFCB05',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">To request a cancellation or return, contact Customer Support with:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">To request a cancellation or return, contact Customer Support with:</p>
         <StepList items={[
           'Order Number',
           'Full Name & Registered Email Address',
@@ -168,7 +168,7 @@ const sections = [
     num: '09', icon: <ShieldOff className="w-4 h-4" />, title: 'Right to Refuse Requests', color: '#111111',
     content: (
       <>
-        <p className="attiz-body text-sm text-black/70 font-light mb-4">ATTIZ reserves the right to reject cancellation, return, or refund requests if:</p>
+        <p className="attiz-body text-sm text-black/90 font-light mb-4">ATTIZ reserves the right to reject cancellation, return, or refund requests if:</p>
         <BulletList items={[
           'The request does not comply with this policy.',
           'The returned product is not in its original condition.',
@@ -188,7 +188,7 @@ const sections = [
         </div>
         <div className="flex items-center gap-3">
           <Diamond />
-          <span className="attiz-mono text-[10px] font-bold text-black/50 tracking-widest uppercase">Mon – Sat &nbsp;·&nbsp; 9:00 AM – 6:00 PM IST</span>
+          <span className="attiz-mono text-[10px] font-bold text-black/85 tracking-widest uppercase">Mon – Sat &nbsp;·&nbsp; 9:00 AM – 6:00 PM IST</span>
         </div>
       </div>
     ),
@@ -216,10 +216,10 @@ export default function RefundReturnPage() {
             </h1>
             <div className="h-1 w-24 bg-[#E63B2E] my-4 mx-auto md:mx-0" />
             <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-              <span className="attiz-mono text-[9px] font-bold text-black/40 tracking-widest uppercase border-2 border-black/10 px-3 py-1 inline-block">Effective: July 2026</span>
-              <span className="attiz-mono text-[9px] font-bold text-black/40 tracking-widest uppercase border-2 border-black/10 px-3 py-1 inline-block">Last Updated: July 2026</span>
+              <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase border-2 border-black/10 px-3 py-1 inline-block">Effective: July 2026</span>
+              <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase border-2 border-black/10 px-3 py-1 inline-block">Last Updated: July 2026</span>
             </div>
-            <p className="attiz-body text-base leading-8 text-black/70 max-w-3xl font-light">
+            <p className="attiz-body text-base leading-8 text-black/90 max-w-3xl font-light">
               At ATTIZ, we strive to provide a smooth and satisfying shopping experience. If you need to cancel an order or return a product, please review the policy below.
             </p>
           </div>

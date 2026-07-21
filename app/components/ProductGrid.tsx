@@ -261,7 +261,7 @@ function ProductGridInner() {
             <h2 className="attiz-display text-5xl sm:text-6xl tracking-tight uppercase leading-none">
               {bannerTitle}
             </h2>
-            <p className="attiz-body text-sm text-black/50 mt-4 max-w-md font-light">
+            <p className="attiz-body text-sm text-black/85 mt-4 max-w-md font-light">
               Architected profiles engineered for comfort. Functional daily wear prioritizing modern ergonomics.
             </p>
           </div>
@@ -269,7 +269,7 @@ function ProductGridInner() {
           {/* Filtering controls unified */}
           <div className="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
             <div className="flex items-center gap-2 px-4 py-2.5 bg-black/5 border border-black/10">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-black/60" />
+              <SlidersHorizontal className="w-3.5 h-3.5 text-black/85" />
               <select
                 value={selectedSort}
                 onChange={(e) => setSelectedSort(e.target.value)}
@@ -297,7 +297,7 @@ function ProductGridInner() {
                     className={`px-4 py-2.5 attiz-mono text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none cursor-pointer shrink-0 ${
                       isActive 
                         ? 'bg-black text-white border-black shadow-lg shadow-black/10' 
-                        : 'bg-transparent text-black/60 border-black/10 hover:border-black hover:text-black'
+                        : 'bg-transparent text-black/85 border-black/10 hover:border-black hover:text-black'
                     }`}
                   >
                     {cat}
@@ -308,7 +308,7 @@ function ProductGridInner() {
 
             {subcategories.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 border-t border-black/5 pt-4 animate-fadeIn">
-                <span className="attiz-mono text-[9px] font-bold tracking-[0.2em] text-black/35 uppercase mr-2">Subcategories:</span>
+                <span className="attiz-mono text-[9px] font-bold tracking-[0.2em] text-black/85 uppercase mr-2">Subcategories:</span>
                 <button
                   onClick={() => handleSubcategoryTabClick(null)}
                   className={`px-3 py-1.5 attiz-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200 border rounded-none cursor-pointer ${
@@ -328,7 +328,7 @@ function ProductGridInner() {
                       className={`px-3 py-1.5 attiz-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200 border rounded-none cursor-pointer ${
                         isActive
                           ? 'bg-black text-[#FFCB05] border-black shadow-[2px_2px_0_0_#111111] translate-x-[-1px] translate-y-[-1px]'
-                          : 'bg-white text-black/60 border-black/10 hover:border-black hover:text-black'
+                          : 'bg-white text-black/85 border-black/10 hover:border-black hover:text-black'
                       }`}
                     >
                       {sub.name}
@@ -343,11 +343,11 @@ function ProductGridInner() {
         {/* Filter Breadcrumbs */}
         {hasActiveFilter && (
           <div className="mb-8 p-4 bg-black/[0.02] border border-black/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center flex-wrap gap-2 attiz-mono text-[11px] font-medium tracking-wide text-black/50">
-              <span className="text-black/30">Active Scope:</span>
+            <div className="flex items-center flex-wrap gap-2 attiz-mono text-[11px] font-medium tracking-wide text-black/85">
+              <span className="text-black/90">Active Scope:</span>
               <span className="text-black font-bold">{parentParam || 'All Collections'}</span>
-              {secondaryParam && <><span className="text-black/25">→</span><span className="text-black font-bold">{secondaryParam}</span></>}
-              {subcategoryParam && <><span className="text-black/25">→</span><span className="text-black font-bold">{subcategoryParam}</span></>}
+              {secondaryParam && <><span className="text-black/90">→</span><span className="text-black font-bold">{secondaryParam}</span></>}
+              {subcategoryParam && <><span className="text-black/90">→</span><span className="text-black font-bold">{subcategoryParam}</span></>}
               <span className="ml-1 px-2 py-0.5 bg-black/5 text-[10px] text-black font-normal">{filteredProducts.length} items</span>
             </div>
             <button
@@ -372,8 +372,8 @@ function ProductGridInner() {
           </div>
         ) : sortedProducts.length === 0 ? (
           <div className="text-center py-32 border border-dashed border-black/10 bg-black/[0.01]">
-            <span className="attiz-mono text-black/40 text-xs font-bold tracking-widest uppercase block mb-2">Zero Results Found</span>
-            <p className="attiz-body text-sm text-black/35 font-light">Try adjusting your selected filters or categories.</p>
+            <span className="attiz-mono text-black/85 text-xs font-bold tracking-widest uppercase block mb-2">Zero Results Found</span>
+            <p className="attiz-body text-sm text-black/85 font-light">Try adjusting your selected filters or categories.</p>
           </div>
         ) : (
           <>
@@ -473,7 +473,7 @@ function ProductGridInner() {
                     <div className="pt-5 flex flex-col justify-between grow">
                       <div>
                         {/* <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="attiz-mono text-[9px] text-black/40 uppercase tracking-widest font-semibold">
+                          <span className="attiz-mono text-[9px] text-black/85 uppercase tracking-widest font-semibold">
                             {product.sizes ? `Sizes: ${product.sizes}` : 'Standard Fit'}
                           </span>
                           <span className="w-1 h-1 bg-black/20 rounded-full group-hover:bg-[#E63B2E] transition-colors" />
@@ -490,7 +490,7 @@ function ProductGridInner() {
                               <span className="attiz-mono text-[15px] font-bold text-[#E63B2E]">
                                 ₹{finalPrice.toLocaleString('en-IN')}
                               </span>
-                              <span className="attiz-body text-xs text-black/35 line-through font-light">
+                              <span className="attiz-body text-xs text-black/85 line-through font-light">
                                 ₹{parseFloat(String(product.price || 0)).toLocaleString('en-IN')}
                               </span>
                             </>
@@ -540,7 +540,7 @@ function ProductGridInner() {
                 >
                   ← Prev
                 </button>
-                <span className="attiz-mono text-[10px] font-bold text-black/50 tracking-widest uppercase text-center">
+                <span className="attiz-mono text-[10px] font-bold text-black/85 tracking-widest uppercase text-center">
                   {currentPage} / {totalPages}
                 </span>
                 <button

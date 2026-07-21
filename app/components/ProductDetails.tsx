@@ -242,7 +242,7 @@ function ProductDetailsInner() {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center space-y-4">
         <div className="w-9 h-9 rounded-full border-[3px] border-black border-t-[#E63B2E] animate-spin" />
-        <span className="font-['Space_Mono'] text-[10px] font-bold tracking-[0.35em] uppercase text-black/60">Loading product details…</span>
+        <span className="font-['Space_Mono'] text-[10px] font-bold tracking-[0.35em] uppercase text-black/85">Loading product details…</span>
       </div>
     );
   }
@@ -250,7 +250,7 @@ function ProductDetailsInner() {
   if (!product) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center space-y-5">
-        <span className="font-['Space_Mono'] text-[10px] font-bold tracking-[0.35em] uppercase text-black/60">Product not found</span>
+        <span className="font-['Space_Mono'] text-[10px] font-bold tracking-[0.35em] uppercase text-black/85">Product not found</span>
         <Link href="/" className="px-7 py-3 bg-black text-[#FFCB05] font-['Anton'] text-xs tracking-[0.2em] uppercase border-[3px] border-black shadow-[4px_4px_0_0_#E63B2E] hover:shadow-[2px_2px_0_0_#E63B2E] hover:translate-x-[2px] hover:translate-y-[2px] transition-all">
           Back to Shop
         </Link>
@@ -644,7 +644,7 @@ function ProductDetailsInner() {
                 </div>
               </div>
               <h1 className="attiz-display text-2xl md:text-[1.85rem] leading-[0.99] tracking-[0.01rem] uppercase mb-2 block text-black">{product.title}</h1>
-              <span className="attiz-mono text-[9px] font-bold text-black/40 tracking-widest uppercase mb-3 block">SKU: {activeVariant?.sku || `ATZTS-${product.id.slice(0, 5).toUpperCase()}`}</span>
+              <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase mb-3 block">SKU: {activeVariant?.sku || `ATZTS-${product.id.slice(0, 5).toUpperCase()}`}</span>
 
               <div className="flex items-center gap-2.5 mb-3 flex-wrap">
                 {displayDiscount > 0 ? (
@@ -652,7 +652,7 @@ function ProductDetailsInner() {
                     <span className="text-white attiz-mono font-bold text-[10px] flex items-center gap-1 bg-[#E63B2E] border-2 border-black px-1.5 py-0.5 shrink-0 rotate-[-2deg]">
                       ↓{displayDiscount}%
                     </span>
-                    <span className="attiz-body text-xs text-black/35 line-through shrink-0">
+                    <span className="attiz-body text-xs text-black/85 line-through shrink-0">
                       ₹{parseFloat(String(displayPrice)).toLocaleString('en-IN')}
                     </span>
                     <span className="relative inline-block">
@@ -682,7 +682,7 @@ function ProductDetailsInner() {
               {/* Sizes */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-1.5">
-                  <span className="attiz-mono text-[9px] font-bold tracking-widest text-black/50 uppercase">Size Options</span>
+                  <span className="attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase">Size Options</span>
                   <button onClick={() => setIsSizeChartOpen(true)} className="attiz-mono text-[9px] font-bold text-[#E63B2E] hover:text-black tracking-wider underline uppercase cursor-pointer">Size Chart</button>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -710,7 +710,7 @@ function ProductDetailsInner() {
               {/* Colors */}
               {colorsArray.length > 0 && (
                 <div className="mb-4">
-                  <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/50 uppercase mb-1.5">
+                  <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase mb-1.5">
                     Color: <span className="text-black font-extrabold">{selectedColor}</span>
                   </span>
                   <div className="flex flex-wrap gap-4">
@@ -759,7 +759,7 @@ function ProductDetailsInner() {
 
               {/* Quantity */}
               <div className="mb-4">
-                <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/50 uppercase mb-1.5">Quantity Selector</span>
+                <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase mb-1.5">Quantity Selector</span>
                 <div className={`flex items-center border-2 bg-white w-24 ${isOutOfStock ? 'border-black/15 opacity-50' : 'border-black'}`}>
                   <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => Math.max(1, prev - 1))} className={`p-1.5 px-2 text-black hover:bg-[#FFCB05] transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Minus className="w-3 h-3" /></button>
                   <span className="attiz-mono text-[11px] font-bold px-2 text-black select-none grow text-center">{isOutOfStock ? 0 : quantity}</span>
@@ -814,7 +814,7 @@ function ProductDetailsInner() {
               Specifications
               <span className="absolute -bottom-1.5 left-0 h-1 w-8 bg-[#FFCB05]" />
             </h3>
-            <p className="attiz-body text-[13px] text-black/65 tracking-wide leading-relaxed text-justify whitespace-pre-line pt-1">
+            <p className="attiz-body text-[13px] text-black/90 tracking-wide leading-relaxed text-justify whitespace-pre-line pt-1">
               {product.specifications || 'Premium tailored garment with reinforced stitching.'}
             </p>
           </div>
@@ -836,17 +836,17 @@ function ProductDetailsInner() {
             <div className="md:col-span-4 text-center border-r-0 md:border-r-2 md:border-black/10 py-4 flex flex-col justify-center">
               <div className="flex items-center justify-center space-x-1 mb-2 text-[#FFCB05]">{[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-current stroke-black" />)}</div>
               <span className="block attiz-display text-2xl text-black">5.00 out of 5</span>
-              <span className="block attiz-mono text-[10px] text-black/45 font-bold tracking-widest uppercase mt-1.5">Based on 3 reviews</span>
+              <span className="block attiz-mono text-[10px] text-black/85 font-bold tracking-widest uppercase mt-1.5">Based on 3 reviews</span>
             </div>
             <div className="md:col-span-5 px-0 md:px-8 space-y-2.5">
               {[5, 4, 3, 2, 1].map((stars) => (
-                <div key={stars} className="flex items-center attiz-mono text-xs text-black/65 font-bold">
+                <div key={stars} className="flex items-center attiz-mono text-xs text-black/90 font-bold">
                   <span className="w-3 select-none">{stars}</span>
                   <Star className="w-3.5 h-3.5 text-[#FFCB05] fill-current stroke-black ml-0.5 mr-2 shrink-0" />
                   <div className="grow h-2.5 bg-black/[0.06] border border-black/10 overflow-hidden">
                     <div className="h-full bg-[#E63B2E] transition-all duration-500" style={{ width: `${stars === 5 ? 100 : 0}%` }} />
                   </div>
-                  <span className="w-8 text-right text-[10px] text-black/45 font-bold ml-3">{stars === 5 ? 3 : 0}</span>
+                  <span className="w-8 text-right text-[10px] text-black/85 font-bold ml-3">{stars === 5 ? 3 : 0}</span>
                 </div>
               ))}
             </div>
@@ -866,10 +866,10 @@ function ProductDetailsInner() {
                   <span>Verified Buyer</span>
                 </span>
               </div>
-              <span className="attiz-mono text-[10px] text-black/45 font-bold">05/20/2026</span>
+              <span className="attiz-mono text-[10px] text-black/85 font-bold">05/20/2026</span>
             </div>
             <h4 className="attiz-display text-sm text-black mb-1.5 tracking-wide">Super</h4>
-            <p className="attiz-body text-[13px] text-black/70 tracking-wide leading-relaxed">Super product. Worth for money. The fit is absolute elegance, and the fabric is incredibly soft.</p>
+            <p className="attiz-body text-[13px] text-black/90 tracking-wide leading-relaxed">Super product. Worth for money. The fit is absolute elegance, and the fabric is incredibly soft.</p>
           </div>
         </section>
 

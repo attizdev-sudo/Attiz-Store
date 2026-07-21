@@ -48,7 +48,7 @@ export default function HeroCarousel() {
               <span className="inline-flex items-center bg-black text-[#FFCB05] attiz-mono text-[9px] font-bold tracking-[0.3em] uppercase px-2 py-0.5 -skew-x-6">
                 <span className="skew-x-6">ATTIZ</span>
               </span>
-              <p className="attiz-mono text-[9px] font-bold text-black/35 tracking-[0.25em] uppercase animate-pulse">
+              <p className="attiz-mono text-[9px] font-bold text-black/85 tracking-[0.25em] uppercase animate-pulse">
                 Loading Banners...
               </p>
             </div>

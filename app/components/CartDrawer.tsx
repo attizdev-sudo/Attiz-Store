@@ -64,13 +64,13 @@ export default function CartDrawer() {
           {/* Header */}
           <div className="px-6 py-5 border-b-2 border-black flex items-center justify-between bg-white text-black">
             <div className="flex items-center space-x-2.5">
-              <ShoppingBag className="w-4 h-4 text-black/70" />
+              <ShoppingBag className="w-4 h-4 text-black/90" />
               <span className="attiz-display text-sm tracking-wider uppercase text-black">Your Cart ({cartItems.length})</span>
             </div>
             
             <button 
               onClick={() => setIsCartOpen(false)} 
-              className="text-black/50 hover:text-black p-1 transition-colors cursor-pointer"
+              className="text-black/85 hover:text-black p-1 transition-colors cursor-pointer"
               aria-label="Close cart"
             >
               <X className="w-5 h-5" />
@@ -94,8 +94,8 @@ export default function CartDrawer() {
 
             {cartItems.length === 0 ? (
               <div className="h-64 flex flex-col items-center justify-center space-y-4 text-black text-center">
-                <ShoppingBag className="w-10 h-10 stroke-[1.2] text-black/30" />
-                <p className="attiz-mono text-[10px] font-bold tracking-widest uppercase text-black/55">Your cart is empty.</p>
+                <ShoppingBag className="w-10 h-10 stroke-[1.2] text-black/90" />
+                <p className="attiz-mono text-[10px] font-bold tracking-widest uppercase text-black/85">Your cart is empty.</p>
                 <button
                   onClick={() => setIsCartOpen(false)}
                   className="py-2 px-5 border border-black bg-white text-black hover:bg-black hover:text-[#FFCB05] transition-all text-[9px] attiz-mono font-bold tracking-wider uppercase cursor-pointer"
@@ -116,7 +116,7 @@ export default function CartDrawer() {
                     <div>
                       <h4 className="attiz-mono text-xs font-bold text-black tracking-wide line-clamp-1 uppercase">{item.title}</h4>
                       {item.selectedSize && (
-                        <span className="attiz-mono text-[9px] text-black/50 uppercase tracking-widest block mt-0.5">
+                        <span className="attiz-mono text-[9px] text-black/85 uppercase tracking-widest block mt-0.5">
                           Size: {item.selectedSize}
                         </span>
                       )}
@@ -146,7 +146,7 @@ export default function CartDrawer() {
                       {/* Remove button */}
                       <button 
                         onClick={() => removeFromCart(item.id, item.selectedSize)} 
-                        className="text-black/40 hover:text-[#E63B2E] p-1.5 transition-colors cursor-pointer" 
+                        className="text-black/85 hover:text-[#E63B2E] p-1.5 transition-colors cursor-pointer" 
                         title="Remove item"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -163,13 +163,13 @@ export default function CartDrawer() {
             <div className="p-6 bg-white space-y-4">
               
               <div className="flex justify-between items-center">
-                <span className="attiz-mono text-[10px] font-bold tracking-widest text-black/50 uppercase">Total Amount</span>
+                <span className="attiz-mono text-[10px] font-bold tracking-widest text-black/85 uppercase">Total Amount</span>
                 <span className="attiz-mono text-sm font-bold text-black">₹{totalAmount.toLocaleString('en-IN')}</span>
               </div>
 
               {!user ? (
                 <div className="space-y-3 pt-2">
-                  <p className="attiz-body text-[10px] text-black/60 tracking-wide text-center leading-relaxed font-light">
+                  <p className="attiz-body text-[10px] text-black/85 tracking-wide text-center leading-relaxed font-light">
                     You must be signed in to complete your checkout order.
                   </p>
                   <button
