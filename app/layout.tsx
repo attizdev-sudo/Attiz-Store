@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { StoreProvider } from '@/context/StoreContext';
 import { CartProvider } from '@/context/CartContext';
+import { WishlistProvider } from '@/context/WishlistContext';
 import StoreLayoutShell from '@/app/components/StoreLayoutShell';
 
 export const metadata: Metadata = {
@@ -24,13 +25,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthProvider>
-          <StoreProvider>
-            <CartProvider>
-              <StoreLayoutShell>
-                {children}
-              </StoreLayoutShell>
-            </CartProvider>
-          </StoreProvider>
+          <WishlistProvider>
+            <StoreProvider>
+              <CartProvider>
+                <StoreLayoutShell>
+                  {children}
+                </StoreLayoutShell>
+              </CartProvider>
+            </StoreProvider>
+          </WishlistProvider>
         </AuthProvider>
       </body>
     </html>

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Star, CheckCircle, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
+import { useWishlist } from '@/context/WishlistContext';
 import type { CartItem, Product } from '@/lib/types';
 
 const getProductImages = (product: Product) => {
@@ -51,6 +52,7 @@ function ProductDetailsInner() {
   const initialColorParam = searchParams.get('color');
   const { addToCart, setIsCartOpen } = useCart();
   const { products, dbLoading } = useStore();
+  const { isWishlisted: checkIsWishlisted, toggleWishlist } = useWishlist();
 
   const product = products.find((p) => p.id === id);
   const relatedProducts = products
@@ -65,11 +67,6 @@ function ProductDetailsInner() {
   const [selectedSize, setSelectedSize] = useState('M');
   const [selectedColor, setSelectedColor] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [wishlist, setWishlist] = useState<Record<string, boolean>>({});
-  const toggleWishlist = (productId: string) => {
-    setWishlist((prev) => ({ ...prev, [productId]: !prev[productId] }));
-  };
   const [activeThumbIdx, setActiveThumbIdx] = useState(0);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
@@ -628,11 +625,11 @@ function ProductDetailsInner() {
                 </span>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setIsWishlisted(!isWishlisted)}
+                    onClick={() => product && toggleWishlist(product)}
                     className="w-7 h-7 flex items-center justify-center border-2 border-black text-black hover:bg-[#FFCB05] transition-colors cursor-pointer"
-                    title={isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
+                    title={product && checkIsWishlisted(product.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   >
-                    <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black'}`} />
+                    <Heart className={`w-3.5 h-3.5 ${product && checkIsWishlisted(product.id) ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black'}`} />
                   </button>
                   <button
                     onClick={handleShare}
@@ -879,7 +876,7 @@ function ProductDetailsInner() {
             <h3 className="attiz-display text-2xl text-black/90 text-center uppercase mb-12 tracking-widest font-semibold">You May Also Like</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-16">
               {relatedProducts.map((prod) => {
-                const isLiked = wishlist[prod.id] || false;
+                const isLiked = checkIsWishlisted(prod.id);
                 const images = getProductImages(prod);
                 const nextImage = images[1];
                 const finalPrice = prod.discount && prod.discount > 0
@@ -933,7 +930,7 @@ function ProductDetailsInner() {
 
                         {/* Wishlist Button Core */}
                         <button
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(prod.id); }}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(prod); }}
                           className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors duration-200 cursor-pointer"
                           aria-label="Wishlist item"
                         >

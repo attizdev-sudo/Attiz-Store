@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Heart, ShoppingBag, SlidersHorizontal, ArrowRight } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
+import { useWishlist } from '@/context/WishlistContext';
 import type { Product } from '@/lib/types';
 
 const getProductImages = (product: Product) => {
@@ -35,6 +36,7 @@ const getProductImages = (product: Product) => {
 function ProductGridInner() {
   const { addToCart } = useCart();
   const { products: allProducts, categories: allCategories, dbLoading } = useStore();
+  const { isWishlisted, toggleWishlist, togglingIds } = useWishlist();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -45,7 +47,6 @@ function ProductGridInner() {
 
   const [selectedCategory, setSelectedCategory] = useState('All Collections');
   const [selectedSort, setSelectedSort] = useState('latest');
-  const [wishlist, setWishlist] = useState<Record<string, boolean>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 16;
 
@@ -221,10 +222,6 @@ function ProductGridInner() {
     if (gridEl) gridEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const toggleWishlist = (productId: string) => {
-    setWishlist((prev) => ({ ...prev, [productId]: !prev[productId] }));
-  };
-
   const hasFilter = !!filterParam && filterParam !== 'All' && filterParam !== 'All Collections';
   const isAllCollectionsActive = parentParam === 'All Collections' || filterParam === 'All Collections';
   const hasActiveFilter = (parentParam && parentParam !== 'All Collections') || secondaryParam || subcategoryParam || categoryParam;
@@ -379,7 +376,8 @@ function ProductGridInner() {
           <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-16">
             {paginatedProducts.map((product) => {
-              const isLiked = wishlist[product.id] || false;
+              const isLiked = isWishlisted(product.id);
+              const isToggling = togglingIds.has(product.id);
               const cardKey = (product as any).selectedColorVariant 
                 ? `${product.id}-${(product as any).selectedColorVariant}` 
                 : product.id;
@@ -450,11 +448,11 @@ function ProductGridInner() {
 
                       {/* Wishlist Button Core */}
                       <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product.id); }}
-                        className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors duration-200 cursor-pointer"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product); }}
+                        className={`absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-all duration-200 cursor-pointer active:scale-90 ${isToggling ? 'scale-110' : ''}`}
                         aria-label="Wishlist item"
                       >
-                        <Heart className={`w-[16px] h-[16px] transition-colors duration-200 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
+                        <Heart className={`w-[16px] h-[16px] transition-all duration-300 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E] scale-110' : 'stroke-black fill-none'} ${isToggling ? 'animate-ping' : ''}`} />
                       </button>
 
                       {/* Quick Add Overlay System (Desktop) */}
