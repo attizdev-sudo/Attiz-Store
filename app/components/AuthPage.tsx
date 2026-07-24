@@ -96,7 +96,13 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
 
   useEffect(() => {
     if (user) {
-      router.push(user.role === 'admin' ? '/admin' : '/');
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const redirectUrl = params?.get('redirect');
+      if (redirectUrl && redirectUrl.startsWith('/')) {
+        router.push(redirectUrl);
+      } else {
+        router.push(user.role === 'admin' ? '/admin' : '/');
+      }
     }
   }, [user, router]);
 
@@ -167,7 +173,10 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
         setPendingVerification({ email: signUpDetails.email, message: res.message || '' });
       } else {
         setSuccessMsg('Account created! Redirecting...');
-        setTimeout(() => { setSuccessMsg(''); router.push('/'); }, 2000);
+        const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const redirectUrl = params?.get('redirect');
+        const target = redirectUrl && redirectUrl.startsWith('/') ? redirectUrl : '/';
+        setTimeout(() => { setSuccessMsg(''); router.push(target); }, 1500);
       }
     } else {
       setErrorMsg(res.message || 'Registration failed.');
@@ -183,7 +192,10 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
     setIsLoading(false);
     if (res.success) {
       setSuccessMsg('Welcome back!');
-      setTimeout(() => { setSuccessMsg(''); router.push(res.user?.role === 'admin' ? '/admin' : '/'); }, 1500);
+      const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const redirectUrl = params?.get('redirect');
+      const target = redirectUrl && redirectUrl.startsWith('/') ? redirectUrl : (res.user?.role === 'admin' ? '/admin' : '/');
+      setTimeout(() => { setSuccessMsg(''); router.push(target); }, 1200);
     } else {
       if (res.code === 'EMAIL_NOT_VERIFIED') setEmailNotVerified(true);
       setErrorMsg(res.message || 'Sign in failed.');

@@ -4,10 +4,11 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, User, ShoppingBag, ChevronDown, Menu, X, ClipboardList, Database, LogOut } from 'lucide-react';
+import { Search, User, ShoppingBag, ChevronDown, Menu, X, ClipboardList, Database, LogOut, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
+import { useWishlist } from '@/context/WishlistContext';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -35,6 +36,7 @@ export default function Navbar() {
   const { cartItems, setIsCartOpen } = useCart();
   const { user, logout } = useAuth();
   const { categories } = useStore();
+  const { wishlistItems } = useWishlist();
   const router = useRouter();
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -176,6 +178,20 @@ export default function Navbar() {
                         >
                           <ClipboardList className="w-3.5 h-3.5" />
                           <span>My Orders</span>
+                        </button>
+                        <button
+                          onClick={() => { setIsProfileDropdownOpen(false); router.push('/wishlist'); }}
+                          className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Heart className="w-3.5 h-3.5 text-[#E63B2E]" />
+                            <span>My Wishlist</span>
+                          </div>
+                          {wishlistItems.length > 0 && (
+                            <span className="bg-[#E63B2E] text-white text-[9px] px-1.5 py-0.5 rounded-full font-mono">
+                              {wishlistItems.length}
+                            </span>
+                          )}
                         </button>
                         {user.role === 'admin' && (
                           <button
@@ -329,6 +345,21 @@ export default function Navbar() {
                     >
                       <ClipboardList className="w-4 h-4 shrink-0 text-black/40" />
                       <span>My Orders</span>
+                    </button>
+
+                    <button
+                      onClick={() => { router.push('/wishlist'); setIsMobileMenuOpen(false); }}
+                      className="w-full flex items-center justify-between px-4 py-3 attiz-mono text-[11px] font-bold tracking-wider text-black/80 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Heart className="w-4 h-4 shrink-0 text-[#E63B2E]" />
+                        <span>My Wishlist</span>
+                      </div>
+                      {wishlistItems.length > 0 && (
+                        <span className="bg-[#E63B2E] text-white text-[9px] px-2 py-0.5 rounded-full font-mono">
+                          {wishlistItems.length}
+                        </span>
+                      )}
                     </button>
 
                     {user.role === 'admin' && (

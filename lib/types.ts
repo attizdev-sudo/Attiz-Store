@@ -121,3 +121,20 @@ export interface ShippingDetails {
   postalCode: string;
   country: string;
 }
+
+export interface WishlistItem {
+  id: string;
+  user_id: string;
+  variant_id: string;
+  product_id?: string | null;
+  title: string;
+  description?: string;
+  color?: string;
+  size?: string;
+  stock?: number;
+  price: number;
+  discount?: number;
+  image: string;
+  created_at?: string;
+}
+

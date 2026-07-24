@@ -11,12 +11,16 @@ export async function middleware(request: NextRequest) {
 
   if (isProtected) {
     if (!sessionToken) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
     }
 
     const sessionData = await validateSession(sessionToken);
     if (!sessionData) {
-      const redirectResponse = NextResponse.redirect(new URL('/login', request.url));
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      const redirectResponse = NextResponse.redirect(loginUrl);
       redirectResponse.cookies.delete('attiz_session');
       return redirectResponse;
     }
