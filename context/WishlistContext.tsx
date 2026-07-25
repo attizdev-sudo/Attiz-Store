@@ -22,12 +22,13 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const router = useRouter();
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
   const fetchWishlist = useCallback(async () => {
     if (!user) {
       setWishlistItems([]);
+      setLoading(false);
       return;
     }
     try {

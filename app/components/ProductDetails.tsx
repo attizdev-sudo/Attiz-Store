@@ -931,10 +931,10 @@ function ProductDetailsInner() {
                         {/* Wishlist Button Core */}
                         <button
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(prod); }}
-                          className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors duration-200 cursor-pointer"
+                          className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white active:scale-90 transition-transform duration-100 cursor-pointer"
                           aria-label="Wishlist item"
                         >
-                          <Heart className={`w-[16px] h-[16px] transition-colors duration-200 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
+                          <Heart className={`w-[16px] h-[16px] transition-colors duration-100 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
                         </button>
 
                         {/* Quick Add Overlay System (Desktop) */}

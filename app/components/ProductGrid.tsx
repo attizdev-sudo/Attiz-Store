@@ -449,10 +449,10 @@ function ProductGridInner() {
                       {/* Wishlist Button Core */}
                       <button
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product); }}
-                        className={`absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-all duration-200 cursor-pointer active:scale-90 ${isToggling ? 'scale-110' : ''}`}
+                        className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white active:scale-90 transition-transform duration-100 cursor-pointer"
                         aria-label="Wishlist item"
                       >
-                        <Heart className={`w-[16px] h-[16px] transition-all duration-300 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E] scale-110' : 'stroke-black fill-none'} ${isToggling ? 'animate-ping' : ''}`} />
+                        <Heart className={`w-[16px] h-[16px] transition-colors duration-100 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
                       </button>
 
                       {/* Quick Add Overlay System (Desktop) */}

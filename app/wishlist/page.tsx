@@ -317,11 +317,10 @@ export default function WishlistPage() {
                     <button
                       onClick={() => handleAddToCart(item)}
                       disabled={isAdded}
-                      className={`w-full py-3 border-2 border-black attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-[2px_2px_0_0_#111111] active:translate-y-0.5 ${
-                        isAdded
+                      className={`w-full py-3 border-2 border-black attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-[2px_2px_0_0_#111111] active:translate-y-0.5 ${isAdded
                           ? 'bg-emerald-600 text-white'
                           : 'bg-[#FFCB05] hover:bg-black hover:text-white text-black'
-                      }`}
+                        }`}
                     >
                       {isAdded ? (
                         <>
