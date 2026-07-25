@@ -2,15 +2,38 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
 const resolvedSupabaseUrl = supabaseUrl || '';
 const resolvedSupabaseAnonKey = supabaseAnonKey || '';
+const resolvedSupabaseServiceKey = supabaseServiceKey || '';
 
-export const supabase = isSupabaseConfigured
-  ? createClient(resolvedSupabaseUrl, resolvedSupabaseAnonKey)
+/**
+ * Service Role Supabase Client — server-side only.
+ * Bypasses RLS safely for authenticated server API routes.
+ */
+export const supabaseAdmin = (resolvedSupabaseUrl && resolvedSupabaseServiceKey)
+  ? createClient(resolvedSupabaseUrl, resolvedSupabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
   : null as any;
+
+/**
+ * Default Supabase Client:
+ * Uses service role client on the server (Node.js) if available,
+ * and anon client in the browser to enforce RLS.
+ */
+export const supabase = isSupabaseConfigured
+  ? (typeof window === 'undefined' && resolvedSupabaseServiceKey && supabaseAdmin
+      ? supabaseAdmin
+      : createClient(resolvedSupabaseUrl, resolvedSupabaseAnonKey))
+  : (null as any);
+
 
 /**
  * SHA-256 hash for custom password auth — server-side only.

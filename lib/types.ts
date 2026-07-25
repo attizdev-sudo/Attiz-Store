@@ -85,6 +85,11 @@ export interface Banner {
   id: string;
   image_url: string;
   redirect_url: string;
+  title?: string | null;
+  discount?: string | null;
+  tagline?: string | null;
+  bg_split_left?: string | null;
+  bg_split_right?: string | null;
   created_at?: string;
 }
 
