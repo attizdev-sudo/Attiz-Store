@@ -97,7 +97,7 @@ export default function Footer() {
 
         <div className="border-t border-black/10 pt-8 text-center">
           <p className="attiz-mono text-[11px] font-bold tracking-[0.25em] text-black/70 uppercase">
-            © 2026, ATTIZ
+            © 2026, ATTIZ®. ALL RIGHTS RESERVED.
           </p>
         </div>
       </div>

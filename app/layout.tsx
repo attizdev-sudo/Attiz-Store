@@ -7,7 +7,7 @@ import { WishlistProvider } from '@/context/WishlistContext';
 import StoreLayoutShell from '@/app/components/StoreLayoutShell';
 
 export const metadata: Metadata = {
-  title: 'ATTIZ — Premium Clothing',
+  title: 'ATTIZ® | Trending Premium Streetwear & Gen Z Fashion',
   description: 'Exquisitely crafted garments for modern sartorial heritage.',
   icons: {
     icon: '/logo.png',

@@ -342,9 +342,6 @@ export default function Navbar() {
                     height={34}
                     style={{ width: 'auto', height: '1.8rem' }}
                   />
-                  <span className="text-[9px] bg-[#FFCB05] text-black px-1.5 py-0.5 border border-black attiz-mono font-bold uppercase">
-                    Navigation
-                  </span>
                 </div>
                 <button
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -465,7 +462,7 @@ export default function Navbar() {
                   INR (₹) | India
                 </span>
                 <span className="attiz-mono text-[9px] font-bold text-black/35 uppercase tracking-widest">
-                  ATTIZ Store
+                  ATTIZ® Store
                 </span>
               </div>
 
@@ -599,7 +596,7 @@ export default function Navbar() {
                   INR (₹) | India
                 </span>
                 <span className="attiz-mono text-[9px] font-bold text-black/35 uppercase tracking-widest">
-                  ATTIZ Account
+                  ATTIZ® Account
                 </span>
               </div>
 

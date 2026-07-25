@@ -1,3 +1,5 @@
+import { validateSession } from '@/lib/auth/session';
+
 const secret = process.env.SESSION_SECRET || 'fallback-secret-for-development-only-attiz-secret';
 
 /**
@@ -30,7 +32,7 @@ export async function signSession(payload: { role: string; id: string }): Promis
 }
 
 /**
- * Verify a signed session string. Returns the payload if valid, or null.
+ * Retrieve the session token from headers.
  */
 export function getSessionCookieFromHeaders(headers: Headers | undefined): string | null {
   const fromHeader = headers?.get('x-attiz-session');
@@ -44,8 +46,24 @@ export function getSessionCookieFromHeaders(headers: Headers | undefined): strin
   return null;
 }
 
+/**
+ * Verify a session token. Validates against database sessions first, falling back to HMAC token signature.
+ */
 export async function verifySession(cookieValue: string): Promise<{ role: string; id: string } | null> {
   if (!cookieValue) return null;
+
+  try {
+    const sessionData = await validateSession(cookieValue);
+    if (sessionData?.user) {
+      return {
+        id: sessionData.user.id,
+        role: sessionData.user.role,
+      };
+    }
+  } catch {
+    // Ignore error and try HMAC legacy fallback
+  }
+
   try {
     const raw = typeof atob !== 'undefined' 
       ? atob(cookieValue) 
@@ -82,3 +100,4 @@ export async function verifySession(cookieValue: string): Promise<{ role: string
     return null;
   }
 }
+

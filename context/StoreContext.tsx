@@ -21,6 +21,7 @@ interface StoreContextValue {
   updateCategory: (id: string, updates: { name: string; parent_id?: string | null; sort_order?: number }) => Promise<{ data: unknown; error: unknown }>;
   deleteCategory: (id: string) => Promise<{ data: unknown; error: unknown }>;
   addBanner: (data: Partial<Banner>) => Promise<{ data: unknown; error: unknown }>;
+  updateBanner: (id: string, updates: Partial<Banner>) => Promise<{ data: unknown; error: unknown }>;
   deleteBanner: (id: string) => Promise<{ data: unknown; error: unknown }>;
   addEditorialBanner: (data: Partial<EditorialBanner>) => Promise<{ data: unknown; error: unknown }>;
   deleteEditorialBanner: (id: string) => Promise<{ data: unknown; error: unknown }>;
@@ -222,6 +223,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return result;
   };
 
+  const updateBanner = async (id: string, updates: Partial<Banner>) => {
+    const result = await apiFetch(`/api/banners/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+    if (!result.error) await refreshData();
+    return result;
+  };
+
   const deleteBanner = async (id: string) => {
     const result = await apiFetch(`/api/banners/${id}`, { method: 'DELETE' });
     if (!result.error) await refreshData();
@@ -263,7 +270,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       products, categories, orders, banners, editorialBanners, lookbookStyles, dbLoading, refreshData,
       addProduct, editProduct, deleteProduct,
       addCategory, updateCategory, deleteCategory,
-      addBanner, deleteBanner,
+      addBanner, updateBanner, deleteBanner,
       addEditorialBanner, deleteEditorialBanner,
       addLookbookStyle, deleteLookbookStyle,
       updateOrderStatus,
