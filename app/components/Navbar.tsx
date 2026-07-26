@@ -54,14 +54,19 @@ export default function Navbar() {
 
   const navItems = [
     { name: 'HOME', href: '/' },
-    { name: 'COLLECTIONS', href: '#', hasDropdown: true },
+    { name: 'COLLECTIONS', href: '/#catalog-grid', hasDropdown: true },
     { name: 'ABOUT US', href: '/about' },
     { name: 'CONTACT US', href: '/contact' },
   ];
 
   const handleNavClick = (e: React.MouseEvent, item: { name: string; href: string }) => {
-    if (item.href.startsWith('#')) return;
+    if (item.href === '#') return;
     e.preventDefault();
+    if (hoverTimeoutId) {
+      clearTimeout(hoverTimeoutId);
+      setHoverTimeoutId(null);
+    }
+    setIsCollectionsHovered(false);
     setActiveTab(item.name);
     router.push(item.href);
     setIsMobileMenuOpen(false);
