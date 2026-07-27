@@ -10,6 +10,7 @@ interface AuthContextValue {
   signup: (firstName: string, lastName: string, email: string, phone: string, password: string, acceptTerms: boolean) => Promise<{ success: boolean; pending?: boolean; message?: string; user?: SessionUser }>;
   resendVerification: (email: string) => Promise<{ ok: boolean }>;
   logout: () => Promise<void>;
+  updateUserPhone: (phone: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -91,8 +92,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const updateUserPhone = async (phone: string) => {
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const json = await res.json();
+      if (res.ok && json.user) {
+        setUser((prev) => (prev ? { ...prev, phone: json.user.phone } : prev));
+        return { success: true };
+      }
+      return { success: false, message: json.error || 'Failed to update phone.' };
+    } catch {
+      return { success: false, message: 'Network error.' };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, sessionLoading, signin, signup, resendVerification, logout }}>
+    <AuthContext.Provider value={{ user, sessionLoading, signin, signup, resendVerification, logout, updateUserPhone }}>
       {children}
     </AuthContext.Provider>
   );

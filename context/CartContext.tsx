@@ -8,9 +8,12 @@ export type { CartItem };
 
 interface CartContextValue {
   cartItems: CartItem[];
+  buyNowItem: CartItem | null;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
   addToCart: (product: CartItem) => void;
+  startBuyNow: (product: CartItem) => void;
+  clearBuyNow: () => void;
   updateQuantity: (productId: string, selectedSize: string | undefined, quantity: number) => void;
   removeFromCart: (productId: string, selectedSize: string | undefined) => void;
   clearCart: () => void;
@@ -23,22 +26,27 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [buyNowItem, setBuyNowItem] = useState<CartItem | null>(null);
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('cart_items');
       if (saved) setCartItems(JSON.parse(saved));
+      const savedBuyNow = sessionStorage.getItem('buy_now_item');
+      if (savedBuyNow) setBuyNowItem(JSON.parse(savedBuyNow));
     } catch { /* ignore */ }
   }, []);
-
-  const [isCartOpen, setIsCartOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('cart_items', JSON.stringify(cartItems));
   }, [cartItems]);
 
   useEffect(() => {
-    if (!user) setCartItems([]);
+    if (!user) {
+      setCartItems([]);
+      clearBuyNow();
+    }
   }, [user]);
 
   const addToCart = (product: CartItem) => {
@@ -56,6 +64,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prev, { ...product, quantity: product.quantity || 1 }];
     });
     setIsCartOpen(true);
+  };
+
+  const startBuyNow = (product: CartItem) => {
+    const item: CartItem = { ...product, quantity: product.quantity || 1 };
+    setBuyNowItem(item);
+    try {
+      sessionStorage.setItem('buy_now_item', JSON.stringify(item));
+    } catch { /* ignore */ }
+  };
+
+  const clearBuyNow = () => {
+    setBuyNowItem(null);
+    try {
+      sessionStorage.removeItem('buy_now_item');
+    } catch { /* ignore */ }
   };
 
   const updateQuantity = (productId: string, selectedSize: string | undefined, quantity: number) => {
@@ -79,16 +102,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const checkout = async (shippingDetails: ShippingDetails) => {
     if (!user) return { success: false, message: 'Please sign in to complete checkout.' };
-    if (cartItems.length === 0) return { success: false, message: 'Your cart is empty.' };
+    const itemsToCheckout = buyNowItem ? [buyNowItem] : cartItems;
+    if (itemsToCheckout.length === 0) return { success: false, message: 'Your cart is empty.' };
+
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, shippingDetails, cartItems }),
+        body: JSON.stringify({ userId: user.id, shippingDetails, cartItems: itemsToCheckout }),
       });
       const json = await res.json();
       if (!res.ok) return { success: false, message: json.error || 'Checkout failed.' };
-      clearCart();
+      
+      if (buyNowItem) {
+        clearBuyNow();
+      } else {
+        clearCart();
+      }
       setIsCartOpen(false);
       return { success: true, message: json.message || 'Order placed successfully!' };
     } catch {
@@ -98,8 +128,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider value={{
-      cartItems, isCartOpen, setIsCartOpen,
-      addToCart, updateQuantity, removeFromCart, clearCart, checkout,
+      cartItems, buyNowItem, isCartOpen, setIsCartOpen,
+      addToCart, startBuyNow, clearBuyNow, updateQuantity, removeFromCart, clearCart, checkout,
     }}>
       {children}
     </CartContext.Provider>

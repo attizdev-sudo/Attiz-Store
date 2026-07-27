@@ -9,13 +9,17 @@ export interface SessionUser {
 
 export interface CartItem {
   id: string;
+  product_id?: string;
+  variant_id?: string;
   title: string;
   price: number;
   image: string;
   quantity: number;
   selectedSize?: string;
+  color?: string;
   stock?: number;
-  [key: string]: unknown;
+  discount?: number;
+  [key: string]: any;
 }
 
 export interface ProductVariantImage {
@@ -72,9 +76,18 @@ export interface Category {
 export interface Order {
   id: string;
   user_id: string;
-  customer_name: string;
-  customer_phone: string;
+  order_number?: string;
+  customer_name?: string;
+  customer_phone?: string;
   shipping_address: string;
+  shipping_name?: string;
+  shipping_phone?: string;
+  shipping_address1?: string;
+  shipping_address2?: string;
+  shipping_city?: string;
+  shipping_state?: string;
+  shipping_country?: string;
+  shipping_postal_code?: string;
   items: CartItem[];
   total_price: number;
   status: string;

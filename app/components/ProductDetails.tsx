@@ -50,7 +50,7 @@ function ProductDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialColorParam = searchParams.get('color');
-  const { addToCart, setIsCartOpen } = useCart();
+  const { addToCart, startBuyNow, setIsCartOpen } = useCart();
   const { products, dbLoading } = useStore();
   const { isWishlisted: checkIsWishlisted, toggleWishlist } = useWishlist();
 
@@ -152,13 +152,22 @@ function ProductDetailsInner() {
       const finalPrice = displayDiscount > 0
         ? Math.round(displayPrice * (1 - displayDiscount / 100))
         : displayPrice;
-      const primaryImage = thumbnails[activeThumbIdx]?.url || product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+      
+      const variantImage = activeVariant.product_variant_images?.[0]?.image_url
+        || thumbnails.find((t) => t.color && selectedColor && t.color.toLowerCase() === selectedColor.toLowerCase())?.url
+        || thumbnails[activeThumbIdx]?.url
+        || product.image
+        || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+
       addToCart({
         ...product,
-        image: primaryImage,
+        product_id: product.id,
+        variant_id: activeVariant.id,
+        image: variantImage,
         price: finalPrice,
         selectedSize,
         selectedColor,
+        color: selectedColor,
         quantity,
       } as any);
     }
@@ -169,16 +178,26 @@ function ProductDetailsInner() {
       const finalPrice = displayDiscount > 0
         ? Math.round(displayPrice * (1 - displayDiscount / 100))
         : displayPrice;
-      const primaryImage = thumbnails[activeThumbIdx]?.url || product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
-      addToCart({
+
+      const variantImage = activeVariant.product_variant_images?.[0]?.image_url
+        || thumbnails.find((t) => t.color && selectedColor && t.color.toLowerCase() === selectedColor.toLowerCase())?.url
+        || thumbnails[activeThumbIdx]?.url
+        || product.image
+        || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+
+      startBuyNow({
         ...product,
-        image: primaryImage,
+        product_id: product.id,
+        variant_id: activeVariant.id,
+        image: variantImage,
         price: finalPrice,
         selectedSize,
         selectedColor,
+        color: selectedColor,
         quantity,
       } as any);
-      setTimeout(() => setIsCartOpen(true), 200);
+      setIsCartOpen(false);
+      router.push('/checkout');
     }
   };
 

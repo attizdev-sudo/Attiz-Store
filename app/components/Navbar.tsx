@@ -374,9 +374,6 @@ export default function Navbar() {
                           >
                             <span className="flex items-center gap-2">
                               <span>{item.name}</span>
-                              <span className="text-[9px] bg-[#FFCB05] text-black px-1.5 py-0.5 border border-black font-bold">
-                                Catalog
-                              </span>
                             </span>
                             <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isMobileCollectionsOpen ? 'rotate-180 text-[#E63B2E]' : 'text-black/50'}`} />
                           </button>

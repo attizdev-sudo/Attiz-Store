@@ -5,10 +5,16 @@ import { validateSession } from '@/lib/auth/session';
 
 interface CheckoutBody {
   userId: string;
+  phone?: string;
+  updateUserPhone?: boolean;
+  saveAddress?: boolean;
+  paymentMethod?: string;
   shippingDetails: {
     recipientName: string;
     phone: string;
-    address: string;
+    address?: string;
+    addressLine1?: string;
+    addressLine2?: string;
     city: string;
     state: string;
     postalCode: string;
@@ -16,23 +22,36 @@ interface CheckoutBody {
   };
   cartItems: Array<{
     id: string;
+    product_id?: string;
+    variant_id?: string;
     title: string;
     price: number;
     quantity: number;
     selectedSize?: string;
+    size?: string;
+    color?: string;
+    image?: string;
+    discount?: number;
   }>;
+  pricing?: {
+    subtotal?: number;
+    shippingCharge?: number;
+    discount?: number;
+    tax?: number;
+    totalPrice?: number;
+  };
 }
 
 /**
  * POST /api/checkout
- * Body: { userId, shippingDetails, cartItems }
- * Creates the order and decrements stock atomically using database RPC.
+ * Processes order placement, updates user phone in `users` table,
+ * saves shipping address in `addresses` table, and creates order, order items, and payment records.
  */
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('attiz_session')?.value;
   if (!sessionCookie) {
-    return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized. Please sign in to place an order.' }, { status: 401 });
   }
 
   const sessionData = await validateSession(sessionCookie);
@@ -45,69 +64,165 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
   }
 
-  const { userId, shippingDetails, cartItems } = body;
+  const { userId, phone: contactPhone, updateUserPhone = true, saveAddress = false, paymentMethod = 'COD', shippingDetails, cartItems, pricing } = body;
 
   if (!userId || !cartItems?.length || !shippingDetails) {
     return NextResponse.json({ error: 'User details, shipping details and cart items are required.' }, { status: 400 });
   }
 
-  const { recipientName, phone, address, city, state, postalCode, country } = shippingDetails;
-  if (!recipientName || !phone || !address || !city || !state || !postalCode || !country) {
-    return NextResponse.json({ error: 'All shipping details fields are required.' }, { status: 400 });
-  }
-
-  // Prevent ordering on behalf of other users
+  // Security check: user must match session unless admin
   if (user.role !== 'admin' && userId !== user.id) {
-    return NextResponse.json({ error: 'Forbidden. User ID mismatch.' }, { status: 403 });
+    return NextResponse.json({ error: 'Forbidden. Session mismatch.' }, { status: 403 });
   }
 
-  const totalPrice = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const recipientName = shippingDetails.recipientName?.trim();
+  const shippingPhone = shippingDetails.phone?.trim();
+  const address1 = (shippingDetails.addressLine1 || shippingDetails.address || '').trim();
+  const address2 = (shippingDetails.addressLine2 || '').trim();
+  const city = shippingDetails.city?.trim();
+  const state = shippingDetails.state?.trim();
+  const postalCode = shippingDetails.postalCode?.trim();
+  const country = (shippingDetails.country || 'India').trim();
 
-  // If this is the user's first shipping address, save it to the addresses table
-  const { count, error: countError } = await supabase
-    .from('addresses')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId);
+  if (!recipientName || !shippingPhone || !address1 || !city || !state || !postalCode || !country) {
+    return NextResponse.json({ error: 'Please provide all required shipping fields.' }, { status: 400 });
+  }
 
-  if (!countError && count === 0) {
-    await supabase.from('addresses').insert({
+  // 1. UPDATE USER'S PHONE IN `users` TABLE IF PROVIDED & CHANGED
+  const finalPhone = contactPhone?.trim() || shippingPhone;
+  if (finalPhone && updateUserPhone) {
+    try {
+      await supabase
+        .from('users')
+        .update({
+          phone: finalPhone,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+    } catch (err) {
+      console.warn('Failed to update phone in users table during checkout:', err);
+    }
+  }
+
+  // 2. SAVE OR UPDATE ADDRESS IN `addresses` TABLE
+  try {
+    const { count } = await supabase
+      .from('addresses')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (saveAddress || count === 0) {
+      const isDefault = count === 0;
+      if (isDefault) {
+        await supabase.from('addresses').update({ is_default: false }).eq('user_id', userId);
+      }
+      await supabase.from('addresses').insert({
+        user_id: userId,
+        recipient_name: recipientName,
+        phone: shippingPhone,
+        address_line1: address1,
+        address_line2: address2 || null,
+        city,
+        state,
+        country,
+        postal_code: postalCode,
+        is_default: isDefault,
+      });
+    }
+  } catch (err) {
+    console.warn('Address saving skipped/failed:', err);
+  }
+
+  // Compute pricing breakdown
+  const subtotal = pricing?.subtotal ?? cartItems.reduce((sum, item) => sum + (Number(item.price) || 0) * (item.quantity || 1), 0);
+  const shippingCharge = pricing?.shippingCharge ?? (subtotal >= 999 ? 0 : 99);
+  const discount = pricing?.discount ?? 0;
+  const tax = pricing?.tax ?? 0;
+  const totalPrice = pricing?.totalPrice ?? (subtotal + shippingCharge + tax - discount);
+
+  const orderNumber = `ATZ-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  // 3. CREATE ORDER IN `orders` TABLE
+  const { data: orderData, error: orderError } = await supabase
+    .from('orders')
+    .insert({
       user_id: userId,
-      recipient_name: recipientName,
-      phone,
-      address_line1: address,
-      city,
-      state,
-      postal_code: postalCode,
-      country,
-      is_default: true,
-    });
+      order_number: orderNumber,
+      subtotal,
+      shipping_charge: shippingCharge,
+      discount,
+      tax,
+      total_price: totalPrice,
+      status: 'Waiting for confirmation',
+      payment_status: paymentMethod === 'COD' ? 'Pending' : 'Paid',
+      shipping_name: recipientName,
+      shipping_phone: shippingPhone,
+      shipping_address1: address1,
+      shipping_address2: address2 || null,
+      shipping_city: city,
+      shipping_state: state,
+      shipping_country: country,
+      shipping_postal_code: postalCode,
+    })
+    .select('id, order_number')
+    .single();
+
+  if (orderError || !orderData) {
+    console.error('Order creation failed:', orderError);
+    return NextResponse.json({ error: orderError?.message || 'Failed to create order.' }, { status: 500 });
   }
 
-  // Invoke atomic stored transaction on database side
-  const { data, error: rpcError } = await supabase.rpc('process_checkout', {
-    user_id_param: userId,
-    customer_name_param: recipientName,
-    customer_phone_param: phone,
-    shipping_address_param: `${address}, ${city}, ${state}, ${postalCode}, ${country}`,
-    items_param: cartItems,
-    total_price_param: totalPrice,
+  const orderId = orderData.id;
+
+  // 4. CREATE ORDER ITEMS IN `order_items` TABLE
+  const orderItemsData = cartItems.map((item) => {
+    const itemPrice = Number(item.price) || 0;
+    const qty = item.quantity || 1;
+    return {
+      order_id: orderId,
+      product_id: item.product_id || (item.id.includes('-') ? null : item.id),
+      variant_id: item.variant_id || null,
+      product_title: item.title || 'Product',
+      color: item.color || (item as any).selectedColor || null,
+      size: item.selectedSize || item.size || null,
+      quantity: qty,
+      unit_price: itemPrice,
+      discount: item.discount || 0,
+      subtotal: itemPrice * qty,
+    };
   });
 
-  if (rpcError) {
-    return NextResponse.json({ error: rpcError.message }, { status: 500 });
+  const { error: itemsError } = await supabase.from('order_items').insert(orderItemsData);
+  if (itemsError) {
+    console.error('Order items insertion error:', itemsError);
+    // Non-fatal if order created, but log error
   }
 
-  // Check custom validation returned from the stored procedure
-  if (data && typeof data === 'object' && 'success' in data && !data.success) {
-    return NextResponse.json({ error: data.error || 'Checkout failed.' }, { status: 409 });
+  // 5. CREATE PAYMENT RECORD IN `payments` TABLE
+  try {
+    await supabase.from('payments').insert({
+      order_id: orderId,
+      provider: paymentMethod,
+      payment_id: `PAY-${Date.now().toString().slice(-8)}`,
+      status: paymentMethod === 'COD' ? 'Pending' : 'Completed',
+      amount: totalPrice,
+      currency: 'INR',
+      paid_at: paymentMethod === 'COD' ? null : new Date().toISOString(),
+    });
+  } catch (err) {
+    console.warn('Payment record insert warning:', err);
   }
 
-  return NextResponse.json({ success: true, message: 'Order placed successfully!' }, { status: 201 });
+  return NextResponse.json(
+    {
+      success: true,
+      message: 'Order placed successfully!',
+      orderNumber: orderData.order_number,
+      orderId,
+    },
+    { status: 201 }
+  );
 }
-
