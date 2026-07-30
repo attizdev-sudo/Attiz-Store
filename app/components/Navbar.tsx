@@ -374,9 +374,6 @@ export default function Navbar() {
                           >
                             <span className="flex items-center gap-2">
                               <span>{item.name}</span>
-                              <span className="text-[9px] bg-[#FFCB05] text-black px-1.5 py-0.5 border border-black font-bold">
-                                Catalog
-                              </span>
                             </span>
                             <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isMobileCollectionsOpen ? 'rotate-180 text-[#E63B2E]' : 'text-black/50'}`} />
                           </button>
@@ -521,9 +518,11 @@ export default function Navbar() {
                         <p className="attiz-display text-sm tracking-wider text-white truncate">
                           {user.first_name} {user.last_name}
                         </p>
-                        <span className={`attiz-mono text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 inline-block mt-0.5 ${user.role === 'admin' ? 'bg-[#E63B2E] text-white' : 'bg-[#FFCB05] text-black'}`}>
-                          {user.role}
-                        </span>
+                        {user.email && (
+                          <p className="attiz-mono text-[10px] text-white/60 truncate mt-0.5">
+                            {user.email}
+                          </p>
+                        )}
                       </div>
                     </div>
 
