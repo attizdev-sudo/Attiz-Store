@@ -518,9 +518,11 @@ export default function Navbar() {
                         <p className="attiz-display text-sm tracking-wider text-white truncate">
                           {user.first_name} {user.last_name}
                         </p>
-                        <span className={`attiz-mono text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 inline-block mt-0.5 ${user.role === 'admin' ? 'bg-[#E63B2E] text-white' : 'bg-[#FFCB05] text-black'}`}>
-                          {user.role}
-                        </span>
+                        {user.email && (
+                          <p className="attiz-mono text-[10px] text-white/60 truncate mt-0.5">
+                            {user.email}
+                          </p>
+                        )}
                       </div>
                     </div>
 

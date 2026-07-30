@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Star, CheckCircle, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Star, CheckCircle, ShoppingBag, ArrowRight, X, Ruler } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -1025,29 +1025,61 @@ function ProductDetailsInner() {
           </section>
         )}
 
-        {/* Size chart lightbox */}
+        {/* Size chart modal */}
         {isSizeChartOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-            <div className="relative bg-white rounded-2xl border border-black/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.25)] max-w-xl w-full p-6 sm:p-8 animate-scale-in">
-              <button 
-                onClick={() => setIsSizeChartOpen(false)} 
-                className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/5 hover:bg-black/10 text-black/60 hover:text-black flex items-center justify-center transition-all duration-200 cursor-pointer font-semibold text-sm"
-                title="Close"
-              >
-                ✕
-              </button>
-              <div className="mb-5">
-                <span className="block attiz-mono text-[9px] font-bold text-black/45 tracking-widest uppercase mb-0.5">Sizing Reference</span>
-                <h3 className="attiz-display text-xl text-black/90 uppercase tracking-wider">Size Chart & Measurements</h3>
+          <div className="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn">
+            {/* Modal Box */}
+            <div className="relative bg-[#FAF8F5] border-[3px] border-black shadow-[8px_8px_0_0_#111111] max-w-2xl w-full max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden animate-scale-in">
+              
+              {/* Header */}
+              <div className="p-3.5 sm:p-4 bg-[#111111] text-white flex items-center justify-between border-b-[3px] border-black shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 bg-[#FFCB05] border-2 border-black flex items-center justify-center shadow-[1px_1px_0_0_#111111] shrink-0">
+                    <Ruler className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <span className="attiz-mono text-[8px] sm:text-[9px] font-bold text-[#FFCB05] tracking-[0.2em] uppercase block leading-none mb-0.5">
+                      Attiz Specifications
+                    </span>
+                    <h3 className="attiz-display text-base sm:text-lg text-white uppercase tracking-wider leading-none">
+                      Size Chart
+                    </h3>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setIsSizeChartOpen(false)} 
+                  className="w-7 h-7 sm:w-8 sm:h-8 bg-white text-black hover:bg-[#E63B2E] hover:text-white border-2 border-black shadow-[2px_2px_0_0_#111111] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center justify-center transition-all duration-150 cursor-pointer shrink-0"
+                  aria-label="Close size guide"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+                </button>
               </div>
-              <div className="relative aspect-4/3 bg-[#FAF8F5] overflow-hidden rounded-xl border border-black/5">
-                <Image
-                  src={product.size_chart || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800'}
-                  alt="Size Chart"
-                  fill
-                  className="object-contain"
-                />
+
+              {/* Image Container - Scrollable/contained inside modal body */}
+              <div className="flex-1 overflow-auto p-3 sm:p-5 flex items-center justify-center bg-white">
+                <div className="relative w-full h-full min-h-[250px] max-h-[58vh] flex items-center justify-center">
+                  <img
+                    src={product?.size_chart || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800'}
+                    alt="Size Chart"
+                    className="max-w-full max-h-[55vh] object-contain border-2 border-black shadow-[4px_4px_0_0_#111111]"
+                  />
+                </div>
               </div>
+
+              {/* Footer */}
+              <div className="p-3 sm:p-3.5 bg-[#FAF8F5] border-t-2 border-black flex items-center justify-between shrink-0">
+                <span className="attiz-mono text-[9px] sm:text-[10px] font-bold text-black/60 uppercase tracking-wider truncate mr-2">
+                  Official Attiz Fit Guide
+                </span>
+                <button
+                  onClick={() => setIsSizeChartOpen(false)}
+                  className="px-4 py-1.5 bg-black text-[#FFCB05] attiz-mono text-[10px] sm:text-xs font-black tracking-widest uppercase border-2 border-black shadow-[2px_2px_0_0_#E63B2E] hover:bg-[#E63B2E] hover:text-white hover:border-black transition-all cursor-pointer shrink-0"
+                >
+                  Close
+                </button>
+              </div>
+
             </div>
           </div>
         )}
