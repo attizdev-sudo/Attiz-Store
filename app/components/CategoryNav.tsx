@@ -30,9 +30,6 @@ export default function CategoryNav() {
   return (
     <section className="py-4 sm:py-16 bg-[#FAF8F5]">
       <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8">
-        <h2 className="text-center attiz-display text-base sm:text-2xl md:text-3xl font-bold tracking-wider text-black mb-3 sm:mb-12 uppercase">
-          Shop by Category
-        </h2>
 
         {/* 5-Column Fixed Non-scrollable Grid */}
         <div className="grid grid-cols-5 gap-0.5 sm:gap-4 items-start">

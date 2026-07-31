@@ -1,11 +1,26 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import Image from 'next/image';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ClipboardList, Clock, CheckCircle2, Package, Truck, MapPin, Hash, CalendarDays, ReceiptText } from 'lucide-react';
+import {
+  ArrowLeft,
+  ClipboardList,
+  Clock,
+  CheckCircle2,
+  Package,
+  Truck,
+  MapPin,
+  X,
+  ExternalLink,
+  Phone,
+  User,
+  ChevronRight
+} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
+import type { CartItem } from '@/lib/types';
+
+const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
 
 type StatusKey = 'Waiting for confirmation' | 'Accepted' | 'Dispatched' | 'Shipped' | 'Delivered' | string;
 
@@ -13,28 +28,27 @@ const STATUS_CONFIG: Record<string, {
   bg: string;
   text: string;
   border: string;
-  shadow: string;
   icon: React.ReactNode;
   step: number;
 }> = {
   'Waiting for confirmation': {
-    bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-300', shadow: 'shadow-[3px_3px_0_0_#f97316]',
+    bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200',
     icon: <Clock className="w-3.5 h-3.5 animate-pulse" />, step: 1,
   },
   'Accepted': {
-    bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-300', shadow: 'shadow-[3px_3px_0_0_#3b82f6]',
+    bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200',
     icon: <CheckCircle2 className="w-3.5 h-3.5" />, step: 2,
   },
   'Dispatched': {
-    bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-300', shadow: 'shadow-[3px_3px_0_0_#6366f1]',
+    bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200',
     icon: <Package className="w-3.5 h-3.5" />, step: 3,
   },
   'Shipped': {
-    bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-300', shadow: 'shadow-[3px_3px_0_0_#a855f7]',
+    bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200',
     icon: <Truck className="w-3.5 h-3.5" />, step: 4,
   },
   'Delivered': {
-    bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-300', shadow: 'shadow-[3px_3px_0_0_#22c55e]',
+    bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200',
     icon: <CheckCircle2 className="w-3.5 h-3.5" />, step: 5,
   },
 };
@@ -46,214 +60,393 @@ function getStatusConfig(status: StatusKey) {
 }
 
 export default function OrdersPage() {
-  const { user } = useAuth();
-  const { orders: allOrders, dbLoading } = useStore();
+  const { user, sessionLoading } = useAuth();
+  const { orders: allOrders } = useStore();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!user) router.push('/login');
-  }, [user, router]);
+  // Selected item state for Flipkart-style popup modal
+  const [selectedDetail, setSelectedDetail] = useState<{ order: any; item: CartItem } | null>(null);
 
-  const userOrders = allOrders.filter((o) => o.user_id === user?.id);
+  // Instant Cached Orders State
+  const [localOrders, setLocalOrders] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('attiz_user_orders');
+        return cached ? JSON.parse(cached) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
+  const [isFetchingOrders, setIsFetchingOrders] = useState(localOrders.length === 0);
+
+  // Fetch orders directly and sync cache
+  useEffect(() => {
+    if (!sessionLoading && !user) {
+      router.push('/login');
+      return;
+    }
+
+    if (user) {
+      const storeUserOrders = allOrders.filter((o) => o.user_id === user.id);
+      if (storeUserOrders.length > 0 && localOrders.length === 0) {
+        setLocalOrders(storeUserOrders);
+        setIsFetchingOrders(false);
+      }
+
+      fetch('/api/orders', { credentials: 'include' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setLocalOrders(data);
+            try {
+              sessionStorage.setItem('attiz_user_orders', JSON.stringify(data));
+            } catch { /* ignore */ }
+          }
+        })
+        .catch((err) => console.error('Error fetching user orders:', err))
+        .finally(() => setIsFetchingOrders(false));
+    }
+  }, [user, sessionLoading, allOrders, router]);
+
+  const userOrders = localOrders;
 
   return (
-    <div className="min-h-screen bg-[#FAF8F5] relative overflow-hidden">
-      {/* Halftone texture */}
-      <div
-        className="pointer-events-none fixed inset-0 opacity-[0.04] z-0"
-        style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '16px 16px' }}
-      />
-
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-24">
+    <div className="min-h-screen bg-[#FAF8F5] py-8 sm:py-12 pb-24">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6">
 
         {/* Back button */}
         <button
           onClick={() => router.push('/')}
-          className="mb-10 flex items-center space-x-2 attiz-mono text-[10px] font-bold tracking-widest text-black/85 hover:text-black transition-colors uppercase cursor-pointer group"
+          className="mb-6 flex items-center space-x-2 attiz-mono text-[10px] font-bold tracking-widest text-black/70 hover:text-black transition-colors uppercase cursor-pointer group"
         >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-200" />
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           <span>Back to Home</span>
         </button>
 
         {/* Page Header */}
-        <div className="mb-10 sm:mb-12">
-          <span className="inline-flex items-center bg-black text-[#FFCB05] attiz-mono text-[9px] font-bold tracking-[0.3em] uppercase px-3 py-1 -skew-x-6 border-2 border-black mb-4">
-            <span className="skew-x-6">My Account</span>
+        <div className="mb-6 border-b border-black/10 pb-4 flex items-center justify-between">
+          <div>
+            <span className="attiz-mono text-[10px] font-bold tracking-widest uppercase text-black/60 block mb-1">My Account</span>
+            <h1 className="attiz-display text-2xl sm:text-3xl uppercase text-black">
+              My Orders
+            </h1>
+          </div>
+          <span className="attiz-mono text-xs font-bold text-black/70 uppercase">
+            {userOrders.length} {userOrders.length === 1 ? 'Order' : 'Orders'}
           </span>
-          <h1 className="attiz-display text-3xl sm:text-4xl md:text-5xl uppercase leading-[0.95] tracking-tight text-black mb-3">
-            Track Orders
-          </h1>
-          <p className="attiz-mono text-[10px] font-bold tracking-[0.25em] text-black/85 uppercase">
-            {userOrders.length > 0
-              ? `${userOrders.length} order${userOrders.length > 1 ? 's' : ''} placed`
-              : 'Your order history'}
-          </p>
         </div>
 
-        {/* Loading state */}
-        {dbLoading ? (
-          <div className="flex flex-col items-center justify-center py-28 space-y-4">
-            <div className="w-9 h-9 rounded-full border-[3px] border-black border-t-[#E63B2E] animate-spin" />
-            <span className="attiz-mono text-[10px] font-bold tracking-[0.35em] uppercase text-black/85">
-              Loading your orders…
+        {/* Loading state - shown during auth check & order fetch if cache is empty */}
+        {(sessionLoading || isFetchingOrders) && userOrders.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 space-y-3">
+            <div className="w-8 h-8 rounded-full border-3 border-black border-t-[#E63B2E] animate-spin" />
+            <span className="attiz-mono text-xs font-bold tracking-widest uppercase text-black/70">
+              Loading your orders...
             </span>
           </div>
 
-        /* Empty state */
+          /* Empty state */
         ) : userOrders.length === 0 ? (
-          <div className="bg-white border-[3px] border-black shadow-[8px_8px_0_0_#111111] p-14 flex flex-col items-center text-center space-y-5">
-            <ClipboardList className="w-14 h-14 text-black/15 stroke-[1.2]" />
+          <div className="bg-white border border-black/15 p-12 text-center flex flex-col items-center justify-center space-y-4">
+            <ClipboardList className="w-12 h-12 text-black/20" />
             <div>
-              <h3 className="attiz-display text-xl text-black uppercase mb-1">No Orders Yet</h3>
-              <p className="attiz-mono text-[10px] font-bold tracking-widest text-black/85 uppercase leading-relaxed">
-                You haven&apos;t placed any orders yet.<br />Start shopping to see them here.
+              <h3 className="attiz-display text-lg text-black uppercase mb-1">No Orders Found</h3>
+              <p className="attiz-mono text-xs text-black/70 uppercase">
+                You haven&apos;t placed any orders yet.
               </p>
             </div>
             <button
               onClick={() => router.push('/')}
-              className="mt-2 px-8 py-3 border-[3px] border-black attiz-display text-xs tracking-[0.15em] uppercase bg-black text-[#FFCB05] shadow-[4px_4px_0_0_#E63B2E] hover:bg-white hover:text-black hover:shadow-[2px_2px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer"
+              className="py-2.5 px-6 border border-black bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors attiz-mono text-xs font-bold uppercase tracking-wider cursor-pointer"
             >
               Start Shopping
             </button>
           </div>
 
-        /* Orders list */
+          /* FLIPKART-STYLE COMPACT ORDERS LIST */
         ) : (
-          <div className="space-y-10">
+          <div className="space-y-3">
             {userOrders.map((order) => {
-              const cfg = getStatusConfig(order.status);
+              const displayOrderNo = order.order_number || order.id.slice(0, 8).toUpperCase();
               const orderDate = new Date(order.created_at).toLocaleDateString('en-IN', {
                 year: 'numeric', month: 'short', day: 'numeric',
               });
-              const total = order.total_price.toLocaleString('en-IN');
 
-              return (
-                <div
-                  key={order.id}
-                  className="bg-white border-[3px] border-black shadow-[6px_6px_0_0_#111111] overflow-hidden"
-                >
-                  {/* ── Order Header ── */}
-                  <div className="bg-[#111111] px-4 sm:px-5 py-4">
-                    {/* Row 1: ID + Date */}
-                    <div className="flex items-center justify-between gap-3 mb-3">
-                      {/* Order ID */}
-                      <div className="flex items-center gap-2">
-                        <Hash className="w-3.5 h-3.5 text-[#FFCB05]" />
-                        <div>
-                          <span className="block attiz-mono text-[8px] font-bold text-white/40 tracking-widest uppercase">Order ID</span>
-                          <span className="attiz-mono text-xs font-bold text-white uppercase">{order.id.slice(0, 8).toUpperCase()}</span>
-                        </div>
-                      </div>
-                      {/* Date */}
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="w-3.5 h-3.5 text-[#FFCB05]" />
-                        <div>
-                          <span className="block attiz-mono text-[8px] font-bold text-white/40 tracking-widest uppercase">Date Placed</span>
-                          <span className="attiz-mono text-xs font-bold text-white">{orderDate}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Row 2: Status badge */}
-                    <div className={`inline-flex items-center space-x-1.5 px-3 py-1.5 border-2 ${cfg.bg} ${cfg.text} ${cfg.border} ${cfg.shadow} attiz-mono text-[9px] font-bold tracking-wider uppercase`}>
-                      {cfg.icon}
-                      <span>{order.status || 'Confirmed'}</span>
-                    </div>
-                  </div>
+              // Robust item extraction with fallback item if items array is empty
+              const rawItems: CartItem[] = order.items && order.items.length > 0
+                ? order.items
+                : [{
+                  id: order.id,
+                  product_id: order.id,
+                  title: `Order #${displayOrderNo}`,
+                  price: order.total_price || 0,
+                  quantity: 1,
+                  image: DEFAULT_IMAGE,
+                }];
 
-                  {/* ── Progress tracker ── */}
-                  <div className="px-4 sm:px-5 py-5 border-b-2 border-black/10 bg-[#FAF8F5]">
-                    <div className="overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
-                      <div className="flex items-center justify-between gap-1 relative min-w-[280px]">
-                        {/* Track line */}
-                        <div className="absolute left-0 right-0 top-[14px] h-[2px] bg-black/10 z-0" />
-                        <div
-                          className="absolute left-0 top-[14px] h-[2px] bg-[#E63B2E] z-0 transition-all duration-700"
-                          style={{ width: `${Math.max(0, ((cfg.step - 1) / (STEPS.length - 1)) * 100)}%` }}
+              return rawItems.map((item: CartItem, idx: number) => {
+                const isDelivered = order.status === 'Delivered';
+                const itemImg = item.image && item.image !== '/placeholder.png' ? item.image : DEFAULT_IMAGE;
+                const colorVal = item.color || item.selectedColor;
+
+                return (
+                  <div
+                    key={`${order.id}-${item.id || idx}`}
+                    onClick={() => setSelectedDetail({ order, item })}
+                    tabIndex={0}
+                    role="button"
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedDetail({ order, item }); }}
+                    className="bg-white border border-black/15 p-3.5 sm:p-4 transition-all hover:border-black hover:shadow-xs cursor-pointer group flex items-center justify-between gap-4"
+                  >
+                    {/* Left: Product Thumbnail & Title Info */}
+                    <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+                      {/* Product Thumbnail with onError Fallback */}
+                      <div className="relative w-14 h-16 sm:w-16 sm:h-20 bg-[#FAF8F5] border border-black/10 shrink-0 overflow-hidden group-hover:scale-105 transition-transform">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={itemImg}
+                          alt={item.title}
+                          className="w-full h-full object-cover object-center"
+                          onError={(e) => {
+                            e.currentTarget.src = DEFAULT_IMAGE;
+                          }}
                         />
-                        {STEPS.map((step, i) => {
-                          const done = i < cfg.step;
-                          const active = i === cfg.step - 1;
-                          return (
-                            <div key={step} className="flex flex-col items-center z-10 flex-1">
-                              <div className={`w-7 h-7 border-2 flex items-center justify-center text-[9px] font-bold transition-all ${
-                                active
-                                  ? 'bg-[#E63B2E] border-[#E63B2E] text-white shadow-[2px_2px_0_0_#111]'
-                                  : done
-                                    ? 'bg-black border-black text-[#FFCB05]'
-                                    : 'bg-white border-black/20 text-black/30'
-                              }`}>
-                                {done && !active ? (
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                ) : (
-                                  <span className="attiz-mono">{i + 1}</span>
-                                )}
-                              </div>
-                              <span className={`mt-1.5 attiz-mono text-[7px] font-bold tracking-wider uppercase text-center leading-tight max-w-[48px] ${
-                                active ? 'text-[#E63B2E]' : done ? 'text-black' : 'text-black/25'
-                              }`}>
-                                {step}
-                              </span>
-                            </div>
-                          );
-                        })}
+                      </div>
+
+                      {/* Title & Variant Details */}
+                      <div className="min-w-0">
+                        <h3 className="attiz-mono text-xs sm:text-sm font-bold text-black uppercase truncate group-hover:text-[#E63B2E] transition-colors mb-1">
+                          {item.title}
+                        </h3>
+
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] attiz-mono text-black/70 mb-1.5">
+                          {item.selectedSize && (
+                            <span className="bg-black text-white px-1.5 py-0.2 font-bold uppercase">
+                              Size: {item.selectedSize}
+                            </span>
+                          )}
+                          {colorVal && (
+                            <span className="bg-black/10 px-1.5 py-0.2 font-bold text-black uppercase">
+                              Color: {colorVal}
+                            </span>
+                          )}
+                          <span>Qty: {item.quantity}</span>
+                        </div>
+
+                        {/* Status Indicator */}
+                        <div className="flex items-center space-x-1.5 text-[11px] attiz-mono uppercase">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${isDelivered ? 'bg-green-600' : 'bg-[#E63B2E] animate-pulse'}`} />
+                          <span className={`font-bold ${isDelivered ? 'text-green-700' : 'text-[#E63B2E]'}`}>
+                            {order.status || 'Order Placed'}
+                          </span>
+                          <span className="text-black/40 hidden sm:inline">· {orderDate}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* ── Order Items ── */}
-                  <div className="divide-y-2 divide-black/5 px-4 sm:px-5">
-                    {order.items?.map((item) => (
-                      <div key={item.id} className="flex items-start sm:items-center justify-between py-4 gap-3">
-                        <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-                          {/* Product image */}
-                          <div className="relative w-12 h-14 sm:w-14 sm:h-16 bg-[#FAF8F5] border-2 border-black shrink-0 overflow-hidden">
-                            <Image src={item.image} alt={item.title} fill className="object-cover" sizes="56px" />
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="attiz-display text-xs sm:text-sm text-black uppercase leading-tight line-clamp-2 mb-0.5">
-                              {item.title}
-                            </h4>
-                            <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase">
-                              Qty: {item.quantity} × ₹{item.price.toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="attiz-display text-sm text-black shrink-0">
-                          ₹{(item.price * item.quantity).toLocaleString('en-IN')}
+                    {/* Right: Price & Chevron Navigation Indicator */}
+                    <div className="flex items-center space-x-3 shrink-0 text-right">
+                      <div>
+                        <span className="attiz-mono text-[9px] text-black/50 block uppercase">Total</span>
+                        <span className="attiz-mono text-xs sm:text-sm font-bold text-black block">
+                          ₹{((item.price || 0) * item.quantity).toLocaleString('en-IN')}
                         </span>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* ── Footer: Address + Total ── */}
-                  <div className="px-5 py-4 border-t-[3px] border-black bg-[#FAF8F5] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    {/* Address */}
-                    <div className="flex items-start gap-2 max-w-sm">
-                      <MapPin className="w-3.5 h-3.5 text-black/40 mt-0.5 shrink-0" />
-                      <div>
-                        <span className="block attiz-mono text-[8px] font-bold text-black/85 tracking-widest uppercase mb-0.5">Shipping To</span>
-                        <p className="attiz-body text-[12px] text-black/65 leading-relaxed tracking-wide">{order.shipping_address}</p>
-                      </div>
-                    </div>
-
-                    {/* Total */}
-                    <div className="shrink-0 text-right sm:text-right">
-                      <span className="block attiz-mono text-[8px] font-bold text-black/35 tracking-widest uppercase mb-0.5">
-                        <ReceiptText className="inline w-3 h-3 mr-1 mb-0.5" />
-                        Order Total
-                      </span>
-                      <div className="relative inline-block">
-                        <span className="absolute inset-x-0 bottom-0.5 h-[40%] bg-[#FFCB05] -rotate-1 -z-0" />
-                        <span className="relative z-10 attiz-display text-xl text-black px-1">₹{total}</span>
-                      </div>
+                      <ChevronRight className="w-4 h-4 text-black/40 group-hover:text-black group-hover:translate-x-1 transition-all" />
                     </div>
                   </div>
-                </div>
-              );
+                );
+              });
             })}
           </div>
         )}
+
       </div>
+
+      {/* DETAILED ORDER & TRACKING OVERLAY (Mobile Page / Desktop Modal) */}
+      {selectedDetail && (
+        <div className="fixed top-[56px] left-0 right-0 bottom-[56px] sm:inset-0 z-[9980] sm:z-50 bg-[#FAF8F5] sm:bg-black/60 sm:backdrop-blur-xs flex flex-col sm:items-center sm:justify-center p-0 sm:p-4 overflow-y-auto">
+          <div className="bg-[#FAF8F5] sm:bg-white sm:border-2 sm:border-black p-4 sm:p-7 w-full sm:max-w-xl relative sm:shadow-xl flex-1 sm:flex-initial overflow-y-auto sm:overflow-visible">
+
+            {/* Mobile Header with Back Button */}
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-black/10 sm:hidden">
+              <button
+                onClick={() => setSelectedDetail(null)}
+                className="flex items-center space-x-2 attiz-mono text-xs font-bold uppercase text-black hover:text-[#E63B2E] transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Orders</span>
+              </button>
+              <span className="attiz-mono text-[10px] font-bold bg-[#FFCB05] border border-black px-2 py-0.5 text-black uppercase">
+                {selectedDetail.order.status || 'Confirmed'}
+              </span>
+            </div>
+
+            {/* Desktop Close Button */}
+            <button
+              onClick={() => setSelectedDetail(null)}
+              className="hidden sm:flex absolute top-4 right-4 text-black hover:text-[#E63B2E] p-1.5 border border-black/20 bg-white hover:bg-black/5 transition-colors cursor-pointer"
+              aria-label="Close modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Modal / Page Header */}
+            <div className="border-b border-black/10 pb-3 mb-4 sm:mb-5 sm:pr-8">
+              <span className="hidden sm:inline-block bg-black text-[#FFCB05] attiz-mono text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 mb-1.5">
+                Order Tracking & Details
+              </span>
+              <h2 className="attiz-display text-lg sm:text-xl uppercase text-black">
+                {selectedDetail.item.title}
+              </h2>
+              <span className="attiz-mono text-xs text-black/70 uppercase">
+                Order No: <strong className="text-black">{selectedDetail.order.order_number || selectedDetail.order.id.slice(0, 8).toUpperCase()}</strong>
+              </span>
+            </div>
+
+            {/* Product Image & Specs Card */}
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center bg-white sm:bg-[#FAF8F5] border border-black/15 p-3.5 mb-5">
+              {/* Product Thumbnail with onError Fallback */}
+              <div className="sm:col-span-4 relative aspect-3/4 w-full bg-white border border-black/10 overflow-hidden max-h-48 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedDetail.item.image && selectedDetail.item.image !== '/placeholder.png' ? selectedDetail.item.image : DEFAULT_IMAGE}
+                  alt={selectedDetail.item.title}
+                  className="w-full h-full object-cover object-center"
+                  onError={(e) => {
+                    e.currentTarget.src = DEFAULT_IMAGE;
+                  }}
+                />
+              </div>
+
+              <div className="sm:col-span-8 space-y-2.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {selectedDetail.item.selectedSize && (
+                    <span className="attiz-mono text-xs font-bold bg-black text-white px-2 py-0.5 uppercase">
+                      Size: {selectedDetail.item.selectedSize}
+                    </span>
+                  )}
+                  {(selectedDetail.item.color || selectedDetail.item.selectedColor) && (
+                    <span className="attiz-mono text-xs font-bold bg-white border border-black/20 px-2 py-0.5 text-black uppercase">
+                      Color: {selectedDetail.item.color || selectedDetail.item.selectedColor}
+                    </span>
+                  )}
+                  <span className="attiz-mono text-xs font-bold bg-white border border-black/20 px-2 py-0.5 text-black uppercase">
+                    Qty: {selectedDetail.item.quantity}
+                  </span>
+                </div>
+
+                <div className="space-y-0.5">
+                  <span className="attiz-mono text-xs text-black/70 uppercase block">
+                    Unit Price: ₹{selectedDetail.item.price.toLocaleString('en-IN')}
+                  </span>
+                  <span className="attiz-mono text-sm font-extrabold text-[#E63B2E] block">
+                    Item Total: ₹{(selectedDetail.item.price * selectedDetail.item.quantity).toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                {/* Button to view full product page with color pre-selected */}
+                <button
+                  onClick={() => {
+                    const prodId = selectedDetail.item.product_id || selectedDetail.item.id;
+                    const colorVal = selectedDetail.item.color || selectedDetail.item.selectedColor;
+                    setSelectedDetail(null);
+                    router.push(`/product/${prodId}${colorVal ? `?color=${encodeURIComponent(colorVal)}` : ''}`);
+                  }}
+                  className="inline-flex items-center space-x-1.5 py-2 px-3 border border-black bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors attiz-mono text-[11px] font-bold tracking-wider uppercase cursor-pointer"
+                >
+                  <span>View Product Page</span>
+                  <ExternalLink className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+
+            {/* Shipment Tracking Timeline */}
+            <div className="space-y-3 mb-5">
+              <div className="flex items-center justify-between">
+                <span className="attiz-display text-xs uppercase text-black">Shipment Progress</span>
+                <span className="attiz-mono text-[10px] font-bold bg-[#FFCB05] border border-black px-2 py-0.5 text-black uppercase">
+                  {selectedDetail.order.status || 'Confirmed'}
+                </span>
+              </div>
+
+              {/* Multi-step Tracking Graph */}
+              <div className="p-3 bg-white border border-black/15">
+                <div className="flex items-center justify-between gap-1 relative">
+                  {STEPS.map((step, i) => {
+                    const cfg = getStatusConfig(selectedDetail.order.status);
+                    const done = i < cfg.step;
+                    const active = i === cfg.step - 1;
+                    return (
+                      <div key={step} className="flex flex-col items-center z-10 flex-1">
+                        <div
+                          className={`w-6 h-6 border flex items-center justify-center text-[8px] font-bold transition-all ${active
+                              ? 'bg-[#E63B2E] border-[#E63B2E] text-white'
+                              : done
+                                ? 'bg-black border-black text-[#FFCB05]'
+                                : 'bg-white border-black/20 text-black/30'
+                            }`}
+                        >
+                          {done && !active ? (
+                            <CheckCircle2 className="w-3 h-3" />
+                          ) : (
+                            <span className="attiz-mono">{i + 1}</span>
+                          )}
+                        </div>
+                        <span
+                          className={`mt-1 attiz-mono text-[7px] font-bold uppercase text-center ${active ? 'text-[#E63B2E]' : done ? 'text-[#111111]' : 'text-black/30'
+                            }`}
+                        >
+                          {step}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Delivery Address & Contact info */}
+            <div className="border-t border-black/10 pt-3 space-y-2">
+              <h4 className="attiz-display text-xs uppercase text-black flex items-center space-x-1.5">
+                <MapPin className="w-3.5 h-3.5 text-black/80" />
+                <span>Delivery Address</span>
+              </h4>
+              <div className="p-3 bg-white sm:bg-[#FAF8F5] border border-black/10 text-xs attiz-mono space-y-1 uppercase text-black/80">
+                {selectedDetail.order.shipping_name && (
+                  <div className="font-bold text-black flex items-center space-x-1.5">
+                    <User className="w-3.5 h-3.5 text-black/70" />
+                    <span>{selectedDetail.order.shipping_name}</span>
+                  </div>
+                )}
+                {selectedDetail.order.shipping_phone && (
+                  <div className="flex items-center space-x-1.5">
+                    <Phone className="w-3.5 h-3.5 text-black/70" />
+                    <span>Phone: {selectedDetail.order.shipping_phone}</span>
+                  </div>
+                )}
+                <p className="pt-0.5 text-black/70">
+                  {selectedDetail.order.shipping_address1
+                    ? `${selectedDetail.order.shipping_address1}${selectedDetail.order.shipping_address2 ? `, ${selectedDetail.order.shipping_address2}` : ''}, ${selectedDetail.order.shipping_city}, ${selectedDetail.order.shipping_state} ${selectedDetail.order.shipping_postal_code}`
+                    : selectedDetail.order.shipping_address}
+                </p>
+              </div>
+            </div>
+
+            {/* Desktop Footer Button */}
+            <div className="mt-5 pt-3 border-t border-black/10 hidden sm:flex justify-end">
+              <button
+                onClick={() => setSelectedDetail(null)}
+                className="py-2 px-5 border border-black bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors attiz-mono text-xs font-bold uppercase tracking-wider cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

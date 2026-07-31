@@ -1,76 +1,83 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { X, Plus, Minus, Trash2, ShoppingBag, Check, Truck } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 
 export default function CartDrawer() {
-  const { cartItems, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart, checkout } = useCart();
+  const { cartItems, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const [isNavigating, setIsNavigating] = React.useState(false);
 
-  const [shippingDetails, setShippingDetails] = useState({
-    recipientName: user ? `${user.first_name} ${user.last_name}`.trim() : '',
-    phone: user?.phone || '',
-    address: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    country: 'India',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  // Prevent background body scroll when cart drawer is open
+  useEffect(() => {
+    if (isCartOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      setIsNavigating(false);
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isCartOpen]);
+
+  // Close cart drawer automatically when route/pathname changes
+  useEffect(() => {
+    setIsCartOpen(false);
+  }, [pathname, setIsCartOpen]);
 
   if (!isCartOpen) return null;
 
-  const totalAmount = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setShippingDetails((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckoutSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
-    setIsSubmitting(true);
-    const res = await checkout(shippingDetails);
-    setIsSubmitting(false);
-    if (res.success) {
-      setSuccessMsg(res.message);
-      setTimeout(() => {
-        setIsCartOpen(false);
-        setSuccessMsg('');
-        router.push('/orders');
-      }, 2500);
+  const handleGoToCheckout = () => {
+    setIsNavigating(true);
+    if (!user) {
+      router.push('/login?redirect=/checkout');
     } else {
-      setErrorMsg(res.message);
+      router.push('/checkout');
     }
   };
 
+  const handleGoToCart = () => {
+    setIsCartOpen(false);
+    router.push('/cart');
+  };
+
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-[9980] overflow-hidden">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/35 backdrop-blur-xs transition-opacity" onClick={() => setIsCartOpen(false)} />
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-300" 
+        onClick={() => setIsCartOpen(false)} 
+      />
       
-      <div className="absolute inset-y-0 right-0 w-full sm:max-w-md flex">
-        <div className="w-full bg-white flex flex-col h-full border-l-2 border-black relative transition-all">
+      <div className="absolute top-[56px] bottom-[56px] sm:top-0 sm:bottom-0 right-0 w-full sm:max-w-md flex">
+        <div className="w-full bg-white flex flex-col h-full border-l-2 border-black relative transition-all shadow-2xl">
 
           {/* Header */}
-          <div className="px-6 py-5 border-b-2 border-black flex items-center justify-between bg-white text-black">
+          <div className="px-6 py-4 border-b-2 border-black flex items-center justify-between bg-white text-black shrink-0">
             <div className="flex items-center space-x-2.5">
-              <ShoppingBag className="w-4 h-4 text-black/90" />
-              <span className="attiz-display text-sm tracking-wider uppercase text-black">Your Cart ({cartItems.length})</span>
+              <div className="w-8 h-8 bg-black text-[#FFCB05] flex items-center justify-center font-bold">
+                <ShoppingBag className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="attiz-display text-sm tracking-wider uppercase text-black block">Shopping Cart</span>
+                <span className="attiz-mono text-[9px] text-black/85 tracking-widest uppercase block">
+                  {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'}
+                </span>
+              </div>
             </div>
             
             <button 
               onClick={() => setIsCartOpen(false)} 
-              className="text-black/85 hover:text-black p-1 transition-colors cursor-pointer"
+              className="hidden sm:block text-black/85 hover:text-black p-1.5 transition-colors cursor-pointer border border-transparent hover:border-black rounded-none"
               aria-label="Close cart"
             >
               <X className="w-5 h-5" />
@@ -78,79 +85,96 @@ export default function CartDrawer() {
           </div>
 
           {/* Cart Items List */}
-          <div className="flex-1 overflow-y-auto px-6 py-2 divide-y border-b border-black/10 divide-black/10 scrollbar-thin">
-            
-            {errorMsg && (
-              <div className="p-3 bg-red-50 text-[#E63B2E] border border-[#E63B2E] text-xs font-bold tracking-wider text-center uppercase my-4">
-                {errorMsg}
-              </div>
-            )}
-            {successMsg && (
-              <div className="p-3 bg-green-50 text-black border border-black text-xs font-bold tracking-wider text-center uppercase flex items-center justify-center space-x-2 my-4">
-                <Check className="w-4 h-4 text-green-600" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
+          <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-2 divide-y divide-black/10 scrollbar-thin">
             {cartItems.length === 0 ? (
-              <div className="h-64 flex flex-col items-center justify-center space-y-4 text-black text-center">
-                <ShoppingBag className="w-10 h-10 stroke-[1.2] text-black/90" />
-                <p className="attiz-mono text-[10px] font-bold tracking-widest uppercase text-black/85">Your cart is empty.</p>
+              <div className="h-full flex flex-col items-center justify-center py-16 text-black text-center">
+                <div className="w-16 h-16 bg-[#FAF8F5] border-2 border-black flex items-center justify-center mb-4 -skew-x-3">
+                  <ShoppingBag className="w-8 h-8 text-black/85 skew-x-3" />
+                </div>
+                <h3 className="attiz-display text-base uppercase tracking-wider mb-1">Your cart is empty</h3>
+                <p className="attiz-mono text-[10px] text-black/85 max-w-xs tracking-wider uppercase mb-6">
+                  Explore our latest catalog and discover premium streetwear styles.
+                </p>
                 <button
                   onClick={() => setIsCartOpen(false)}
-                  className="py-2 px-5 border border-black bg-white text-black hover:bg-black hover:text-[#FFCB05] transition-all text-[9px] attiz-mono font-bold tracking-wider uppercase cursor-pointer"
+                  className="py-3 px-6 border-2 border-black bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-all text-xs attiz-mono font-bold tracking-widest uppercase cursor-pointer"
                 >
-                  Continue Shopping
+                  Start Shopping
                 </button>
               </div>
             ) : (
-              cartItems.map((item) => (
-                <div key={`${item.id}-${item.selectedSize}`} className="flex items-start gap-4 py-4">
+              cartItems.map((item, idx) => (
+                <div key={`${item.id}-${item.selectedSize}-${idx}`} className="flex items-start gap-4 py-4">
                   {/* Product Image */}
-                  <div className="relative w-20 h-24 bg-[#F5F1E6] border border-black/10 overflow-hidden shrink-0">
-                    <Image src={item.image} alt={item.title} fill className="object-cover" sizes="80px" />
+                  <div className="relative w-20 h-24 bg-[#F5F1E6] border border-black overflow-hidden shrink-0">
+                    <Image 
+                      src={item.image || '/placeholder.png'} 
+                      alt={item.title} 
+                      fill 
+                      className="object-cover" 
+                      sizes="80px" 
+                    />
                   </div>
 
                   {/* Info & Action area */}
-                  <div className="grow flex flex-col justify-between h-24">
+                  <div className="grow flex flex-col justify-between min-h-[96px]">
                     <div>
-                      <h4 className="attiz-mono text-xs font-bold text-black tracking-wide line-clamp-1 uppercase">{item.title}</h4>
-                      {item.selectedSize && (
-                        <span className="attiz-mono text-[9px] text-black/85 uppercase tracking-widest block mt-0.5">
-                          Size: {item.selectedSize}
-                        </span>
-                      )}
-                      <span className="attiz-mono text-xs font-bold text-[#E63B2E] mt-1 block">₹{item.price.toLocaleString('en-IN')}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      {/* Quantity control */}
-                      <div className="flex items-center border border-black bg-white">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="attiz-mono text-xs font-bold text-black tracking-wide line-clamp-1 uppercase">
+                          {item.title}
+                        </h4>
                         <button 
-                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)} 
-                          className="p-2 px-3 text-black hover:bg-black/5 transition-colors cursor-pointer border-r border-black"
-                          aria-label="Decrease quantity"
+                          onClick={() => removeFromCart(item.id, item.selectedSize)} 
+                          className="text-black/85 hover:text-[#E63B2E] transition-colors p-0.5 cursor-pointer" 
+                          title="Remove item"
                         >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="attiz-mono text-xs font-bold px-3 text-black select-none">{item.quantity}</span>
-                        <button 
-                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)} 
-                          className="p-2 px-3 text-black hover:bg-black/5 transition-colors cursor-pointer border-l border-black"
-                          aria-label="Increase quantity"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
 
-                      {/* Remove button */}
-                      <button 
-                        onClick={() => removeFromCart(item.id, item.selectedSize)} 
-                        className="text-black/85 hover:text-[#E63B2E] p-1.5 transition-colors cursor-pointer" 
-                        title="Remove item"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        {item.selectedSize && (
+                          <span className="attiz-mono text-[9px] bg-black/5 border border-black/20 px-1.5 py-0.5 text-black font-bold uppercase tracking-wider">
+                            Size: {item.selectedSize}
+                          </span>
+                        )}
+                        {item.color && (
+                          <span className="attiz-mono text-[9px] bg-black/5 border border-black/20 px-1.5 py-0.5 text-black/85 uppercase tracking-wider">
+                            Color: {item.color}
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="attiz-mono text-xs font-extrabold text-[#E63B2E] mt-1.5 block">
+                        ₹{(Number(item.price) || 0).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between mt-2">
+                      {/* Quantity selector */}
+                      <div className="flex items-center border border-black bg-white">
+                        <button 
+                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)} 
+                          className="p-1 px-2.5 text-black hover:bg-black/10 transition-colors cursor-pointer border-r border-black"
+                          aria-label="Decrease quantity"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="attiz-mono text-xs font-bold px-3 text-black select-none">
+                          {item.quantity}
+                        </span>
+                        <button 
+                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)} 
+                          className="p-1 px-2.5 text-black hover:bg-black/10 transition-colors cursor-pointer border-l border-black"
+                          aria-label="Increase quantity"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      <span className="attiz-mono text-xs font-bold text-black">
+                        ₹{((Number(item.price) || 0) * item.quantity).toLocaleString('en-IN')}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -158,117 +182,54 @@ export default function CartDrawer() {
             )}
           </div>
 
-          {/* Bottom Panel */}
+          {/* Footer Area — Compact & Space Efficient */}
           {cartItems.length > 0 && (
-            <div className="p-6 bg-white space-y-4">
-              
-              <div className="flex justify-between items-center">
-                <span className="attiz-mono text-[10px] font-bold tracking-widest text-black/85 uppercase">Total Amount</span>
-                <span className="attiz-mono text-sm font-bold text-black">₹{totalAmount.toLocaleString('en-IN')}</span>
+            <div className="p-3.5 sm:p-4 border-t-2 border-black bg-[#FAF8F5] space-y-2.5 shrink-0">
+              <div className="space-y-1 text-[11px] attiz-mono">
+                <div className="flex justify-between items-center text-black/75 uppercase">
+                  <span>Subtotal</span>
+                  <span className="font-bold text-black">₹{subtotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between items-center text-black/75 uppercase">
+                  <span>Estimated Shipping</span>
+                  <span className="font-bold text-emerald-700">FREE</span>
+                </div>
+                <div className="pt-1.5 border-t border-black/10 flex justify-between items-center">
+                  <span className="attiz-display text-xs sm:text-sm uppercase text-black font-bold">Estimated Total</span>
+                  <span className="attiz-mono text-base font-black text-[#E63B2E]">
+                    ₹{subtotal.toLocaleString('en-IN')}
+                  </span>
+                </div>
               </div>
 
-              {!user ? (
-                <div className="space-y-3 pt-2">
-                  <p className="attiz-body text-[10px] text-black/85 tracking-wide text-center leading-relaxed font-light">
-                    You must be signed in to complete your checkout order.
-                  </p>
-                  <button
-                    onClick={() => { setIsCartOpen(false); router.push('/login'); }}
-                    className="w-full py-3 border-2 border-black bg-black text-[#FFCB05] hover:bg-white hover:text-black shadow-[4px_4px_0_0_#111111] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-xs attiz-display tracking-[0.15em] uppercase cursor-pointer"
-                  >
-                    Sign In to Checkout
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleCheckoutSubmit} className="space-y-3 pt-2 max-h-72 sm:max-h-60 overflow-y-auto pr-1 scrollbar-thin">
-                  <div className="flex items-center gap-1 border-b border-black/10 pb-1.5 mb-2">
-                    <Truck className="w-3.5 h-3.5 text-black/60" />
-                    <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/50 uppercase">Shipping Details</span>
-                  </div>
+              {/* Action Buttons */}
+              <div>
+                <button
+                  onClick={handleGoToCheckout}
+                  disabled={isNavigating}
+                  className="w-full py-2.5 px-3.5 border-2 border-black bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-all text-xs attiz-mono font-black tracking-widest uppercase flex items-center justify-center space-x-2 cursor-pointer shadow-[2px_2px_0_0_#000] disabled:opacity-80"
+                >
+                  {isNavigating ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FFCB05]" />
+                      <span>Redirecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Proceed to Checkout</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
+              </div>
 
-                  <input
-                    type="text"
-                    name="recipientName"
-                    placeholder="RECIPIENT NAME *"
-                    required
-                    value={shippingDetails.recipientName}
-                    onChange={handleInputChange}
-                    className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
-                  />
-
-                  <input
-                    type="tel"
-                    name="phone"
-                    placeholder="CONTACT PHONE NUMBER *"
-                    required
-                    value={shippingDetails.phone}
-                    onChange={handleInputChange}
-                    className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
-                  />
-
-                  <input
-                    type="text"
-                    name="address"
-                    placeholder="SHIPPING STREET ADDRESS *"
-                    required
-                    value={shippingDetails.address}
-                    onChange={handleInputChange}
-                    className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
-                  />
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      name="city"
-                      placeholder="CITY *"
-                      required
-                      value={shippingDetails.city}
-                      onChange={handleInputChange}
-                      className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
-                    />
-                    <input
-                      type="text"
-                      name="state"
-                      placeholder="STATE *"
-                      required
-                      value={shippingDetails.state}
-                      onChange={handleInputChange}
-                      className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      name="postalCode"
-                      placeholder="POSTAL CODE *"
-                      required
-                      value={shippingDetails.postalCode}
-                      onChange={handleInputChange}
-                      className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
-                    />
-                    <input
-                      type="text"
-                      name="country"
-                      placeholder="COUNTRY *"
-                      required
-                      value={shippingDetails.country}
-                      onChange={handleInputChange}
-                      className="w-full bg-[#FAF8F5] border border-black/20 px-3 py-2 text-xs outline-none attiz-body text-black placeholder-black/30 font-medium focus:border-black focus:bg-white transition-all uppercase"
-                    />
-                  </div>
-                  
-                  <button 
-                    type="submit" 
-                    disabled={isSubmitting} 
-                    className="w-full mt-2 py-3 border-2 border-black bg-black text-[#FFCB05] hover:bg-white hover:text-black shadow-[4px_4px_0_0_#111111] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all text-xs attiz-display tracking-[0.15em] uppercase cursor-pointer"
-                  >
-                    {isSubmitting ? 'PLACING ORDER...' : 'PLACE ORDER'}
-                  </button>
-                </form>
-              )}
+              <div className="flex items-center justify-center space-x-1.5 text-[8.5px] attiz-mono text-black/70 uppercase tracking-widest">
+                <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                <span>Encrypted & 100% Secure Checkout</span>
+              </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
