@@ -225,7 +225,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
   // ── Pending Verification Screen ──────────────────────────────────────────────
   if (pendingVerification) {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] mt-[-40px] flex items-center justify-center px-4 py-8">
+      <div className="min-h-[calc(100dvh-112px)] sm:min-h-screen bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-6 pb-20 sm:pb-8">
         <div
           className="pointer-events-none fixed inset-0 opacity-[0.03] z-0"
           style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '18px 18px' }}
@@ -275,7 +275,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
   // ── Session Loading Screen (shown while checking session after Google OAuth) ──
   if (sessionLoading || googleLoading) {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] mt-[-40px] flex items-center justify-center px-4 py-8">
+      <div className="min-h-[calc(100dvh-112px)] sm:min-h-screen bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-6 pb-20 sm:pb-8">
         <div
           className="pointer-events-none fixed inset-0 opacity-[0.03] z-0"
           style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '18px 18px' }}
@@ -302,7 +302,7 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
 
   // ── Main Auth Layout ──────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#FAF8F5] mt-[-40px] flex items-center justify-center px-4 py-8">
+    <div className="min-h-[calc(100dvh-112px)] sm:min-h-screen bg-[#FAF8F5] flex flex-col justify-center items-center px-4 py-6 pb-20 sm:pb-8">
       {/* Halftone texture */}
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.03] z-0"

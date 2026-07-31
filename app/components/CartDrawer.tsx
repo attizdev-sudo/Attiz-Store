@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 
@@ -11,16 +11,33 @@ export default function CartDrawer() {
   const { cartItems, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const [isNavigating, setIsNavigating] = React.useState(false);
+
+  // Prevent background body scroll when cart drawer is open
+  useEffect(() => {
+    if (isCartOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      setIsNavigating(false);
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isCartOpen]);
+
+  // Close cart drawer automatically when route/pathname changes
+  useEffect(() => {
+    setIsCartOpen(false);
+  }, [pathname, setIsCartOpen]);
 
   if (!isCartOpen) return null;
 
   const subtotal = cartItems.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
-  const freeShippingThreshold = 999;
-  const progressPercent = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
-  const amountForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
 
   const handleGoToCheckout = () => {
-    setIsCartOpen(false);
+    setIsNavigating(true);
     if (!user) {
       router.push('/login?redirect=/checkout');
     } else {
@@ -34,14 +51,14 @@ export default function CartDrawer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
+    <div className="fixed inset-0 z-[9980] overflow-hidden">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-300" 
         onClick={() => setIsCartOpen(false)} 
       />
       
-      <div className="absolute inset-y-0 right-0 w-full sm:max-w-md flex">
+      <div className="absolute top-[56px] bottom-[56px] sm:top-0 sm:bottom-0 right-0 w-full sm:max-w-md flex">
         <div className="w-full bg-white flex flex-col h-full border-l-2 border-black relative transition-all shadow-2xl">
 
           {/* Header */}
@@ -60,38 +77,15 @@ export default function CartDrawer() {
             
             <button 
               onClick={() => setIsCartOpen(false)} 
-              className="text-black/85 hover:text-black p-1.5 transition-colors cursor-pointer border border-transparent hover:border-black rounded-none"
+              className="hidden sm:block text-black/85 hover:text-black p-1.5 transition-colors cursor-pointer border border-transparent hover:border-black rounded-none"
               aria-label="Close cart"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Free Shipping Progress Indicator */}
-          {cartItems.length > 0 && (
-            <div className="bg-[#FAF8F5] px-6 py-3 border-b border-black/10 shrink-0">
-              <div className="flex items-center justify-between text-[10px] attiz-mono font-bold tracking-wider text-black mb-1.5 uppercase">
-                <span className="flex items-center space-x-1.5">
-                  <Truck className="w-3.5 h-3.5 text-black/85" />
-                  <span>
-                    {amountForFreeShipping > 0
-                      ? `Add ₹${amountForFreeShipping.toLocaleString('en-IN')} for FREE Shipping`
-                      : '🎉 You unlocked FREE Shipping!'}
-                  </span>
-                </span>
-                <span>{progressPercent}%</span>
-              </div>
-              <div className="w-full h-1.5 bg-black/10 overflow-hidden">
-                <div 
-                  className="h-full bg-black transition-all duration-300" 
-                  style={{ width: `${progressPercent}%` }} 
-                />
-              </div>
-            </div>
-          )}
-
           {/* Cart Items List */}
-          <div className="flex-1 overflow-y-auto px-6 py-2 divide-y divide-black/10 scrollbar-thin">
+          <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-2 divide-y divide-black/10 scrollbar-thin">
             {cartItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center py-16 text-black text-center">
                 <div className="w-16 h-16 bg-[#FAF8F5] border-2 border-black flex items-center justify-center mb-4 -skew-x-3">
@@ -188,48 +182,49 @@ export default function CartDrawer() {
             )}
           </div>
 
-          {/* Footer Area */}
+          {/* Footer Area — Compact & Space Efficient */}
           {cartItems.length > 0 && (
-            <div className="p-6 border-t-2 border-black bg-[#FAF8F5] space-y-4 shrink-0">
-              <div className="space-y-2">
-                <div className="flex justify-between items-center text-xs attiz-mono text-black/85 uppercase">
+            <div className="p-3.5 sm:p-4 border-t-2 border-black bg-[#FAF8F5] space-y-2.5 shrink-0">
+              <div className="space-y-1 text-[11px] attiz-mono">
+                <div className="flex justify-between items-center text-black/75 uppercase">
                   <span>Subtotal</span>
                   <span className="font-bold text-black">₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between items-center text-xs attiz-mono text-black/85 uppercase">
+                <div className="flex justify-between items-center text-black/75 uppercase">
                   <span>Estimated Shipping</span>
-                  <span className="font-bold text-black">
-                    {subtotal >= freeShippingThreshold ? 'FREE' : '₹99'}
-                  </span>
+                  <span className="font-bold text-emerald-700">FREE</span>
                 </div>
-                <div className="pt-2 border-t border-black/10 flex justify-between items-center">
-                  <span className="attiz-display text-base uppercase text-black">Estimated Total</span>
-                  <span className="attiz-mono text-lg font-black text-[#E63B2E]">
-                    ₹{(subtotal + (subtotal >= freeShippingThreshold ? 0 : 99)).toLocaleString('en-IN')}
+                <div className="pt-1.5 border-t border-black/10 flex justify-between items-center">
+                  <span className="attiz-display text-xs sm:text-sm uppercase text-black font-bold">Estimated Total</span>
+                  <span className="attiz-mono text-base font-black text-[#E63B2E]">
+                    ₹{subtotal.toLocaleString('en-IN')}
                   </span>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="space-y-2 pt-1">
+              <div>
                 <button
                   onClick={handleGoToCheckout}
-                  className="w-full py-3.5 px-4 border-2 border-black bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-all text-xs attiz-mono font-black tracking-widest uppercase flex items-center justify-center space-x-2 cursor-pointer shadow-[3px_3px_0_0_#000]"
+                  disabled={isNavigating}
+                  className="w-full py-2.5 px-3.5 border-2 border-black bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-all text-xs attiz-mono font-black tracking-widest uppercase flex items-center justify-center space-x-2 cursor-pointer shadow-[2px_2px_0_0_#000] disabled:opacity-80"
                 >
-                  <span>Proceed to Checkout</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-
-                <button
-                  onClick={handleGoToCart}
-                  className="w-full py-2.5 px-4 border border-black bg-white text-black hover:bg-black/5 transition-all text-[11px] attiz-mono font-bold tracking-wider uppercase cursor-pointer"
-                >
-                  View Full Cart
+                  {isNavigating ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-[#FFCB05]" />
+                      <span>Redirecting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Proceed to Checkout</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
                 </button>
               </div>
 
-              <div className="flex items-center justify-center space-x-2 text-[9px] attiz-mono text-black/85 uppercase tracking-widest pt-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-green-600" />
+              <div className="flex items-center justify-center space-x-1.5 text-[8.5px] attiz-mono text-black/70 uppercase tracking-widest">
+                <ShieldCheck className="w-3 h-3 text-emerald-600" />
                 <span>Encrypted & 100% Secure Checkout</span>
               </div>
             </div>

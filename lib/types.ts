@@ -63,6 +63,7 @@ export interface Product {
   stock?: number;
   size_chart?: string;
   split_variants?: boolean;
+  category?: any;
 }
 
 export interface Category {

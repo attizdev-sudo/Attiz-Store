@@ -4,7 +4,7 @@ import { RotateCcw, ShieldCheck, Truck, Headphones } from 'lucide-react';
 const propsList = [
   { title: 'FREE RETURNS', description: 'Easy 7-day returns & exchanges', icon: <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.2]" /> },
   { title: 'SAFE PAYMENT', description: '100% encrypted & secure checkout', icon: <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.2]" /> },
-  { title: 'FREE SHIPPING', description: 'Free shipping on orders over ₹999', icon: <Truck className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.2]" /> },
+  { title: 'FREE SHIPPING', description: 'Free shipping on all orders', icon: <Truck className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.2]" /> },
   { title: 'CUSTOMER SERVICE', description: '24/7 dedicated priority support', icon: <Headphones className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.2]" /> },
 ];
 

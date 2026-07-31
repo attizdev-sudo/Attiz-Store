@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Heart, ShoppingBag, SlidersHorizontal, ArrowRight } from 'lucide-react';
+import { Heart, ShoppingBag, SlidersHorizontal, ArrowRight, Check } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -48,7 +48,16 @@ function ProductGridInner() {
   const [selectedCategory, setSelectedCategory] = useState('All Collections');
   const [selectedSort, setSelectedSort] = useState('latest');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
+  const [addedCardId, setAddedCardId] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 16;
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const categories = ['All Collections', ...allCategories.filter(c => !c.parent_id).map(c => c.name)];
 
@@ -288,31 +297,29 @@ function ProductGridInner() {
         <span className="attiz-display text-[240px] leading-none tracking-tighter uppercase">{bannerTitle}</span>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 relative z-10">
-
-        {/* Header Layout */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 border-b border-black/10 pb-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-16">
+        {/* Top Header section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-4 pb-3 sm:mb-8 sm:pb-6 border-b border-black/10">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#E63B2E]" />
-              <span className="attiz-mono text-[11px] font-bold tracking-[0.3em] text-[#E63B2E] uppercase">Attiz</span>
-            </div>
-            <h2 className="attiz-display text-5xl sm:text-6xl tracking-tight uppercase leading-none">
+            <span className="attiz-mono text-[10px] sm:text-xs text-[#E63B2E] tracking-[0.25em] uppercase font-bold flex items-center gap-1.5 mb-1 sm:mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E63B2E]" /> ATTIZ
+            </span>
+            <h2 className="attiz-display text-3xl sm:text-6xl tracking-tight uppercase leading-none">
               {bannerTitle}
             </h2>
-            <p className="attiz-body text-sm text-black/85 mt-4 max-w-md font-light">
+            <p className="hidden sm:block attiz-body text-sm text-black/85 mt-4 max-w-md font-light">
               Architected profiles engineered for comfort. Functional daily wear prioritizing modern ergonomics.
             </p>
           </div>
 
           {/* Filtering controls unified */}
-          <div className="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-black/5 border border-black/10">
+          <div className="flex flex-wrap items-center gap-3 mt-3 md:mt-0">
+            <div className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-black/5 border border-black/10">
               <SlidersHorizontal className="w-3.5 h-3.5 text-black/85" />
               <select
                 value={selectedSort}
                 onChange={(e) => setSelectedSort(e.target.value)}
-                className="bg-transparent attiz-mono text-[11px] font-bold uppercase tracking-wider outline-none cursor-pointer pr-2"
+                className="bg-transparent attiz-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider outline-none cursor-pointer pr-1 sm:pr-2"
               >
                 <option value="latest">Latest Arrivals</option>
                 <option value="shuffle">Shuffle / Mixed</option>
@@ -324,17 +331,17 @@ function ProductGridInner() {
         </div>
 
         {/* Categories Horizontal Navigation Slider */}
-        <div className="mb-10 sm:mb-12">
+        <div className="mb-4 sm:mb-12">
           <div className="flex flex-col gap-4">
-            {/* Scrollable pill row on mobile */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:gap-3">
+            {/* Category Pills Row (Wraps to next line when overflowing) */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {categories.map((cat) => {
                 const isActive = selectedCategory === cat;
                 return (
                   <button
                     key={cat}
                     onClick={() => handleCategoryTabClick(cat)}
-                    className={`px-4 py-2.5 attiz-mono text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none cursor-pointer shrink-0 ${isActive
+                    className={`px-3.5 py-2 sm:px-4 sm:py-2.5 attiz-mono text-[10px] sm:text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none cursor-pointer ${isActive
                       ? 'bg-black text-white border-black shadow-lg shadow-black/10'
                       : 'bg-transparent text-black/85 border-black/10 hover:border-black hover:text-black'
                       }`}
@@ -444,7 +451,12 @@ function ProductGridInner() {
                     quantity: 1,
                     selectedSize,
                     selectedColor: targetColor || (targetVariant?.color) || '',
-                  } as any);
+                  } as any, !isMobile);
+
+                  if (isMobile) {
+                    setAddedCardId(cardKey);
+                    setTimeout(() => setAddedCardId(null), 1500);
+                  }
                 };
 
                 const queryColor = (product as any).selectedColorVariant
@@ -548,10 +560,15 @@ function ProductGridInner() {
                           {/* Mobile Action Button Trigger */}
                           <button
                             onClick={handleQuickAdd}
-                            className="lg:hidden w-8 h-8 flex items-center justify-center bg-black text-white rounded-none cursor-pointer"
+                            className={`lg:hidden w-8 h-8 flex items-center justify-center rounded-none cursor-pointer transition-colors ${addedCardId === cardKey ? 'bg-emerald-600 text-white' : 'bg-black text-white'
+                              }`}
                             aria-label="Add to cart context"
                           >
-                            <ShoppingBag className="w-3.5 h-3.5" />
+                            {addedCardId === cardKey ? (
+                              <Check className="w-3.5 h-3.5" />
+                            ) : (
+                              <ShoppingBag className="w-3.5 h-3.5" />
+                            )}
                           </button>
                         </div>
 

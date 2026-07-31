@@ -10,8 +10,9 @@ interface CartContextValue {
   cartItems: CartItem[];
   buyNowItem: CartItem | null;
   isCartOpen: boolean;
+  isHydrated: boolean;
   setIsCartOpen: (open: boolean) => void;
-  addToCart: (product: CartItem) => void;
+  addToCart: (product: CartItem, openDrawer?: boolean) => void;
   startBuyNow: (product: CartItem) => void;
   clearBuyNow: () => void;
   updateQuantity: (productId: string, selectedSize: string | undefined, quantity: number) => void;
@@ -23,12 +24,14 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, sessionLoading } = useAuth();
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [buyNowItem, setBuyNowItem] = useState<CartItem | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
+  // Hydrate cart items and buyNow item from storage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem('cart_items');
@@ -36,34 +39,33 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const savedBuyNow = sessionStorage.getItem('buy_now_item');
       if (savedBuyNow) setBuyNowItem(JSON.parse(savedBuyNow));
     } catch { /* ignore */ }
+    setIsHydrated(true);
   }, []);
 
+  // Save cartItems to localStorage only after initial hydration
   useEffect(() => {
-    localStorage.setItem('cart_items', JSON.stringify(cartItems));
-  }, [cartItems]);
-
-  useEffect(() => {
-    if (!user) {
-      setCartItems([]);
-      clearBuyNow();
+    if (isHydrated) {
+      localStorage.setItem('cart_items', JSON.stringify(cartItems));
     }
-  }, [user]);
+  }, [cartItems, isHydrated]);
 
-  const addToCart = (product: CartItem) => {
+  const addToCart = (product: CartItem, openDrawer = true) => {
     setCartItems((prev) => {
       const existing = prev.find(
-        (item) => item.id === product.id && item.selectedSize === product.selectedSize
+        (item) => item.id === product.id && item.selectedSize === product.selectedSize && item.color === product.color
       );
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id && item.selectedSize === product.selectedSize
+          item.id === product.id && item.selectedSize === product.selectedSize && item.color === product.color
             ? { ...item, quantity: item.quantity + (product.quantity || 1) }
             : item
         );
       }
       return [...prev, { ...product, quantity: product.quantity || 1 }];
     });
-    setIsCartOpen(true);
+    if (openDrawer) {
+      setIsCartOpen(true);
+    }
   };
 
   const startBuyNow = (product: CartItem) => {
@@ -128,7 +130,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider value={{
-      cartItems, buyNowItem, isCartOpen, setIsCartOpen,
+      cartItems, buyNowItem, isCartOpen, isHydrated, setIsCartOpen,
       addToCart, startBuyNow, clearBuyNow, updateQuantity, removeFromCart, clearCart, checkout,
     }}>
       {children}

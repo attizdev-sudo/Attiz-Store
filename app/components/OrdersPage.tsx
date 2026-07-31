@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  ClipboardList, 
-  Clock, 
-  CheckCircle2, 
-  Package, 
-  Truck, 
-  MapPin, 
+import {
+  ArrowLeft,
+  ClipboardList,
+  Clock,
+  CheckCircle2,
+  Package,
+  Truck,
+  MapPin,
   X,
   ExternalLink,
   Phone,
@@ -61,20 +61,54 @@ function getStatusConfig(status: StatusKey) {
 
 export default function OrdersPage() {
   const { user, sessionLoading } = useAuth();
-  const { orders: allOrders, dbLoading } = useStore();
+  const { orders: allOrders } = useStore();
   const router = useRouter();
 
   // Selected item state for Flipkart-style popup modal
   const [selectedDetail, setSelectedDetail] = useState<{ order: any; item: CartItem } | null>(null);
 
-  // FIX: Only redirect after session loading completes
+  // Instant Cached Orders State
+  const [localOrders, setLocalOrders] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('attiz_user_orders');
+        return cached ? JSON.parse(cached) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
+  const [isFetchingOrders, setIsFetchingOrders] = useState(localOrders.length === 0);
+
+  // Fetch orders directly and sync cache
   useEffect(() => {
     if (!sessionLoading && !user) {
       router.push('/login');
+      return;
     }
-  }, [user, sessionLoading, router]);
 
-  const userOrders = allOrders.filter((o) => o.user_id === user?.id);
+    if (user) {
+      const storeUserOrders = allOrders.filter((o) => o.user_id === user.id);
+      if (storeUserOrders.length > 0 && localOrders.length === 0) {
+        setLocalOrders(storeUserOrders);
+        setIsFetchingOrders(false);
+      }
+
+      fetch('/api/orders', { credentials: 'include' })
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setLocalOrders(data);
+            try {
+              sessionStorage.setItem('attiz_user_orders', JSON.stringify(data));
+            } catch { /* ignore */ }
+          }
+        })
+        .catch((err) => console.error('Error fetching user orders:', err))
+        .finally(() => setIsFetchingOrders(false));
+    }
+  }, [user, sessionLoading, allOrders, router]);
+
+  const userOrders = localOrders;
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] py-8 sm:py-12 pb-24">
@@ -102,8 +136,8 @@ export default function OrdersPage() {
           </span>
         </div>
 
-        {/* Loading state - waits for both session & DB loading */}
-        {sessionLoading || dbLoading ? (
+        {/* Loading state - shown during auth check & order fetch if cache is empty */}
+        {(sessionLoading || isFetchingOrders) && userOrders.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <div className="w-8 h-8 rounded-full border-3 border-black border-t-[#E63B2E] animate-spin" />
             <span className="attiz-mono text-xs font-bold tracking-widest uppercase text-black/70">
@@ -111,7 +145,7 @@ export default function OrdersPage() {
             </span>
           </div>
 
-        /* Empty state */
+          /* Empty state */
         ) : userOrders.length === 0 ? (
           <div className="bg-white border border-black/15 p-12 text-center flex flex-col items-center justify-center space-y-4">
             <ClipboardList className="w-12 h-12 text-black/20" />
@@ -129,7 +163,7 @@ export default function OrdersPage() {
             </button>
           </div>
 
-        /* FLIPKART-STYLE COMPACT ORDERS LIST */
+          /* FLIPKART-STYLE COMPACT ORDERS LIST */
         ) : (
           <div className="space-y-3">
             {userOrders.map((order) => {
@@ -142,13 +176,13 @@ export default function OrdersPage() {
               const rawItems: CartItem[] = order.items && order.items.length > 0
                 ? order.items
                 : [{
-                    id: order.id,
-                    product_id: order.id,
-                    title: `Order #${displayOrderNo}`,
-                    price: order.total_price || 0,
-                    quantity: 1,
-                    image: DEFAULT_IMAGE,
-                  }];
+                  id: order.id,
+                  product_id: order.id,
+                  title: `Order #${displayOrderNo}`,
+                  price: order.total_price || 0,
+                  quantity: 1,
+                  image: DEFAULT_IMAGE,
+                }];
 
               return rawItems.map((item: CartItem, idx: number) => {
                 const isDelivered = order.status === 'Delivered';
@@ -229,23 +263,37 @@ export default function OrdersPage() {
 
       </div>
 
-      {/* DETAILED ORDER & TRACKING MODAL */}
+      {/* DETAILED ORDER & TRACKING OVERLAY (Mobile Page / Desktop Modal) */}
       {selectedDetail && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border-2 border-black p-5 sm:p-7 max-w-xl w-full relative shadow-xl my-8">
-            
-            {/* Close Button */}
+        <div className="fixed top-[56px] left-0 right-0 bottom-[56px] sm:inset-0 z-[9980] sm:z-50 bg-[#FAF8F5] sm:bg-black/60 sm:backdrop-blur-xs flex flex-col sm:items-center sm:justify-center p-0 sm:p-4 overflow-y-auto">
+          <div className="bg-[#FAF8F5] sm:bg-white sm:border-2 sm:border-black p-4 sm:p-7 w-full sm:max-w-xl relative sm:shadow-xl flex-1 sm:flex-initial overflow-y-auto sm:overflow-visible">
+
+            {/* Mobile Header with Back Button */}
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-black/10 sm:hidden">
+              <button
+                onClick={() => setSelectedDetail(null)}
+                className="flex items-center space-x-2 attiz-mono text-xs font-bold uppercase text-black hover:text-[#E63B2E] transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Orders</span>
+              </button>
+              <span className="attiz-mono text-[10px] font-bold bg-[#FFCB05] border border-black px-2 py-0.5 text-black uppercase">
+                {selectedDetail.order.status || 'Confirmed'}
+              </span>
+            </div>
+
+            {/* Desktop Close Button */}
             <button
               onClick={() => setSelectedDetail(null)}
-              className="absolute top-4 right-4 text-black hover:text-[#E63B2E] p-1.5 border border-black/20 bg-white hover:bg-black/5 transition-colors cursor-pointer"
+              className="hidden sm:flex absolute top-4 right-4 text-black hover:text-[#E63B2E] p-1.5 border border-black/20 bg-white hover:bg-black/5 transition-colors cursor-pointer"
               aria-label="Close modal"
             >
               <X className="w-4 h-4" />
             </button>
 
-            {/* Modal Header */}
-            <div className="border-b border-black/10 pb-3 mb-5 pr-8">
-              <span className="inline-block bg-black text-[#FFCB05] attiz-mono text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 mb-1.5">
+            {/* Modal / Page Header */}
+            <div className="border-b border-black/10 pb-3 mb-4 sm:mb-5 sm:pr-8">
+              <span className="hidden sm:inline-block bg-black text-[#FFCB05] attiz-mono text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 mb-1.5">
                 Order Tracking & Details
               </span>
               <h2 className="attiz-display text-lg sm:text-xl uppercase text-black">
@@ -257,7 +305,7 @@ export default function OrdersPage() {
             </div>
 
             {/* Product Image & Specs Card */}
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center bg-[#FAF8F5] border border-black/15 p-3.5 mb-5">
+            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center bg-white sm:bg-[#FAF8F5] border border-black/15 p-3.5 mb-5">
               {/* Product Thumbnail with onError Fallback */}
               <div className="sm:col-span-4 relative aspect-3/4 w-full bg-white border border-black/10 overflow-hidden max-h-48 flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -332,13 +380,12 @@ export default function OrdersPage() {
                     return (
                       <div key={step} className="flex flex-col items-center z-10 flex-1">
                         <div
-                          className={`w-6 h-6 border flex items-center justify-center text-[8px] font-bold transition-all ${
-                            active
+                          className={`w-6 h-6 border flex items-center justify-center text-[8px] font-bold transition-all ${active
                               ? 'bg-[#E63B2E] border-[#E63B2E] text-white'
                               : done
-                              ? 'bg-black border-black text-[#FFCB05]'
-                              : 'bg-white border-black/20 text-black/30'
-                          }`}
+                                ? 'bg-black border-black text-[#FFCB05]'
+                                : 'bg-white border-black/20 text-black/30'
+                            }`}
                         >
                           {done && !active ? (
                             <CheckCircle2 className="w-3 h-3" />
@@ -347,9 +394,8 @@ export default function OrdersPage() {
                           )}
                         </div>
                         <span
-                          className={`mt-1 attiz-mono text-[7px] font-bold uppercase text-center ${
-                            active ? 'text-[#E63B2E]' : done ? 'text-[#111111]' : 'text-black/30'
-                          }`}
+                          className={`mt-1 attiz-mono text-[7px] font-bold uppercase text-center ${active ? 'text-[#E63B2E]' : done ? 'text-[#111111]' : 'text-black/30'
+                            }`}
                         >
                           {step}
                         </span>
@@ -366,7 +412,7 @@ export default function OrdersPage() {
                 <MapPin className="w-3.5 h-3.5 text-black/80" />
                 <span>Delivery Address</span>
               </h4>
-              <div className="p-3 bg-[#FAF8F5] border border-black/10 text-xs attiz-mono space-y-1 uppercase text-black/80">
+              <div className="p-3 bg-white sm:bg-[#FAF8F5] border border-black/10 text-xs attiz-mono space-y-1 uppercase text-black/80">
                 {selectedDetail.order.shipping_name && (
                   <div className="font-bold text-black flex items-center space-x-1.5">
                     <User className="w-3.5 h-3.5 text-black/70" />
@@ -387,8 +433,8 @@ export default function OrdersPage() {
               </div>
             </div>
 
-            {/* Footer button */}
-            <div className="mt-5 pt-3 border-t border-black/10 flex justify-end">
+            {/* Desktop Footer Button */}
+            <div className="mt-5 pt-3 border-t border-black/10 hidden sm:flex justify-end">
               <button
                 onClick={() => setSelectedDetail(null)}
                 className="py-2 px-5 border border-black bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors attiz-mono text-xs font-bold uppercase tracking-wider cursor-pointer"

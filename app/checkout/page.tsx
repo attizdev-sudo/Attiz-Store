@@ -4,19 +4,19 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  Check, 
-  ArrowLeft, 
-  ArrowRight, 
-  ShieldCheck, 
-  Phone, 
-  MapPin, 
-  CreditCard, 
-  Truck, 
-  Plus, 
-  User, 
-  CheckCircle2, 
-  Lock, 
+import {
+  Check,
+  ArrowLeft,
+  ArrowRight,
+  ShieldCheck,
+  Phone,
+  MapPin,
+  CreditCard,
+  Truck,
+  Plus,
+  User,
+  CheckCircle2,
+  Lock,
   AlertCircle,
   FileText,
   Edit2
@@ -38,7 +38,7 @@ interface SavedAddress {
 }
 
 export default function CheckoutPage() {
-  const { cartItems, buyNowItem, clearCart, clearBuyNow } = useCart();
+  const { cartItems, buyNowItem, clearCart, clearBuyNow, isHydrated } = useCart();
   const { user, sessionLoading, updateUserPhone } = useAuth();
   const router = useRouter();
 
@@ -76,9 +76,8 @@ export default function CheckoutPage() {
 
   // Pricing calculations
   const subtotal = checkoutItems.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
-  const freeShippingThreshold = 999;
-  const shippingCharge = subtotal >= freeShippingThreshold || checkoutItems.length === 0 ? 0 : 99;
-  const grandTotal = subtotal + shippingCharge;
+  const shippingCharge = 0;
+  const grandTotal = subtotal;
 
   // Protect route & prefill user details
   useEffect(() => {
@@ -97,6 +96,11 @@ export default function CheckoutPage() {
     }
   }, [user, sessionLoading, router]);
 
+  // Scroll to top of viewport when switching checkout steps
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
   // Fetch user addresses
   const fetchAddresses = async () => {
     try {
@@ -114,7 +118,7 @@ export default function CheckoutPage() {
           // If user has saved phone & valid saved address, jump directly to Step 2: Order Summary
           const userHasPhone = Boolean((user?.phone && user.phone.trim().length >= 7) || (defaultAddr.phone && defaultAddr.phone.trim().length >= 7));
           const userHasAddress = Boolean(defaultAddr.address_line1 && defaultAddr.city && defaultAddr.state && defaultAddr.postal_code);
-          
+
           if (userHasPhone && userHasAddress) {
             setCurrentStep(2);
           }
@@ -218,14 +222,14 @@ export default function CheckoutPage() {
         },
         cartItems: checkoutItems.map((item) => ({
           id: item.id,
-          product_id: item.product_id || item.id,
+          product_id: item.product_id || (item.id.includes('-') ? item.id.split('-')[0] : item.id),
           variant_id: item.variant_id || null,
           title: item.title,
           price: Number(item.price) || 0,
           quantity: item.quantity,
           selectedSize: item.selectedSize || item.size || '',
           color: item.color || item.selectedColor || '',
-          image: item.image,
+          image: item.image || (item as any).colorSpecificImage || '',
         })),
         pricing: {
           subtotal,
@@ -235,6 +239,8 @@ export default function CheckoutPage() {
           totalPrice: grandTotal,
         },
       };
+
+      console.log('🚀 [CHECKOUT CLIENT] Placing order with payload:', payload);
 
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -268,7 +274,7 @@ export default function CheckoutPage() {
     }
   };
 
-  if (sessionLoading) {
+  if (sessionLoading || !isHydrated) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center py-20">
         <div className="w-8 h-8 border-3 border-black border-t-[#E63B2E] rounded-full animate-spin mb-3" />
@@ -302,14 +308,14 @@ export default function CheckoutPage() {
   return (
     <div className="min-h-screen bg-[#FAF8F5] py-6 sm:py-10 pb-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
-        
+
         {/* Minimalist Top Navigation Header */}
         <div className="flex items-center justify-between border-b border-black/10 pb-4 mb-6">
           <div className="flex items-center space-x-3">
             <Link
-              href="/cart"
+              href="/#catalog-grid"
               className="p-1.5 text-black hover:text-[#E63B2E] transition-colors"
-              title="Return to Cart"
+              title="Return to Shop Catalog"
             >
               <ArrowLeft className="w-4 h-4" />
             </Link>
@@ -358,17 +364,16 @@ export default function CheckoutPage() {
         {/* CLEAN MINIMALIST STEP TABS */}
         <div className="mb-6 bg-white border border-black/10 p-1.5">
           <div className="grid grid-cols-3 gap-1.5">
-            
+
             {/* Step 1: Address */}
             <button
               onClick={() => setCurrentStep(1)}
-              className={`py-2 px-2 sm:px-3 text-xs attiz-mono uppercase font-bold tracking-wider flex items-center justify-center space-x-1.5 transition-colors cursor-pointer ${
-                currentStep === 1
-                  ? 'bg-black text-[#FFCB05]'
-                  : currentStep > 1
+              className={`py-2 px-2 sm:px-3 text-xs attiz-mono uppercase font-bold tracking-wider flex items-center justify-center space-x-1.5 transition-colors cursor-pointer ${currentStep === 1
+                ? 'bg-black text-[#FFCB05]'
+                : currentStep > 1
                   ? 'bg-black/5 text-black hover:bg-black/10'
                   : 'text-black/40'
-              }`}
+                }`}
             >
               <span className="shrink-0">{currentStep > 1 ? <Check className="w-3.5 h-3.5 text-black" /> : '1.'}</span>
               <span className="truncate">Address</span>
@@ -378,13 +383,12 @@ export default function CheckoutPage() {
             <button
               onClick={() => { if (currentStep > 1) setCurrentStep(2); }}
               disabled={currentStep < 2}
-              className={`py-2 px-2 sm:px-3 text-xs attiz-mono uppercase font-bold tracking-wider flex items-center justify-center space-x-1.5 transition-colors ${
-                currentStep === 2
-                  ? 'bg-black text-[#FFCB05] cursor-pointer'
-                  : currentStep > 2
+              className={`py-2 px-2 sm:px-3 text-xs attiz-mono uppercase font-bold tracking-wider flex items-center justify-center space-x-1.5 transition-colors ${currentStep === 2
+                ? 'bg-black text-[#FFCB05] cursor-pointer'
+                : currentStep > 2
                   ? 'bg-black/5 text-black hover:bg-black/10 cursor-pointer'
                   : 'text-black/30 cursor-not-allowed'
-              }`}
+                }`}
             >
               <span className="shrink-0">{currentStep > 2 ? <Check className="w-3.5 h-3.5 text-black" /> : '2.'}</span>
               <span className="truncate">Summary</span>
@@ -394,11 +398,10 @@ export default function CheckoutPage() {
             <button
               onClick={() => { if (currentStep > 2) setCurrentStep(3); }}
               disabled={currentStep < 3}
-              className={`py-2 px-2 sm:px-3 text-xs attiz-mono uppercase font-bold tracking-wider flex items-center justify-center space-x-1.5 transition-colors ${
-                currentStep === 3
-                  ? 'bg-black text-[#FFCB05] cursor-pointer'
-                  : 'text-black/30 cursor-not-allowed'
-              }`}
+              className={`py-2 px-2 sm:px-3 text-xs attiz-mono uppercase font-bold tracking-wider flex items-center justify-center space-x-1.5 transition-colors ${currentStep === 3
+                ? 'bg-black text-[#FFCB05] cursor-pointer'
+                : 'text-black/30 cursor-not-allowed'
+                }`}
             >
               <span className="shrink-0">3.</span>
               <span className="truncate">Payment</span>
@@ -422,13 +425,13 @@ export default function CheckoutPage() {
               </div>
 
               <form onSubmit={handleProceedFromStep1} className="space-y-4">
-                
+
                 {/* Contact phone section */}
                 <div className="bg-[#FAF8F5] border border-black/10 p-3.5 space-y-3">
-                  <div className="flex items-center space-x-2 text-xs attiz-mono text-black uppercase">
+                  <div className="flex items-center space-x-2 text-xs attiz-mono text-black ">
                     <User className="w-3.5 h-3.5 text-black/85 shrink-0" />
-                    <span className="font-bold">{user?.first_name} {user?.last_name}</span>
-                    <span className="text-black/60">({user?.email})</span>
+                    <span className="font-bold uppercase">{user?.first_name} {user?.last_name}</span>
+                    <span className="text-black/60 lowercase">({user?.email})</span>
                   </div>
 
                   <div>
@@ -476,11 +479,10 @@ export default function CheckoutPage() {
                         <div
                           key={addr.id}
                           onClick={() => handleSelectSavedAddress(addr.id)}
-                          className={`p-3 border cursor-pointer transition-all ${
-                            selectedAddressId === addr.id
-                              ? 'border-black bg-[#FFCB05]/15'
-                              : 'border-black/15 hover:border-black/50 bg-white'
-                          }`}
+                          className={`p-3 border cursor-pointer transition-all ${selectedAddressId === addr.id
+                            ? 'border-black bg-[#FFCB05]/15'
+                            : 'border-black/15 hover:border-black/50 bg-white'
+                            }`}
                         >
                           <div className="flex items-center justify-between mb-1">
                             <span className="attiz-mono text-xs font-bold text-black uppercase">
@@ -500,11 +502,10 @@ export default function CheckoutPage() {
 
                       <div
                         onClick={() => handleSelectSavedAddress('new')}
-                        className={`p-3 border border-dashed cursor-pointer transition-all flex items-center justify-center space-x-1.5 ${
-                          selectedAddressId === 'new'
-                            ? 'border-black bg-[#FFCB05]/15'
-                            : 'border-black/30 hover:border-black bg-white'
-                        }`}
+                        className={`p-3 border border-dashed cursor-pointer transition-all flex items-center justify-center space-x-1.5 ${selectedAddressId === 'new'
+                          ? 'border-black bg-[#FFCB05]/15'
+                          : 'border-black/30 hover:border-black bg-white'
+                          }`}
                       >
                         <Plus className="w-3.5 h-3.5 text-black" />
                         <span className="attiz-mono text-xs font-bold text-black uppercase">
@@ -742,7 +743,7 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="pt-2 border-t border-black/10 flex justify-between items-center font-bold">
-                  <span className="attiz-display text-sm uppercase text-black">Grand Total</span>
+                  <span className="attiz-mono text-sm uppercase text-black">Grand Total</span>
                   <span className="attiz-mono text-lg text-[#E63B2E]">₹{grandTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>
@@ -799,11 +800,10 @@ export default function CheckoutPage() {
                 {/* COD */}
                 <label
                   onClick={() => setPaymentMethod('COD')}
-                  className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${
-                    paymentMethod === 'COD'
-                      ? 'border-black bg-[#FFCB05]/15'
-                      : 'border-black/15 hover:border-black/40 bg-white'
-                  }`}
+                  className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${paymentMethod === 'COD'
+                    ? 'border-black bg-[#FFCB05]/15'
+                    : 'border-black/15 hover:border-black/40 bg-white'
+                    }`}
                 >
                   <input
                     type="radio"
@@ -825,11 +825,10 @@ export default function CheckoutPage() {
                 {/* Online Payment */}
                 <label
                   onClick={() => setPaymentMethod('Online')}
-                  className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${
-                    paymentMethod === 'Online'
-                      ? 'border-black bg-[#FFCB05]/15'
-                      : 'border-black/15 hover:border-black/40 bg-white'
-                  }`}
+                  className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${paymentMethod === 'Online'
+                    ? 'border-black bg-[#FFCB05]/15'
+                    : 'border-black/15 hover:border-black/40 bg-white'
+                    }`}
                 >
                   <input
                     type="radio"

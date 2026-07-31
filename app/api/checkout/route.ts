@@ -181,9 +181,10 @@ export async function POST(request: Request) {
   const orderItemsData = cartItems.map((item) => {
     const itemPrice = Number(item.price) || 0;
     const qty = item.quantity || 1;
+    const cleanProdId = item.product_id || (item.id.includes('-') ? item.id.split('-')[0] : item.id);
     return {
       order_id: orderId,
-      product_id: item.product_id || (item.id.includes('-') ? null : item.id),
+      product_id: cleanProdId,
       variant_id: item.variant_id || null,
       product_title: item.title || 'Product',
       color: item.color || (item as any).selectedColor || null,
@@ -192,8 +193,11 @@ export async function POST(request: Request) {
       unit_price: itemPrice,
       discount: item.discount || 0,
       subtotal: itemPrice * qty,
+      image_url: item.image || null,
     };
   });
+
+  console.log('🛍️ [CHECKOUT API] Data sent to `order_items` table:', orderItemsData);
 
   const { error: itemsError } = await supabase.from('order_items').insert(orderItemsData);
   if (itemsError) {

@@ -33,27 +33,40 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Fetch product details to enrich images and variants if missing/dummy
+  // Collect product IDs from user's orders to query only relevant products
+  const productIds = new Set<string>();
+  (data || []).forEach((order: any) => {
+    if (Array.isArray(order.items)) {
+      order.items.forEach((item: any) => {
+        if (item.product_id) productIds.add(item.product_id);
+        if (item.id) productIds.add(item.id);
+      });
+    }
+  });
+
   let productsMap: Record<string, any> = {};
   let variantsMap: Record<string, any> = {};
 
-  try {
-    const { data: products } = await supabase
-      .from('products')
-      .select('id, image, title, product_variants(id, color, size, product_variant_images(image_url))');
-    
-    if (products) {
-      products.forEach((p: any) => {
-        productsMap[p.id] = p;
-        if (p.product_variants) {
-          p.product_variants.forEach((v: any) => {
-            variantsMap[v.id] = { ...v, parentProduct: p };
-          });
-        }
-      });
+  if (productIds.size > 0) {
+    try {
+      const { data: products } = await supabase
+        .from('products')
+        .select('id, image, title, product_variants(id, color, size, product_variant_images(image_url))')
+        .in('id', Array.from(productIds));
+
+      if (products) {
+        products.forEach((p: any) => {
+          productsMap[p.id] = p;
+          if (p.product_variants) {
+            p.product_variants.forEach((v: any) => {
+              variantsMap[v.id] = { ...v, parentProduct: p };
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Could not fetch products for image mapping:', err);
     }
-  } catch (err) {
-    console.warn('Could not fetch products for image mapping:', err);
   }
 
   const enrichedOrders = (data || []).map((order: any) => {
@@ -108,7 +121,7 @@ export async function GET() {
         const matchingProd = oi.product_id ? productsMap[oi.product_id] : null;
         const matchingVariant = oi.variant_id ? variantsMap[oi.variant_id] : null;
         const colorVal = oi.color || matchingVariant?.color || '';
-        const realImg = resolvePrimaryImage(oi.product_id, oi.variant_id, colorVal, oi.image);
+        const realImg = resolvePrimaryImage(oi.product_id, oi.variant_id, colorVal, oi.image_url);
 
         return {
           id: oi.id,
@@ -128,7 +141,7 @@ export async function GET() {
         const pId = item.product_id || item.id;
         const vId = item.variant_id;
         const colorVal = item.color || item.selectedColor || '';
-        
+
         item.image = resolvePrimaryImage(pId, vId, colorVal, item.image);
         if (!item.color) item.color = colorVal;
         if (!item.variant_id && vId) item.variant_id = vId;
