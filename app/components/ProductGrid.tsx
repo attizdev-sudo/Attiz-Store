@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Heart, ShoppingBag, SlidersHorizontal, ArrowRight } from 'lucide-react';
+import { Heart, ShoppingBag, SlidersHorizontal, ArrowRight, Check } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -48,12 +48,21 @@ function ProductGridInner() {
   const [selectedCategory, setSelectedCategory] = useState('All Collections');
   const [selectedSort, setSelectedSort] = useState('latest');
   const [currentPage, setCurrentPage] = useState(1);
+  const [isMobile, setIsMobile] = useState(false);
+  const [addedCardId, setAddedCardId] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 16;
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const categories = ['All Collections', ...allCategories.filter(c => !c.parent_id).map(c => c.name)];
 
   const activeParentCategory = allCategories.find(c => c.name === selectedCategory && !c.parent_id);
-  const subcategories = activeParentCategory 
+  const subcategories = activeParentCategory
     ? allCategories.filter(c => c.parent_id === activeParentCategory.id)
     : [];
 
@@ -161,17 +170,23 @@ function ProductGridInner() {
     return true;
   });
 
-  // Split products by color variants if split_variants is checked
-  const splitProducts: (Product & { selectedColorVariant?: string; colorSpecificImage?: string; colorSpecificAltImage?: string })[] = [];
-  
-  filteredProducts.forEach((product) => {
+  // Group and split products by color variants if split_variants is checked
+  const baseProductsSorted = [...filteredProducts].sort((a, b) =>
+    new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  );
+
+  type ExtendedProduct = Product & { selectedColorVariant?: string; colorSpecificImage?: string; colorSpecificAltImage?: string };
+  const groupedSplitProducts: ExtendedProduct[][] = [];
+
+  baseProductsSorted.forEach((product) => {
+    const productItems: ExtendedProduct[] = [];
     if (product.split_variants && product.product_variants && product.product_variants.length > 0) {
-      const colors = Array.from(new Set(product.product_variants.map(v => v.color))).filter(Boolean);
+      const colors = Array.from(new Set(product.product_variants.map((v) => v.color))).filter(Boolean);
       if (colors.length > 0) {
         colors.forEach((color) => {
-          const colorVariants = product.product_variants!.filter(v => v.color === color);
+          const colorVariants = product.product_variants!.filter((v) => v.color === color);
           const firstColorVariant = colorVariants[0];
-          
+
           const colorImages: string[] = [];
           colorVariants.forEach((v) => {
             v.product_variant_images?.forEach((img) => {
@@ -180,11 +195,11 @@ function ProductGridInner() {
               }
             });
           });
-          
+
           const primaryImage = colorImages[0] || product.image;
           const secondaryImage = colorImages[1] || colorImages[0] || product.image;
-          
-          splitProducts.push({
+
+          productItems.push({
             ...product,
             title: `${product.title} - ${color}`,
             price: firstColorVariant ? parseFloat(String(firstColorVariant.price)) : product.price,
@@ -195,16 +210,52 @@ function ProductGridInner() {
             colorSpecificAltImage: secondaryImage,
           });
         });
-        return;
+      } else {
+        productItems.push(product);
+      }
+    } else {
+      productItems.push(product);
+    }
+    if (productItems.length > 0) {
+      groupedSplitProducts.push(productItems);
+    }
+  });
+
+  // Interleave round-robin so color variants of the same product don't sit side-by-side
+  const splitProducts: ExtendedProduct[] = [];
+  let maxVariants = 0;
+  groupedSplitProducts.forEach((group) => {
+    if (group.length > maxVariants) maxVariants = group.length;
+  });
+
+  for (let i = 0; i < maxVariants; i++) {
+    for (let g = 0; g < groupedSplitProducts.length; g++) {
+      if (groupedSplitProducts[g][i]) {
+        splitProducts.push(groupedSplitProducts[g][i]);
       }
     }
-    splitProducts.push(product);
-  });
+  }
+
+  // Hash helper for deterministic shuffle
+  const getHash = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash);
+  };
 
   const sortedProducts = [...splitProducts].sort((a, b) => {
     if (selectedSort === 'low-high') return parseFloat(String(a.price)) - parseFloat(String(b.price));
     if (selectedSort === 'high-low') return parseFloat(String(b.price)) - parseFloat(String(a.price));
-    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    if (selectedSort === 'shuffle') {
+      const hashA = getHash(`${a.id}-${a.selectedColorVariant || ''}`);
+      const hashB = getHash(`${b.id}-${b.selectedColorVariant || ''}`);
+      return hashA - hashB;
+    }
+    // Default ('latest') uses the interleaved round-robin order
+    return 0;
   });
 
   // Reset to page 1 whenever filters or sort change
@@ -246,33 +297,32 @@ function ProductGridInner() {
         <span className="attiz-display text-[240px] leading-none tracking-tighter uppercase">{bannerTitle}</span>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 relative z-10">
-        
-        {/* Header Layout */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-16 border-b border-black/10 pb-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-16">
+        {/* Top Header section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-4 pb-3 sm:mb-8 sm:pb-6 border-b border-black/10">
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#E63B2E]" />
-              <span className="attiz-mono text-[11px] font-bold tracking-[0.3em] text-[#E63B2E] uppercase">Attiz</span>
-            </div>
-            <h2 className="attiz-display text-5xl sm:text-6xl tracking-tight uppercase leading-none">
+            <span className="attiz-mono text-[10px] sm:text-xs text-[#E63B2E] tracking-[0.25em] uppercase font-bold flex items-center gap-1.5 mb-1 sm:mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E63B2E]" /> ATTIZ
+            </span>
+            <h2 className="attiz-display text-3xl sm:text-6xl tracking-tight uppercase leading-none">
               {bannerTitle}
             </h2>
-            <p className="attiz-body text-sm text-black/85 mt-4 max-w-md font-light">
+            <p className="hidden sm:block attiz-body text-sm text-black/85 mt-4 max-w-md font-light">
               Architected profiles engineered for comfort. Functional daily wear prioritizing modern ergonomics.
             </p>
           </div>
 
           {/* Filtering controls unified */}
-          <div className="flex flex-wrap items-center gap-3 mt-4 md:mt-0">
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-black/5 border border-black/10">
+          <div className="flex flex-wrap items-center gap-3 mt-3 md:mt-0">
+            <div className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 bg-black/5 border border-black/10">
               <SlidersHorizontal className="w-3.5 h-3.5 text-black/85" />
               <select
                 value={selectedSort}
                 onChange={(e) => setSelectedSort(e.target.value)}
-                className="bg-transparent attiz-mono text-[11px] font-bold uppercase tracking-wider outline-none cursor-pointer pr-2"
+                className="bg-transparent attiz-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider outline-none cursor-pointer pr-1 sm:pr-2"
               >
                 <option value="latest">Latest Arrivals</option>
+                <option value="shuffle">Shuffle / Mixed</option>
                 <option value="low-high">Price: Low - High</option>
                 <option value="high-low">Price: High - Low</option>
               </select>
@@ -281,21 +331,20 @@ function ProductGridInner() {
         </div>
 
         {/* Categories Horizontal Navigation Slider */}
-        <div className="mb-10 sm:mb-12">
+        <div className="mb-4 sm:mb-12">
           <div className="flex flex-col gap-4">
-            {/* Scrollable pill row on mobile */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:gap-3">
+            {/* Category Pills Row (Wraps to next line when overflowing) */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {categories.map((cat) => {
                 const isActive = selectedCategory === cat;
                 return (
                   <button
                     key={cat}
                     onClick={() => handleCategoryTabClick(cat)}
-                    className={`px-4 py-2.5 attiz-mono text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none cursor-pointer shrink-0 ${
-                      isActive 
-                        ? 'bg-black text-white border-black shadow-lg shadow-black/10' 
-                        : 'bg-transparent text-black/85 border-black/10 hover:border-black hover:text-black'
-                    }`}
+                    className={`px-3.5 py-2 sm:px-4 sm:py-2.5 attiz-mono text-[10px] sm:text-[11px] font-bold tracking-wider uppercase transition-all duration-300 border rounded-none cursor-pointer ${isActive
+                      ? 'bg-black text-white border-black shadow-lg shadow-black/10'
+                      : 'bg-transparent text-black/85 border-black/10 hover:border-black hover:text-black'
+                      }`}
                   >
                     {cat}
                   </button>
@@ -308,11 +357,10 @@ function ProductGridInner() {
                 <span className="attiz-mono text-[9px] font-bold tracking-[0.2em] text-black/85 uppercase mr-2">Subcategories:</span>
                 <button
                   onClick={() => handleSubcategoryTabClick(null)}
-                  className={`px-3 py-1.5 attiz-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200 border rounded-none cursor-pointer ${
-                    !activeSubcategory
-                      ? 'bg-black text-[#FFCB05] border-black shadow-[2px_2px_0_0_#111111] translate-x-[-1px] translate-y-[-1px]'
-                      : 'bg-white text-black/60 border-black/10 hover:border-black hover:text-black'
-                  }`}
+                  className={`px-3 py-1.5 attiz-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200 border rounded-none cursor-pointer ${!activeSubcategory
+                    ? 'bg-black text-[#FFCB05] border-black shadow-[2px_2px_0_0_#111111] translate-x-[-1px] translate-y-[-1px]'
+                    : 'bg-white text-black/60 border-black/10 hover:border-black hover:text-black'
+                    }`}
                 >
                   All {selectedCategory}
                 </button>
@@ -322,11 +370,10 @@ function ProductGridInner() {
                     <button
                       key={sub.id}
                       onClick={() => handleSubcategoryTabClick(sub.id)}
-                      className={`px-3 py-1.5 attiz-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200 border rounded-none cursor-pointer ${
-                        isActive
-                          ? 'bg-black text-[#FFCB05] border-black shadow-[2px_2px_0_0_#111111] translate-x-[-1px] translate-y-[-1px]'
-                          : 'bg-white text-black/85 border-black/10 hover:border-black hover:text-black'
-                      }`}
+                      className={`px-3 py-1.5 attiz-mono text-[10px] font-bold tracking-wider uppercase transition-all duration-200 border rounded-none cursor-pointer ${isActive
+                        ? 'bg-black text-[#FFCB05] border-black shadow-[2px_2px_0_0_#111111] translate-x-[-1px] translate-y-[-1px]'
+                        : 'bg-white text-black/85 border-black/10 hover:border-black hover:text-black'
+                        }`}
                     >
                       {sub.name}
                     </button>
@@ -374,242 +421,247 @@ function ProductGridInner() {
           </div>
         ) : (
           <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-16">
-            {paginatedProducts.map((product) => {
-              const isLiked = isWishlisted(product.id);
-              const isToggling = togglingIds.has(product.id);
-              const cardKey = (product as any).selectedColorVariant 
-                ? `${product.id}-${(product as any).selectedColorVariant}` 
-                : product.id;
-              const images = getProductImages(product);
-              const nextImage = (product as any).colorSpecificAltImage || images[1];
-              const finalPrice = product.discount && product.discount > 0
-                ? Math.round((product.price || 0) * (1 - (product.discount || 0) / 100))
-                : (product.price || 0);
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-10 sm:gap-x-6 sm:gap-y-16">
+              {paginatedProducts.map((product) => {
+                const isLiked = isWishlisted(product.id);
+                const isToggling = togglingIds.has(product.id);
+                const cardKey = (product as any).selectedColorVariant
+                  ? `${product.id}-${(product as any).selectedColorVariant}`
+                  : product.id;
+                const images = getProductImages(product);
+                const nextImage = (product as any).colorSpecificAltImage || images[1];
+                const finalPrice = product.discount && product.discount > 0
+                  ? Math.round((product.price || 0) * (1 - (product.discount || 0) / 100))
+                  : (product.price || 0);
 
-              const handleQuickAdd = (e: React.MouseEvent) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const selectedSize = product.sizes ? product.sizes.split(',')[0].trim() : 'M';
-                const targetColor = (product as any).selectedColorVariant || '';
-                const targetVariant = product.product_variants?.find(v => 
-                  v.size === selectedSize && 
-                  (!targetColor || v.color.toLowerCase() === targetColor.toLowerCase())
-                ) || product.product_variants?.[0];
+                const handleQuickAdd = (e: React.MouseEvent) => {
+                  e.preventDefault();
+                  e.stopPropagation();
 
-                addToCart({
-                  ...product,
-                  price: finalPrice,
-                  quantity: 1,
-                  selectedSize,
-                  selectedColor: targetColor || (targetVariant?.color) || '',
-                } as any);
-              };
+                  const selectedSize = product.sizes ? product.sizes.split(',')[0].trim() : 'M';
+                  const targetColor = (product as any).selectedColorVariant || '';
+                  const targetVariant = product.product_variants?.find(v =>
+                    v.size === selectedSize &&
+                    (!targetColor || v.color.toLowerCase() === targetColor.toLowerCase())
+                  ) || product.product_variants?.[0];
 
-              const queryColor = (product as any).selectedColorVariant 
-                ? `?color=${encodeURIComponent((product as any).selectedColorVariant)}` 
-                : '';
+                  addToCart({
+                    ...product,
+                    price: finalPrice,
+                    quantity: 1,
+                    selectedSize,
+                    selectedColor: targetColor || (targetVariant?.color) || '',
+                  } as any, !isMobile);
 
-              return (
-                <div key={cardKey} className="group relative flex flex-col justify-between">
-                  <Link href={`/product/${product.id}${queryColor}`} className="flex flex-col h-full relative">
-                    
-                    {/* Media container */}
-                    <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden transition-all duration-500 ease-out group-hover:shadow-xl group-hover:shadow-black/5">
-                      
-                      {/* Product Base Image */}
-                      <Image
-                        src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
-                        alt={product.title}
-                        fill
-                        className={`object-cover object-center transition-all duration-700 ease-out scale-100 group-hover:scale-105 ${nextImage ? 'group-hover:opacity-0' : ''}`}
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      />
+                  if (isMobile) {
+                    setAddedCardId(cardKey);
+                    setTimeout(() => setAddedCardId(null), 1500);
+                  }
+                };
 
-                      {/* Product Alternative Hover Image */}
-                      {nextImage && (
+                const queryColor = (product as any).selectedColorVariant
+                  ? `?color=${encodeURIComponent((product as any).selectedColorVariant)}`
+                  : '';
+
+                return (
+                  <div key={cardKey} className="group relative flex flex-col justify-between">
+                    <Link href={`/product/${product.id}${queryColor}`} className="flex flex-col h-full relative">
+
+                      {/* Media container */}
+                      <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden transition-all duration-500 ease-out group-hover:shadow-xl group-hover:shadow-black/5">
+
+                        {/* Product Base Image */}
                         <Image
-                          src={nextImage}
-                          alt={`${product.title} Alternate`}
+                          src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                          alt={product.title}
                           fill
-                          className="object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-102 group-hover:scale-105"
+                          className={`object-cover object-center transition-all duration-700 ease-out scale-100 group-hover:scale-105 ${nextImage ? 'group-hover:opacity-0' : ''}`}
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
-                      )}
 
-                      {/* Floating Discount Badge */}
-                      {product.discount && product.discount > 0 && (
-                        <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 bg-black text-white px-1.5 py-0.5 sm:px-2.5 sm:py-1 attiz-mono text-[8px] sm:text-[9px] font-bold tracking-wider sm:tracking-widest uppercase">
-                          <span className="inline sm:hidden">-{product.discount}%</span>
-                          <span className="hidden sm:inline">Save {product.discount}%</span>
-                        </div>
-                      )}
+                        {/* Product Alternative Hover Image */}
+                        {nextImage && (
+                          <Image
+                            src={nextImage}
+                            alt={`${product.title} Alternate`}
+                            fill
+                            className="object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-102 group-hover:scale-105"
+                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                          />
+                        )}
 
-                      {/* Wishlist Button Core */}
-                      <button
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product); }}
-                        className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white active:scale-90 transition-transform duration-100 cursor-pointer"
-                        aria-label="Wishlist item"
-                      >
-                        <Heart className={`w-[16px] h-[16px] transition-colors duration-100 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
-                      </button>
+                        {/* Floating Discount Badge */}
+                        {product.discount && product.discount > 0 && (
+                          <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 bg-black text-white px-1.5 py-0.5 sm:px-2.5 sm:py-1 attiz-mono text-[8px] sm:text-[9px] font-bold tracking-wider sm:tracking-widest uppercase">
+                            <span className="inline sm:hidden">-{product.discount}%</span>
+                            <span className="hidden sm:inline">Save {product.discount}%</span>
+                          </div>
+                        )}
 
-                      {/* Quick Add Overlay System (Desktop) */}
-                      <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out hidden lg:block z-20 bg-gradient-to-t from-black/60 to-transparent">
+                        {/* Wishlist Button Core */}
                         <button
-                          onClick={handleQuickAdd}
-                          className="w-full py-3 bg-white hover:bg-black text-black hover:text-white attiz-mono text-[10px] font-bold tracking-[0.2em] flex items-center justify-center gap-2 cursor-pointer uppercase transition-all duration-300"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(product); }}
+                          className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white active:scale-90 transition-transform duration-100 cursor-pointer"
+                          aria-label="Wishlist item"
                         >
-                          <ShoppingBag className="w-3.5 h-3.5" />
-                          <span>Quick Add +</span>
+                          <Heart className={`w-[16px] h-[16px] transition-colors duration-100 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
                         </button>
-                      </div>
-                    </div>
 
-                    {/* Metadata Content */}
-                    <div className="pt-5 flex flex-col justify-between grow">
-                      <div>
-                        {/* <div className="flex items-center justify-between gap-2 mb-1">
+                        {/* Quick Add Overlay System (Desktop) */}
+                        <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out hidden lg:block z-20 bg-gradient-to-t from-black/60 to-transparent">
+                          <button
+                            onClick={handleQuickAdd}
+                            className="w-full py-3 bg-white hover:bg-black text-black hover:text-white attiz-mono text-[10px] font-bold tracking-[0.2em] flex items-center justify-center gap-2 cursor-pointer uppercase transition-all duration-300"
+                          >
+                            <ShoppingBag className="w-3.5 h-3.5" />
+                            <span>Quick Add +</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Metadata Content */}
+                      <div className="pt-5 flex flex-col justify-between grow">
+                        <div>
+                          {/* <div className="flex items-center justify-between gap-2 mb-1">
                           <span className="attiz-mono text-[9px] text-black/85 uppercase tracking-widest font-semibold">
                             {product.sizes ? `Sizes: ${product.sizes}` : 'Standard Fit'}
                           </span>
                           <span className="w-1 h-1 bg-black/20 rounded-full group-hover:bg-[#E63B2E] transition-colors" />
                         </div> */}
-                        <h4 className="attiz-body text-[14px] font-medium text-black/90 group-hover:text-black transition-colors line-clamp-2 leading-snug">
-                          {product.title}
-                        </h4>
-                      </div>
+                          <h4 className="attiz-body text-[14px] font-medium text-black/90 group-hover:text-black transition-colors line-clamp-2 leading-snug">
+                            {product.title}
+                          </h4>
+                        </div>
 
-                      <div className="flex items-baseline justify-between mt-3 pt-2 border-t border-black/5">
-                        <div className="flex items-baseline gap-2">
-                          {product.discount && product.discount > 0 ? (
-                            <>
-                              <span className="attiz-mono text-[15px] font-bold text-[#E63B2E]">
-                                ₹{finalPrice.toLocaleString('en-IN')}
-                              </span>
-                              <span className="attiz-body text-xs text-black/85 line-through font-light">
+                        <div className="flex items-baseline justify-between mt-3 pt-2 border-t border-black/5">
+                          <div className="flex items-baseline gap-2">
+                            {product.discount && product.discount > 0 ? (
+                              <>
+                                <span className="attiz-mono text-[15px] font-bold text-[#E63B2E]">
+                                  ₹{finalPrice.toLocaleString('en-IN')}
+                                </span>
+                                <span className="attiz-body text-xs text-black/85 line-through font-light">
+                                  ₹{parseFloat(String(product.price || 0)).toLocaleString('en-IN')}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="attiz-mono text-[15px] font-bold text-black">
                                 ₹{parseFloat(String(product.price || 0)).toLocaleString('en-IN')}
                               </span>
-                            </>
-                          ) : (
-                            <span className="attiz-mono text-[15px] font-bold text-black">
-                              ₹{parseFloat(String(product.price || 0)).toLocaleString('en-IN')}
-                            </span>
-                          )}
+                            )}
+                          </div>
+
+                          {/* Inline Interactive CTA */}
+                          <div className="flex items-center text-[11px] attiz-mono font-bold tracking-wider text-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-1 lg:flex hidden">
+                            <span>VIEW</span>
+                            <ArrowRight className="w-3 h-3 transform group-hover:translate-x-1 transition-transform" />
+                          </div>
+
+                          {/* Mobile Action Button Trigger */}
+                          <button
+                            onClick={handleQuickAdd}
+                            className={`lg:hidden w-8 h-8 flex items-center justify-center rounded-none cursor-pointer transition-colors ${addedCardId === cardKey ? 'bg-emerald-600 text-white' : 'bg-black text-white'
+                              }`}
+                            aria-label="Add to cart context"
+                          >
+                            {addedCardId === cardKey ? (
+                              <Check className="w-3.5 h-3.5" />
+                            ) : (
+                              <ShoppingBag className="w-3.5 h-3.5" />
+                            )}
+                          </button>
                         </div>
 
-                        {/* Inline Interactive CTA */}
-                        <div className="flex items-center text-[11px] attiz-mono font-bold tracking-wider text-black opacity-0 group-hover:opacity-100 transition-opacity duration-300 gap-1 lg:flex hidden">
-                          <span>VIEW</span>
-                          <ArrowRight className="w-3 h-3 transform group-hover:translate-x-1 transition-transform" />
-                        </div>
-
-                        {/* Mobile Action Button Trigger */}
-                        <button
-                          onClick={handleQuickAdd}
-                          className="lg:hidden w-8 h-8 flex items-center justify-center bg-black text-white rounded-none cursor-pointer"
-                          aria-label="Add to cart context"
-                        >
-                          <ShoppingBag className="w-3.5 h-3.5" />
-                        </button>
                       </div>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
 
-                    </div>
-                  </Link>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="mt-12 sm:mt-16 border-t-[3px] border-black pt-8 sm:pt-10">
-              {/* Mobile: compact Prev / counter / Next */}
-              <div className="flex items-center justify-between gap-3 sm:hidden">
-                <button
-                  onClick={() => goToPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`flex items-center gap-1.5 px-4 py-3 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${
-                    currentPage === 1
-                      ? 'border-black/10 text-black/25 cursor-not-allowed'
-                      : 'border-black bg-white text-black shadow-[3px_3px_0_0_#111111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer'
-                  }`}
-                >
-                  ← Prev
-                </button>
-                <span className="attiz-mono text-[10px] font-bold text-black/85 tracking-widest uppercase text-center">
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => goToPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`flex items-center gap-1.5 px-4 py-3 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${
-                    currentPage === totalPages
-                      ? 'border-black/10 text-black/25 cursor-not-allowed'
-                      : 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer'
-                  }`}
-                >
-                  Next →
-                </button>
-              </div>
-
-              {/* Desktop: full pill row + Prev/Next */}
-              <div className="hidden sm:flex items-center justify-between gap-6">
-                <div className="flex items-center gap-3">
-                  <span className="attiz-mono text-[9px] font-bold text-black/35 tracking-widest uppercase">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  <span className="w-px h-4 bg-black/15" />
-                  <span className="attiz-mono text-[9px] font-bold text-black/35 tracking-widest uppercase">
-                    {sortedProducts.length} Products
-                  </span>
-                </div>
-
-                {/* Page number pills */}
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => goToPage(page)}
-                      className={`w-9 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all duration-200 cursor-pointer ${
-                        currentPage === page
-                          ? 'bg-black text-[#FFCB05] border-black shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
-                          : 'bg-white text-black border-black/30 hover:border-black hover:shadow-[2px_2px_0_0_#111111] hover:-translate-x-[1px] hover:-translate-y-[1px]'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-3">
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-12 sm:mt-16 border-t-[3px] border-black pt-8 sm:pt-10">
+                {/* Mobile: compact Prev / counter / Next */}
+                <div className="flex items-center justify-between gap-3 sm:hidden">
                   <button
                     onClick={() => goToPage(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className={`flex items-center gap-2 px-5 py-2.5 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${
-                      currentPage === 1
-                        ? 'border-black/10 text-black/25 cursor-not-allowed'
-                        : 'border-black bg-white text-black shadow-[3px_3px_0_0_#111111] hover:bg-black hover:text-[#FFCB05] hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer'
-                    }`}
+                    className={`flex items-center gap-1.5 px-4 py-3 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${currentPage === 1
+                      ? 'border-black/10 text-black/25 cursor-not-allowed'
+                      : 'border-black bg-white text-black shadow-[3px_3px_0_0_#111111] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer'
+                      }`}
                   >
                     ← Prev
                   </button>
+                  <span className="attiz-mono text-[10px] font-bold text-black/85 tracking-widest uppercase text-center">
+                    {currentPage} / {totalPages}
+                  </span>
                   <button
                     onClick={() => goToPage(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className={`flex items-center gap-2 px-5 py-2.5 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${
-                      currentPage === totalPages
-                        ? 'border-black/10 text-black/25 cursor-not-allowed'
-                        : 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] hover:bg-white hover:text-black hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer'
-                    }`}
+                    className={`flex items-center gap-1.5 px-4 py-3 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${currentPage === totalPages
+                      ? 'border-black/10 text-black/25 cursor-not-allowed'
+                      : 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer'
+                      }`}
                   >
                     Next →
                   </button>
                 </div>
+
+                {/* Desktop: full pill row + Prev/Next */}
+                <div className="hidden sm:flex items-center justify-between gap-6">
+                  <div className="flex items-center gap-3">
+                    <span className="attiz-mono text-[9px] font-bold text-black/35 tracking-widest uppercase">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <span className="w-px h-4 bg-black/15" />
+                    <span className="attiz-mono text-[9px] font-bold text-black/35 tracking-widest uppercase">
+                      {sortedProducts.length} Products
+                    </span>
+                  </div>
+
+                  {/* Page number pills */}
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`w-9 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all duration-200 cursor-pointer ${currentPage === page
+                          ? 'bg-black text-[#FFCB05] border-black shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
+                          : 'bg-white text-black border-black/30 hover:border-black hover:shadow-[2px_2px_0_0_#111111] hover:-translate-x-[1px] hover:-translate-y-[1px]'
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className={`flex items-center gap-2 px-5 py-2.5 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${currentPage === 1
+                        ? 'border-black/10 text-black/25 cursor-not-allowed'
+                        : 'border-black bg-white text-black shadow-[3px_3px_0_0_#111111] hover:bg-black hover:text-[#FFCB05] hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer'
+                        }`}
+                    >
+                      ← Prev
+                    </button>
+                    <button
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className={`flex items-center gap-2 px-5 py-2.5 border-2 attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 ${currentPage === totalPages
+                        ? 'border-black/10 text-black/25 cursor-not-allowed'
+                        : 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] hover:bg-white hover:text-black hover:shadow-[1px_1px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] cursor-pointer'
+                        }`}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          )}
+            )}
           </>
         )}
       </div>

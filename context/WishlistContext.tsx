@@ -21,8 +21,16 @@ const WishlistContext = createContext<WishlistContextValue | null>(null);
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const router = useRouter();
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('attiz_wishlist_items');
+        return cached ? JSON.parse(cached) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(wishlistItems.length === 0);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
   const fetchWishlist = useCallback(async () => {
@@ -32,11 +40,15 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      setLoading(true);
+      if (wishlistItems.length === 0) setLoading(true);
       const res = await fetch('/api/wishlist', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
-        setWishlistItems(Array.isArray(data) ? data : []);
+        const items = Array.isArray(data) ? data : [];
+        setWishlistItems(items);
+        try {
+          localStorage.setItem('attiz_wishlist_items', JSON.stringify(items));
+        } catch { /* ignore */ }
       } else {
         setWishlistItems([]);
       }
@@ -45,7 +57,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, wishlistItems.length]);
 
   useEffect(() => {
     fetchWishlist();

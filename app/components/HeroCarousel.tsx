@@ -131,71 +131,71 @@ export default function HeroCarousel() {
                   priority={idx === 0}
                 />
 
-                {/* Dark Gradient Overlay for Sharp Text Contrast */}
+                {/* Clean Content Overlay — ZERO Black Fade Background */}
                 <div 
-                  className={`absolute inset-0 z-10 flex flex-col justify-center p-4 sm:p-12 md:p-16 lg:p-20 pb-10 sm:pb-12 transition-opacity duration-700 ${
+                  className={`absolute inset-0 z-10 flex flex-col justify-end sm:justify-center p-4 sm:p-12 md:p-16 lg:p-20 pb-5 sm:pb-12 transition-opacity duration-700 ${
                     isRightAligned
-                      ? 'items-end text-right bg-gradient-to-l from-black via-black/85 via-40% to-transparent'
-                      : 'items-start text-left bg-gradient-to-r from-black via-black/85 via-40% to-transparent'
+                      ? 'items-end text-right'
+                      : 'items-start text-left'
                   }`}
                 >
                   {hasTextContent && (
-                    <div className={`max-w-xl space-y-1.5 sm:space-y-4 ${isRightAligned ? 'flex flex-col items-end' : 'flex flex-col items-start'}`}>
-                      {/* Custom Small Title / Subtitle with Smooth Entrance */}
+                    <div className={`max-w-xl space-y-1 sm:space-y-3.5 ${isRightAligned ? 'flex flex-col items-end' : 'flex flex-col items-start'}`}>
+                      {/* Small Title / Tagline */}
                       {smallTitle && (
                         <div 
                           className={`transform transition-all duration-700 ease-out delay-150 ${
-                            isActive ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+                            isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
                           }`}
                         >
-                          <span className="attiz-mono text-[9px] sm:text-xs md:text-sm font-bold text-[#FFCB05] tracking-[0.2em] uppercase block drop-shadow-sm">
+                          <span className="attiz-mono text-[10px] sm:text-xs md:text-sm font-bold text-[#FFCB05] tracking-[0.2em] uppercase block drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                             {smallTitle}
                           </span>
                         </div>
                       )}
 
-                      {/* Main Title / Headline with Smooth Entrance */}
+                      {/* Main Title / Headline */}
                       {mainTitle && (
                         <div
                           className={`transform transition-all duration-700 ease-out delay-300 ${
-                            isActive ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+                            isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
                           }`}
                         >
-                          <h2 className="attiz-display text-xl sm:text-4xl md:text-5xl lg:text-6xl font-black uppercase text-white tracking-wide leading-tight drop-shadow-md">
+                          <h2 className="attiz-display text-lg sm:text-4xl md:text-5xl lg:text-6xl font-black uppercase text-white tracking-wide leading-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
                             {mainTitle}
                           </h2>
                         </div>
                       )}
 
-                      {/* Title Description with Smooth Entrance */}
+                      {/* Title Description — Hidden on Mobile to Keep Hero Image Unobscured */}
                       {description && (
                         <div
-                          className={`transform transition-all duration-700 ease-out delay-450 ${
-                            isActive ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+                          className={`hidden sm:block transform transition-all duration-700 ease-out delay-450 ${
+                            isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
                           }`}
                         >
-                          <p className="attiz-body text-[10px] sm:text-sm md:text-base text-white/85 font-normal leading-snug max-w-[280px] sm:max-w-lg line-clamp-2">
+                          <p className="attiz-body text-sm md:text-base text-white/90 font-normal leading-snug max-w-lg line-clamp-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
                             {description}
                           </p>
                         </div>
                       )}
 
-                      {/* Dual CTA Buttons with Smooth Entrance */}
+                      {/* CTA Buttons — Hidden on Mobile for Maximum Image Visibility */}
                       <div
-                        className={`pt-1 sm:pt-4 flex flex-wrap items-center gap-2 sm:gap-3 transform transition-all duration-700 ease-out delay-600 ${
-                          isActive ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+                        className={`hidden sm:flex pt-2 sm:pt-4 flex-wrap items-center gap-2 sm:gap-3 transform transition-all duration-700 ease-out delay-600 ${
+                          isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
                         }`}
                       >
                         {/* Primary Button */}
                         {slideLink ? (
                           <Link 
                             href={slideLink}
-                            className="attiz-mono text-[9px] sm:text-xs font-bold text-white bg-[#E63B2E] hover:bg-[#c92a1e] border-2 border-[#E63B2E] px-3.5 py-1.5 sm:px-6 sm:py-3 uppercase tracking-wider transition-all duration-200 shadow-[2px_2px_0_0_#111111] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] inline-flex items-center gap-1.5 cursor-pointer"
+                            className="attiz-mono text-xs font-bold text-white bg-[#E63B2E] hover:bg-[#c92a1e] border-2 border-[#E63B2E] px-6 py-3 uppercase tracking-wider transition-all duration-200 shadow-[2px_2px_0_0_#111111] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] inline-flex items-center gap-1.5 cursor-pointer"
                           >
                             <span>{primaryBtnText}</span>
                           </Link>
                         ) : (
-                          <span className="attiz-mono text-[9px] sm:text-xs font-bold text-white bg-[#E63B2E] border-2 border-[#E63B2E] px-3.5 py-1.5 sm:px-6 sm:py-3 uppercase tracking-wider inline-flex items-center gap-1.5">
+                          <span className="attiz-mono text-xs font-bold text-white bg-[#E63B2E] border-2 border-[#E63B2E] px-6 py-3 uppercase tracking-wider inline-flex items-center gap-1.5">
                             <span>{primaryBtnText}</span>
                           </span>
                         )}
@@ -204,7 +204,7 @@ export default function HeroCarousel() {
                         {secondaryBtnText && (
                           <Link 
                             href={slideLink || '/'}
-                            className="attiz-mono text-[9px] sm:text-xs font-bold text-[#FFCB05] bg-transparent hover:bg-[#FFCB05] hover:text-black border-2 border-[#FFCB05] px-3.5 py-1.5 sm:px-6 sm:py-3 uppercase tracking-wider transition-all duration-200 shadow-[2px_2px_0_0_#111111] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] inline-flex items-center gap-1.5 cursor-pointer"
+                            className="attiz-mono text-xs font-bold text-[#FFCB05] bg-transparent hover:bg-[#FFCB05] hover:text-black border-2 border-[#FFCB05] px-6 py-3 uppercase tracking-wider transition-all duration-200 shadow-[2px_2px_0_0_#111111] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] inline-flex items-center gap-1.5 cursor-pointer"
                           >
                             <span>{secondaryBtnText}</span>
                           </Link>

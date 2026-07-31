@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Star, CheckCircle, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Star, CheckCircle, ShoppingBag, ArrowRight, X, Ruler, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -50,22 +50,51 @@ function ProductDetailsInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialColorParam = searchParams.get('color');
-  const { addToCart, setIsCartOpen } = useCart();
+  const { addToCart, startBuyNow, setIsCartOpen } = useCart();
   const { products, dbLoading } = useStore();
   const { isWishlisted: checkIsWishlisted, toggleWishlist } = useWishlist();
 
   const product = products.find((p) => p.id === id);
-  const relatedProducts = products
-    .filter((p) => {
-      if (p.id === product?.id) return false;
-      const productCats = product?.category_ids || (product?.category_id ? [product.category_id] : []);
-      const pCats = p.category_ids || (p.category_id ? [p.category_id] : []);
-      return pCats.some((catId) => productCats.includes(catId));
-    })
-    .slice(0, 4);
+
+  // Smart, contextual "You May Also Like" recommendation engine
+  const relatedProducts = React.useMemo(() => {
+    if (!product || !products || products.length <= 1) return [];
+
+    const otherProducts = products.filter((p) => p.id !== product.id);
+    const currentTitleWords = product.title.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+    const productCatIds = product.category_ids || (product.category_id ? [product.category_id] : []);
+
+    const scoredProducts = otherProducts.map((p) => {
+      let score = 0;
+      const pCatIds = p.category_ids || (p.category_id ? [p.category_id] : []);
+      const catMatches = pCatIds.filter((c) => productCatIds.includes(c)).length;
+      score += catMatches * 5;
+
+      const pTitle = p.title.toLowerCase();
+      currentTitleWords.forEach((word) => {
+        if (pTitle.includes(word)) score += 3;
+      });
+
+      // Deterministic seed based on product.id & p.id so each product page receives a unique, varied selection
+      let seed = 0;
+      const seedStr = (product.id || '') + (p.id || '');
+      for (let i = 0; i < seedStr.length; i++) {
+        seed = (seed << 5) - seed + seedStr.charCodeAt(i);
+        seed |= 0;
+      }
+      score += Math.abs(seed) % 10;
+
+      return { product: p, score };
+    });
+
+    scoredProducts.sort((a, b) => b.score - a.score);
+    return scoredProducts.slice(0, 4).map((sp) => sp.product);
+  }, [product, products]);
 
   const [selectedSize, setSelectedSize] = useState('M');
-  const [selectedColor, setSelectedColor] = useState('');
+  const [isAddedToast, setIsAddedToast] = useState(false);
+  const [isNavigatingBuyNow, setIsNavigatingBuyNow] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [activeThumbIdx, setActiveThumbIdx] = useState(0);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
@@ -94,6 +123,7 @@ function ProductDetailsInner() {
   }, []);
 
   useEffect(() => {
+    setIsNavigatingBuyNow(false);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActiveThumbIdx(0);
     setQuantity(1);
@@ -152,33 +182,56 @@ function ProductDetailsInner() {
       const finalPrice = displayDiscount > 0
         ? Math.round(displayPrice * (1 - displayDiscount / 100))
         : displayPrice;
-      const primaryImage = thumbnails[activeThumbIdx]?.url || product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+      
+      const variantImage = activeVariant.product_variant_images?.[0]?.image_url
+        || thumbnails.find((t) => t.color && selectedColor && t.color.toLowerCase() === selectedColor.toLowerCase())?.url
+        || thumbnails[activeThumbIdx]?.url
+        || product.image
+        || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+
       addToCart({
         ...product,
-        image: primaryImage,
+        product_id: product.id,
+        variant_id: activeVariant.id,
+        image: variantImage,
         price: finalPrice,
         selectedSize,
         selectedColor,
+        color: selectedColor,
         quantity,
-      } as any);
+      } as any, !isMobile);
+
+      setIsAddedToast(true);
+      setTimeout(() => setIsAddedToast(false), 2000);
     }
   };
 
   const handleBuyNow = () => {
     if (product && activeVariant) {
+      setIsNavigatingBuyNow(true);
       const finalPrice = displayDiscount > 0
         ? Math.round(displayPrice * (1 - displayDiscount / 100))
         : displayPrice;
-      const primaryImage = thumbnails[activeThumbIdx]?.url || product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
-      addToCart({
+
+      const variantImage = activeVariant.product_variant_images?.[0]?.image_url
+        || thumbnails.find((t) => t.color && selectedColor && t.color.toLowerCase() === selectedColor.toLowerCase())?.url
+        || thumbnails[activeThumbIdx]?.url
+        || product.image
+        || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+
+      startBuyNow({
         ...product,
-        image: primaryImage,
+        product_id: product.id,
+        variant_id: activeVariant.id,
+        image: variantImage,
         price: finalPrice,
         selectedSize,
         selectedColor,
+        color: selectedColor,
         quantity,
       } as any);
-      setTimeout(() => setIsCartOpen(true), 200);
+      setIsCartOpen(false);
+      router.push('/checkout');
     }
   };
 
@@ -754,41 +807,50 @@ function ProductDetailsInner() {
                 </div>
               )}
 
-              {/* Quantity */}
-              <div className="mb-4">
-                <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase mb-1.5">Quantity Selector</span>
-                <div className={`flex items-center border-2 bg-white w-24 ${isOutOfStock ? 'border-black/15 opacity-50' : 'border-black'}`}>
-                  <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => Math.max(1, prev - 1))} className={`p-1.5 px-2 text-black hover:bg-[#FFCB05] transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Minus className="w-3 h-3" /></button>
-                  <span className="attiz-mono text-[11px] font-bold px-2 text-black select-none grow text-center">{isOutOfStock ? 0 : quantity}</span>
-                  <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => prev < (activeVariant?.stock || 0) ? prev + 1 : prev)} className={`p-1.5 px-2 text-black hover:bg-[#FFCB05] transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Plus className="w-3 h-3" /></button>
+              {/* Quantity Selector & CTAs */}
+              <div className="space-y-4 mb-6">
+                <div>
+                  <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase mb-1.5">Quantity Selector</span>
+                  <div className={`flex items-center border-2 bg-white w-28 ${isOutOfStock ? 'border-black/15 opacity-50' : 'border-black'}`}>
+                    <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => Math.max(1, prev - 1))} className={`p-2 text-black hover:bg-[#FFCB05] transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Minus className="w-3.5 h-3.5" /></button>
+                    <span className="attiz-mono text-xs font-bold px-2 text-black select-none grow text-center">{isOutOfStock ? 0 : quantity}</span>
+                    <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => prev < (activeVariant?.stock || 0) ? prev + 1 : prev)} className={`p-2 text-black hover:bg-[#FFCB05] transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Plus className="w-3.5 h-3.5" /></button>
+                  </div>
+                  {!isOutOfStock && quantity >= (activeVariant?.stock || 0) && (
+                    <span className="attiz-mono text-[9px] text-[#E63B2E] font-bold tracking-wider mt-1 block">Maximum available stock reached.</span>
+                  )}
                 </div>
-                {!isOutOfStock && quantity >= (activeVariant?.stock || 0) && (
-                  <span className="attiz-mono text-[9px] text-[#E63B2E] font-bold tracking-wider mt-1 block">Maximum available stock reached.</span>
-                )}
-              </div>
 
-              {/* Action buttons — sticky on desktop so they stay in view; fixed bar on mobile */}
-              <div className="fixed bottom-0 left-0 right-0 bg-[#FAF8F5]/95 backdrop-blur-md border-t-[3px] border-black p-4 z-40 flex gap-3 lg:sticky lg:bottom-6 lg:left-auto lg:right-auto lg:bg-transparent lg:border-t-0 lg:backdrop-blur-none lg:p-0 lg:flex-col lg:gap-0 lg:space-y-2.5">
-                <button
-                  disabled={isOutOfStock}
-                  onClick={handleAddToCart}
-                  className={`flex-1 lg:w-full py-2.5 lg:py-3 border-[3px] attiz-display text-[11px] lg:text-xs tracking-[0.15em] uppercase transition-all ${isOutOfStock
-                    ? 'border-black/15 text-black/30 bg-black/[0.02] cursor-not-allowed'
-                    : 'border-black text-black bg-white shadow-[2px_2px_0_0_#111111] lg:shadow-[3px_3px_0_0_#111111] hover:bg-black hover:text-[#FFCB05] hover:shadow-[1.5px_1.5px_0_0_#111111] hover:translate-x-[1.5px] hover:translate-y-[1.5px] cursor-pointer'
-                    }`}
-                >
-                  {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
-                </button>
-                <button
-                  disabled={isOutOfStock}
-                  onClick={handleBuyNow}
-                  className={`flex-1 lg:w-full py-2.5 lg:py-3 border-[3px] border-black attiz-display text-[11px] lg:text-xs tracking-[0.15em] uppercase transition-all ${isOutOfStock
-                    ? 'bg-black/[0.04] text-black/30 cursor-not-allowed'
-                    : 'bg-[#E63B2E] text-white shadow-[2px_2px_0_0_#111111] lg:shadow-[3px_3px_0_0_#111111] hover:bg-black hover:shadow-[1.5px_1.5px_0_0_#111111] hover:translate-x-[1.5px] hover:translate-y-[1.5px] cursor-pointer'
-                    }`}
-                >
-                  {isOutOfStock ? 'Out of Stock' : 'Buy It Now'}
-                </button>
+                {/* Action buttons (Add to Cart & Buy Now) — rendered inline on Mobile & Desktop */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5 pt-2">
+                  <button
+                    disabled={isOutOfStock}
+                    onClick={handleAddToCart}
+                    className={`w-full py-3 border-[3px] attiz-display text-xs tracking-[0.15em] uppercase transition-all ${isOutOfStock
+                      ? 'border-black/15 text-black/30 bg-black/[0.02] cursor-not-allowed'
+                      : 'border-black text-black bg-white shadow-[3px_3px_0_0_#111111] hover:bg-black hover:text-[#FFCB05] hover:shadow-[1.5px_1.5px_0_0_#111111] hover:translate-x-[1.5px] hover:translate-y-[1.5px] cursor-pointer'
+                      }`}
+                  >
+                    {isAddedToast ? 'Added to Cart ✓' : (isOutOfStock ? 'Out of Stock' : 'Add to Cart')}
+                  </button>
+                  <button
+                    disabled={isOutOfStock || isNavigatingBuyNow}
+                    onClick={handleBuyNow}
+                    className={`w-full py-3 border-[3px] border-black attiz-display text-xs tracking-[0.15em] uppercase transition-all flex items-center justify-center space-x-2 ${isOutOfStock || isNavigatingBuyNow
+                      ? 'bg-black/[0.04] text-black/30 cursor-not-allowed'
+                      : 'bg-[#E63B2E] text-white shadow-[3px_3px_0_0_#111111] hover:bg-black hover:shadow-[1.5px_1.5px_0_0_#111111] hover:translate-x-[1.5px] hover:translate-y-[1.5px] cursor-pointer'
+                      }`}
+                  >
+                    {isNavigatingBuyNow ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                        <span>Redirecting to Checkout...</span>
+                      </>
+                    ) : (
+                      <span>{isOutOfStock ? 'Out of Stock' : 'Buy It Now'}</span>
+                    )}
+                  </button>
+                </div>
               </div>
 
             </div>
@@ -863,7 +925,7 @@ function ProductDetailsInner() {
                   <span>Verified Buyer</span>
                 </span>
               </div>
-              <span className="attiz-mono text-[10px] text-black/85 font-bold">05/20/2026</span>
+            <span className="attiz-mono text-[10px] text-black/85 font-bold">05/20/2026</span>
             </div>
             <h4 className="attiz-display text-sm text-black mb-1.5 tracking-wide">Super</h4>
             <p className="attiz-body text-[13px] text-black/90 tracking-wide leading-relaxed">Super product. Worth for money. The fit is absolute elegance, and the fabric is incredibly soft.</p>
@@ -872,9 +934,9 @@ function ProductDetailsInner() {
 
         {/* Related products */}
         {relatedProducts.length > 0 && (
-          <section className="py-16 border-t border-black/10">
-            <h3 className="attiz-display text-2xl text-black/90 text-center uppercase mb-12 tracking-widest font-semibold">You May Also Like</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-16">
+          <section className="py-8 sm:py-16 border-t border-black/10">
+            <h3 className="attiz-display text-xl sm:text-2xl text-black/90 text-center uppercase mb-6 sm:mb-12 tracking-widest font-semibold">You May Also Like</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-x-3 sm:gap-x-6 gap-y-8 sm:gap-y-16">
               {relatedProducts.map((prod) => {
                 const isLiked = checkIsWishlisted(prod.id);
                 const images = getProductImages(prod);
@@ -891,7 +953,7 @@ function ProductDetailsInner() {
                     price: finalPrice,
                     quantity: 1,
                     selectedSize: prod.sizes ? prod.sizes.split(',')[0].trim() : 'M',
-                  } as any);
+                  } as any, !isMobile);
                 };
 
                 return (
@@ -907,7 +969,7 @@ function ProductDetailsInner() {
                           alt={prod.title}
                           fill
                           className={`object-cover object-center transition-all duration-700 ease-out scale-100 group-hover:scale-105 ${nextImage ? 'group-hover:opacity-0' : ''}`}
-                          sizes="(max-width: 640px) 100vw, 25vw"
+                          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
                         />
 
                         {/* Product Alternative Hover Image */}
@@ -917,24 +979,25 @@ function ProductDetailsInner() {
                             alt={`${prod.title} Alternate`}
                             fill
                             className="object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-102 group-hover:scale-105"
-                            sizes="(max-width: 640px) 100vw, 25vw"
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
                           />
                         )}
 
                         {/* Floating Discount Badge */}
                         {prod.discount && prod.discount > 0 && (
-                          <div className="absolute top-4 left-4 z-20 bg-black text-white px-2.5 py-1 attiz-mono text-[9px] font-bold tracking-widest uppercase">
-                            Save {prod.discount}%
+                          <div className="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 bg-black text-white px-1.5 py-0.5 sm:px-2.5 sm:py-1 attiz-mono text-[8px] sm:text-[9px] font-bold tracking-wider sm:tracking-widest uppercase">
+                            <span className="inline sm:hidden">-{prod.discount}%</span>
+                            <span className="hidden sm:inline">Save {prod.discount}%</span>
                           </div>
                         )}
 
                         {/* Wishlist Button Core */}
                         <button
                           onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleWishlist(prod); }}
-                          className="absolute top-4 right-4 z-20 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white active:scale-90 transition-transform duration-100 cursor-pointer"
+                          className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 w-7 h-7 sm:w-9 sm:h-9 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white active:scale-90 transition-transform duration-100 cursor-pointer"
                           aria-label="Wishlist item"
                         >
-                          <Heart className={`w-[16px] h-[16px] transition-colors duration-100 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
+                          <Heart className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-100 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
                         </button>
 
                         {/* Quick Add Overlay System (Desktop) */}
@@ -950,32 +1013,26 @@ function ProductDetailsInner() {
                       </div>
 
                       {/* Metadata Content */}
-                      <div className="pt-5 flex flex-col justify-between grow">
+                      <div className="pt-2.5 sm:pt-5 flex flex-col justify-between grow">
                         <div>
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className="attiz-mono text-[9px] text-black/40 uppercase tracking-widest font-semibold">
-                              {prod.sizes ? `Sizes: ${prod.sizes}` : 'Standard Fit'}
-                            </span>
-                            <span className="w-1 h-1 bg-black/20 rounded-full group-hover:bg-[#E63B2E] transition-colors" />
-                          </div>
-                          <h4 className="attiz-body text-[14px] font-medium text-black/90 group-hover:text-black transition-colors line-clamp-2 leading-snug">
+                          <h4 className="attiz-body text-[13px] sm:text-[14px] font-medium text-black/90 group-hover:text-black transition-colors line-clamp-2 leading-snug">
                             {prod.title}
                           </h4>
                         </div>
 
-                        <div className="flex items-baseline justify-between mt-3 pt-2 border-t border-black/5">
-                          <div className="flex items-baseline gap-2">
+                        <div className="flex items-baseline justify-between mt-2 sm:mt-3 pt-1.5 sm:pt-2 border-t border-black/5">
+                          <div className="flex items-baseline gap-1.5 sm:gap-2">
                             {prod.discount && prod.discount > 0 ? (
                               <>
-                                <span className="attiz-mono text-[15px] font-bold text-[#E63B2E]">
+                                <span className="attiz-mono text-xs sm:text-[15px] font-bold text-[#E63B2E]">
                                   ₹{finalPrice.toLocaleString('en-IN')}
                                 </span>
-                                <span className="attiz-body text-xs text-black/35 line-through font-light">
+                                <span className="attiz-body text-[10px] sm:text-xs text-black/85 line-through font-light">
                                   ₹{parseFloat(String(prod.price || 0)).toLocaleString('en-IN')}
                                 </span>
                               </>
                             ) : (
-                              <span className="attiz-mono text-[15px] font-bold text-black">
+                              <span className="attiz-mono text-xs sm:text-[15px] font-bold text-black">
                                 ₹{parseFloat(String(prod.price || 0)).toLocaleString('en-IN')}
                               </span>
                             )}
@@ -990,10 +1047,10 @@ function ProductDetailsInner() {
                           {/* Mobile Action Button Trigger */}
                           <button
                             onClick={handleQuickAdd}
-                            className="lg:hidden w-8 h-8 flex items-center justify-center bg-black text-white rounded-none cursor-pointer"
+                            className="lg:hidden w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-black text-white rounded-none cursor-pointer shrink-0"
                             aria-label="Add to cart context"
                           >
-                            <ShoppingBag className="w-3.5 h-3.5" />
+                            <ShoppingBag className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                           </button>
                         </div>
 
@@ -1006,29 +1063,61 @@ function ProductDetailsInner() {
           </section>
         )}
 
-        {/* Size chart lightbox */}
+        {/* Size chart modal */}
         {isSizeChartOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-            <div className="relative bg-white rounded-2xl border border-black/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.25)] max-w-xl w-full p-6 sm:p-8 animate-scale-in">
-              <button 
-                onClick={() => setIsSizeChartOpen(false)} 
-                className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-black/5 hover:bg-black/10 text-black/60 hover:text-black flex items-center justify-center transition-all duration-200 cursor-pointer font-semibold text-sm"
-                title="Close"
-              >
-                ✕
-              </button>
-              <div className="mb-5">
-                <span className="block attiz-mono text-[9px] font-bold text-black/45 tracking-widest uppercase mb-0.5">Sizing Reference</span>
-                <h3 className="attiz-display text-xl text-black/90 uppercase tracking-wider">Size Chart & Measurements</h3>
+          <div className="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn">
+            {/* Modal Box */}
+            <div className="relative bg-[#FAF8F5] border-[3px] border-black shadow-[8px_8px_0_0_#111111] max-w-2xl w-full max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden animate-scale-in">
+              
+              {/* Header */}
+              <div className="p-3.5 sm:p-4 bg-[#111111] text-white flex items-center justify-between border-b-[3px] border-black shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 bg-[#FFCB05] border-2 border-black flex items-center justify-center shadow-[1px_1px_0_0_#111111] shrink-0">
+                    <Ruler className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <span className="attiz-mono text-[8px] sm:text-[9px] font-bold text-[#FFCB05] tracking-[0.2em] uppercase block leading-none mb-0.5">
+                      Attiz Specifications
+                    </span>
+                    <h3 className="attiz-display text-base sm:text-lg text-white uppercase tracking-wider leading-none">
+                      Size Chart
+                    </h3>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setIsSizeChartOpen(false)} 
+                  className="w-7 h-7 sm:w-8 sm:h-8 bg-white text-black hover:bg-[#E63B2E] hover:text-white border-2 border-black shadow-[2px_2px_0_0_#111111] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center justify-center transition-all duration-150 cursor-pointer shrink-0"
+                  aria-label="Close size guide"
+                >
+                  <X className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5]" />
+                </button>
               </div>
-              <div className="relative aspect-4/3 bg-[#FAF8F5] overflow-hidden rounded-xl border border-black/5">
-                <Image
-                  src={product.size_chart || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800'}
-                  alt="Size Chart"
-                  fill
-                  className="object-contain"
-                />
+
+              {/* Image Container - Scrollable/contained inside modal body */}
+              <div className="flex-1 overflow-auto p-3 sm:p-5 flex items-center justify-center bg-white">
+                <div className="relative w-full h-full min-h-[250px] max-h-[58vh] flex items-center justify-center">
+                  <img
+                    src={product?.size_chart || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800'}
+                    alt="Size Chart"
+                    className="max-w-full max-h-[55vh] object-contain border-2 border-black shadow-[4px_4px_0_0_#111111]"
+                  />
+                </div>
               </div>
+
+              {/* Footer */}
+              <div className="p-3 sm:p-3.5 bg-[#FAF8F5] border-t-2 border-black flex items-center justify-between shrink-0">
+                <span className="attiz-mono text-[9px] sm:text-[10px] font-bold text-black/60 uppercase tracking-wider truncate mr-2">
+                  Official Attiz Fit Guide
+                </span>
+                <button
+                  onClick={() => setIsSizeChartOpen(false)}
+                  className="px-4 py-1.5 bg-black text-[#FFCB05] attiz-mono text-[10px] sm:text-xs font-black tracking-widest uppercase border-2 border-black shadow-[2px_2px_0_0_#E63B2E] hover:bg-[#E63B2E] hover:text-white hover:border-black transition-all cursor-pointer shrink-0"
+                >
+                  Close
+                </button>
+              </div>
+
             </div>
           </div>
         )}

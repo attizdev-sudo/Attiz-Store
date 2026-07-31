@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Search, User, ShoppingBag, ChevronDown, Menu, X, ClipboardList, Database, LogOut, Heart } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { Search, User, ShoppingBag, ChevronDown, ChevronRight, Menu, X, ClipboardList, Database, LogOut, Heart, Home, LayoutGrid, Package } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
@@ -14,6 +14,10 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
   const [isMobileCollectionsOpen, setIsMobileCollectionsOpen] = useState(false);
+  const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [activeBottomNavTab, setActiveBottomNavTab] = useState<'home' | 'collections' | 'search' | 'cart' | 'account' | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [expandedParentIds, setExpandedParentIds] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState('HOME');
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
@@ -41,11 +45,53 @@ export default function Navbar() {
     setHoverTimeoutId(timeout);
   };
 
-  const { cartItems, setIsCartOpen } = useCart();
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setActiveBottomNavTab('search');
+    setIsSearchOpen(false);
+    setIsMobileMenuOpen(false);
+    setIsMobileProfileOpen(false);
+    setIsCollectionsOpen(false);
+    setIsCartOpen(false);
+    router.push(`/?q=${encodeURIComponent(searchQuery.trim())}#catalog-grid`);
+    setTimeout(() => {
+      const catalogEl = document.getElementById('catalog-grid');
+      if (catalogEl) {
+        catalogEl.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
+  const { cartItems, isCartOpen, setIsCartOpen } = useCart();
   const { user, logout } = useAuth();
-  const { categories } = useStore();
+  const { categories, products } = useStore();
   const { wishlistItems } = useWishlist();
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Prevent background body scroll when any overlay or mobile drawer is open
+  useEffect(() => {
+    if (isCollectionsOpen || isCartOpen || isSearchOpen || isMobileProfileOpen || isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isCollectionsOpen, isCartOpen, isSearchOpen, isMobileProfileOpen, isMobileMenuOpen]);
+
+  const liveSearchResults = searchQuery.trim().length > 0
+    ? products.filter((p) => {
+        const q = searchQuery.toLowerCase();
+        const titleMatch = p.title.toLowerCase().includes(q);
+        const descMatch = p.description?.toLowerCase().includes(q);
+        const catMatch = p.category?.name?.toLowerCase().includes(q);
+        const colorMatch = p.product_variants?.some((v: any) => v.color?.toLowerCase().includes(q));
+        return titleMatch || descMatch || catMatch || colorMatch;
+      }).slice(0, 5)
+    : [];
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -74,75 +120,22 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-[#FAF8F5]/95 backdrop-blur-md border-b border-black/10 transition-all duration-300">
+      <header className="sticky top-0 z-[9999] bg-[#FAF8F5]/95 backdrop-blur-md border-b border-black/10 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-between items-center h-14 lg:h-20">
 
-            {/* ── MOBILE HEADER BAR (Hamburger & Logo Left, Search, Cart & Profile Right) ── */}
-            <div className="lg:hidden flex items-center justify-between w-full">
-              {/* Left Utilities (Hamburger & Brand Logo) */}
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => {
-                    setIsMobileMenuOpen(!isMobileMenuOpen);
-                    setIsMobileProfileOpen(false);
-                  }}
-                  className="text-black/95 hover:text-black p-1.5 -ml-1 cursor-pointer"
-                  aria-label="Toggle navigation menu"
-                >
-                  {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-                </button>
-
-                <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
-                  <Image
-                    src="/ATTIZ.png"
-                    alt="ATTIZ Logo"
-                    width={100}
-                    height={40}
-                    style={{ width: 'auto', height: '2.2rem' }}
-                    className="object-contain"
-                    priority
-                  />
-                </div>
-              </div>
-
-              {/* Right Utilities (Search, Cart, Profile Icon at Far Right) */}
-              <div className="flex items-center space-x-2">
-                <button className="text-black/95 hover:text-black p-1.5 cursor-pointer" title="Search">
-                  <Search className="w-5 h-5" />
-                </button>
-
-                <button
-                  onClick={() => setIsCartOpen(true)}
-                  className="relative text-black/95 hover:text-black p-1.5 cursor-pointer"
-                  title="Shopping Bag"
-                >
-                  <ShoppingBag className="w-5 h-5" />
-                  {cartCount > 0 && (
-                    <span className="absolute top-0 right-0 w-4 h-4 bg-[#E63B2E] border border-black rounded-full text-[8px] font-bold text-white flex items-center justify-center">
-                      {cartCount}
-                    </span>
-                  )}
-                </button>
-
-                {/* Profile Icon Button (Far Right) */}
-                <button
-                  onClick={() => {
-                    setIsMobileProfileOpen(!isMobileProfileOpen);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="p-1.5 text-black/95 hover:text-black transition-colors cursor-pointer relative"
-                  aria-label="Account & Preferences"
-                  title="Account & Preferences"
-                >
-                  {user ? (
-                    <div className="w-7.5 h-7.5 bg-[#FFCB05] border-2 border-black flex items-center justify-center shadow-[1px_1px_0_0_#111111]">
-                      <User className="w-4 h-4 text-black stroke-[2.5]" />
-                    </div>
-                  ) : (
-                    <User className="w-5 h-5" />
-                  )}
-                </button>
+            {/* ── MOBILE HEADER BAR (Centered Brand Logo Only) ── */}
+            <div className="lg:hidden flex items-center justify-center w-full">
+              <div className="flex items-center cursor-pointer" onClick={() => router.push('/')}>
+                <Image
+                  src="/ATTIZ.png"
+                  alt="ATTIZ Logo"
+                  width={110}
+                  height={40}
+                  style={{ width: 'auto', height: '2.2rem' }}
+                  className="object-contain"
+                  priority
+                />
               </div>
             </div>
 
@@ -234,7 +227,7 @@ export default function Navbar() {
                   <ChevronDown className="w-3 h-3" />
                 </div>
 
-                <button className="text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer">
+                <button onClick={() => setIsSearchOpen(true)} className="text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer" title="Search Catalog">
                   <Search className="w-4.5 h-4.5" />
                 </button>
 
@@ -324,288 +317,505 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* ── LEFT NAVIGATION SIDEBAR (Portal Full-Screen Viewport Slide-over) ── */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-[9999] flex justify-start">
-          {/* Backdrop Page Blur Overlay */}
-          <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity duration-300 animate-fadeIn cursor-pointer"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-
-          {/* Full Screen Height Sidebar Drawer Panel */}
-          <div className="relative z-[10000] w-[82vw] max-w-[340px] h-[100dvh] h-screen bg-[#FAF8F5] border-r-2 border-black flex flex-col justify-between shadow-[10px_0_30px_rgba(0,0,0,0.4)] animate-slideRight overflow-hidden">
-
-            <div className="flex flex-col h-full">
-              {/* Sidebar Header */}
-              <div className="p-4 bg-[#111111] text-white flex items-center justify-between border-b-2 border-black shrink-0">
-                <div className="flex items-center space-x-2">
-                  <Image
-                    src="/ATTIZ.png"
-                    alt="ATTIZ Logo"
-                    width={85}
-                    height={34}
-                    style={{ width: 'auto', height: '1.8rem' }}
-                  />
+      {/* ── MOBILE ACCOUNT & PREFERENCES PAGE VIEW OVERLAY (Dedicated Mobile Screen) ── */}
+      {isMobileProfileOpen && (
+        <div className="lg:hidden fixed top-[56px] left-0 right-0 bottom-[56px] z-[9980] bg-[#FAF8F5] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200">
+          {/* Main Scrollable Account & Preferences Content */}
+          <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {user ? (
+              <div className="space-y-4 max-w-md mx-auto">
+                {/* User Branded Profile Card */}
+                <div className="p-4 bg-[#111111] border-2 border-black shadow-[4px_4px_0_0_#FFCB05] flex items-center space-x-3.5">
+                  <div className="w-12 h-12 bg-[#FFCB05] border-2 border-black flex items-center justify-center shrink-0">
+                    <span className="attiz-display text-xl font-bold text-black">
+                      {user.first_name?.[0]?.toUpperCase() ?? 'U'}
+                    </span>
+                  </div>
+                  <div className="min-w-0 grow">
+                    <p className="attiz-display text-base tracking-wider text-white truncate">
+                      {user.first_name} {user.last_name}
+                    </p>
+                    {user.email && (
+                      <p className="attiz-mono text-xs text-white/70 truncate mt-0.5">
+                        {user.email}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <button
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-[#E63B2E] text-white transition-colors border border-white/20 cursor-pointer"
-                  aria-label="Close navigation menu"
-                >
-                  <X className="w-4.5 h-4.5" />
-                </button>
-              </div>
 
-              {/* Sidebar Content Body */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <span className="attiz-mono text-[9px] font-bold text-black/40 uppercase tracking-[0.2em] block px-1">
-                  Site Menu
-                </span>
+                {/* Account Navigation Grid */}
                 <div className="divide-y divide-black/10 border-2 border-black bg-white shadow-[4px_4px_0_0_#111111]">
-                  {navItems.map((item) => (
-                    <div key={item.name}>
-                      {item.hasDropdown ? (
-                        <div>
-                          <button
-                            onClick={() => setIsMobileCollectionsOpen(!isMobileCollectionsOpen)}
-                            className={`w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-widest uppercase transition-colors cursor-pointer text-left ${isMobileCollectionsOpen ? 'text-[#E63B2E] bg-black/5' : 'text-black/90 hover:bg-black/5'
-                              }`}
-                          >
-                            <span className="flex items-center gap-2">
-                              <span>{item.name}</span>
-                              <span className="text-[9px] bg-[#FFCB05] text-black px-1.5 py-0.5 border border-black font-bold">
-                                Catalog
-                              </span>
-                            </span>
-                            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isMobileCollectionsOpen ? 'rotate-180 text-[#E63B2E]' : 'text-black/50'}`} />
-                          </button>
-
-                          {/* Collections Accordion */}
-                          {isMobileCollectionsOpen && (
-                            <div className="bg-[#FAF8F5] px-4 py-3 border-t border-black/10 space-y-3 max-h-[45vh] overflow-y-auto scrollbar-thin scrollbar-thumb-black/20">
-                              {parentCategories.map((parent) => {
-                                const isExpanded = expandedParentIds.includes(parent.id);
-                                const subCats = categories.filter((c) => c.parent_id === parent.id);
-                                const hasSubCats = subCats.length > 0;
-
-                                return (
-                                  <div key={parent.id} className="border-b border-black/5 pb-2.5 last:border-b-0 space-y-2">
-                                    <div className="flex items-center justify-between gap-2">
-                                      <button
-                                        onClick={() => {
-                                          if (hasSubCats) {
-                                            toggleParentCategory(parent.id);
-                                          } else {
-                                            router.push(`/?category=${parent.id}`);
-                                            setIsMobileMenuOpen(false);
-                                          }
-                                        }}
-                                        className="flex items-center gap-2 attiz-mono text-[11px] font-bold tracking-wider text-black hover:text-[#E63B2E] uppercase text-left py-1 cursor-pointer grow"
-                                      >
-                                        <span>{parent.name}</span>
-                                        {hasSubCats && (
-                                          <ChevronDown
-                                            className={`w-3.5 h-3.5 text-black/50 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-[#E63B2E]' : ''
-                                              }`}
-                                          />
-                                        )}
-                                      </button>
-
-                                      <button
-                                        onClick={() => {
-                                          router.push(`/?category=${parent.id}`);
-                                          setIsMobileMenuOpen(false);
-                                        }}
-                                        className="attiz-mono text-[9px] font-bold text-[#E63B2E] uppercase tracking-wider px-2 py-0.5 border border-[#E63B2E]/30 hover:bg-[#E63B2E] hover:text-white transition-colors cursor-pointer shrink-0"
-                                      >
-                                        View All
-                                      </button>
-                                    </div>
-
-                                    {hasSubCats && isExpanded && (
-                                      <div className="pl-3 border-l-2 border-[#E63B2E]/40 space-y-1 max-h-40 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-black/20">
-                                        {subCats.map((secondary) => (
-                                          <button
-                                            key={secondary.id}
-                                            onClick={() => {
-                                              router.push(`/?category=${secondary.id}`);
-                                              setIsMobileMenuOpen(false);
-                                            }}
-                                            className="w-full text-left py-1 attiz-mono text-[11px] font-medium tracking-wider text-black/75 hover:text-black uppercase cursor-pointer block transition-colors"
-                                          >
-                                            {secondary.name}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <a
-                          href={item.href}
-                          onClick={(e) => handleNavClick(e, item)}
-                          className={`block px-4 py-3.5 attiz-mono text-xs font-bold tracking-widest uppercase transition-colors hover:bg-black/5 ${activeTab === item.name ? 'text-[#E63B2E] bg-black/5' : 'text-black/90'
-                            }`}
-                        >
-                          {item.name}
-                        </a>
-                      )}
+                  <button
+                    onClick={() => { router.push('/orders'); setIsMobileProfileOpen(false); }}
+                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <ClipboardList className="w-4.5 h-4.5 shrink-0 text-black/60" />
+                      <span>My Orders</span>
                     </div>
-                  ))}
+                    <ChevronRight className="w-4 h-4 text-black/40" />
+                  </button>
+
+                  <button
+                    onClick={() => { router.push('/wishlist'); setIsMobileProfileOpen(false); }}
+                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <Heart className="w-4.5 h-4.5 shrink-0 text-[#E63B2E]" />
+                      <span>My Wishlist</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {wishlistItems.length > 0 && (
+                        <span className="bg-[#E63B2E] text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
+                          {wishlistItems.length}
+                        </span>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-black/40" />
+                    </div>
+                  </button>
+
+                  {user.role === 'admin' && (
+                    <button
+                      onClick={() => { router.push('/admin'); setIsMobileProfileOpen(false); }}
+                      className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/95 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <Database className="w-4.5 h-4.5 shrink-0 text-black/60" />
+                        <span>Admin Panel</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-black/40" />
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => { setIsMobileProfileOpen(false); logout().then(() => router.push('/')); }}
+                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-[#E63B2E] hover:bg-red-50 transition-colors cursor-pointer uppercase text-left"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <LogOut className="w-4.5 h-4.5 shrink-0" />
+                      <span>Sign Out</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#E63B2E]/50" />
+                  </button>
                 </div>
               </div>
-
-              {/* Sidebar Footer */}
-              <div className="p-4 border-t-2 border-black bg-white flex items-center justify-between shrink-0">
-                <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  INR (₹) | India
-                </span>
-                <span className="attiz-mono text-[9px] font-bold text-black/35 uppercase tracking-widest">
-                  ATTIZ® Store
-                </span>
+            ) : (
+              <div className="space-y-4 max-w-md mx-auto pt-4">
+                <p className="attiz-mono text-xs text-black/70 font-semibold tracking-wider text-center">
+                  Sign in to manage your orders, wishlist, and profile preferences.
+                </p>
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    onClick={() => { router.push('/login'); setIsMobileProfileOpen(false); }}
+                    className="w-full py-3.5 border-2 border-black bg-white text-black attiz-mono text-xs font-bold tracking-widest uppercase shadow-[4px_4px_0_0_#111111] hover:bg-black hover:text-white transition-all cursor-pointer"
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => { router.push('/signup'); setIsMobileProfileOpen(false); }}
+                    className="w-full py-3.5 border-2 border-black bg-black text-[#FFCB05] attiz-mono text-xs font-bold tracking-widest uppercase shadow-[4px_4px_0_0_#E63B2E] hover:bg-white hover:text-black transition-all cursor-pointer"
+                  >
+                    Sign Up
+                  </button>
+                </div>
               </div>
-
-            </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* ── RIGHT ACCOUNT & PREFERENCES SIDEBAR (Portal Full-Screen Viewport Slide-over) ── */}
-      {isMobileProfileOpen && (
-        <div className="lg:hidden fixed inset-0 z-[9999] flex justify-end">
-          {/* Page Blur & Dark Overlay */}
-          <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-md transition-opacity duration-300 animate-fadeIn cursor-pointer"
-            onClick={() => setIsMobileProfileOpen(false)}
-          />
+      {/* ── MOBILE BOTTOM NAVIGATION BAR (Home, Collections, Orders, Cart, Account) ── */}
+      <nav className="fixed bottom-0 left-0 right-0 z-[9990] md:hidden bg-[#FAF8F5] border-t-2 border-black shadow-[0_-4px_16px_rgba(0,0,0,0.12)] px-2 py-1.5 flex items-center justify-around">
+        {/* 1. Home */}
+        <button
+          onClick={() => {
+            setActiveBottomNavTab('home');
+            setSearchQuery('');
+            setIsCartOpen(false);
+            setIsCollectionsOpen(false);
+            setIsSearchOpen(false);
+            setIsMobileProfileOpen(false);
+            if (pathname === '/' && typeof window !== 'undefined' && !window.location.search) {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+              router.push('/');
+              if (typeof window !== 'undefined') {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+            }
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
+            activeBottomNavTab === 'home' || (!activeBottomNavTab && pathname === '/' && !isCollectionsOpen && !isSearchOpen && !isMobileProfileOpen && !isCartOpen)
+              ? 'text-[#E63B2E] font-black scale-105'
+              : 'text-black/75 hover:text-black font-bold'
+          }`}
+        >
+          <Home className="w-5 h-5 stroke-[2]" />
+          <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Home</span>
+        </button>
 
-          {/* Full Screen Height Sidebar Drawer Panel */}
-          <div className="relative z-[10000] w-[82vw] max-w-[340px] h-[100dvh] h-screen bg-[#FAF8F5] border-l-2 border-black flex flex-col justify-between shadow-[-10px_0_30px_rgba(0,0,0,0.4)] animate-slideLeft overflow-hidden">
+        {/* 2. Collections (Opens Parent Category Cards Page) */}
+        <button
+          onClick={() => {
+            setActiveBottomNavTab('collections');
+            setIsCartOpen(false);
+            setIsSearchOpen(false);
+            setIsMobileProfileOpen(false);
+            setIsCollectionsOpen(!isCollectionsOpen);
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
+            isCollectionsOpen || (activeBottomNavTab === 'collections' && !isCartOpen && !isSearchOpen && !isMobileProfileOpen)
+              ? 'text-[#E63B2E] font-black scale-105'
+              : 'text-black/75 hover:text-black font-bold'
+          }`}
+        >
+          <LayoutGrid className="w-5 h-5 stroke-[2]" />
+          <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Collections</span>
+        </button>
 
-            <div className="flex flex-col h-full">
-              {/* Sidebar Header */}
-              <div className="p-4 bg-[#111111] text-white flex items-center justify-between border-b-2 border-black shrink-0">
-                <div className="flex items-center space-x-2">
-                  <span className="w-2 h-2 rounded-full bg-[#FFCB05]" />
-                  <span className="attiz-mono text-xs font-bold tracking-wider uppercase text-white">
-                    Account & Preferences
-                  </span>
-                </div>
+        {/* 3. Search */}
+        <button
+          onClick={() => {
+            if (activeBottomNavTab === 'search' && !isSearchOpen) {
+              setIsSearchOpen(true);
+            } else {
+              setActiveBottomNavTab('search');
+              setIsCartOpen(false);
+              setIsCollectionsOpen(false);
+              setIsMobileProfileOpen(false);
+              setIsSearchOpen(!isSearchOpen);
+            }
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
+            isSearchOpen || (activeBottomNavTab === 'search' && !isCartOpen && !isCollectionsOpen && !isMobileProfileOpen)
+              ? 'text-[#E63B2E] font-black scale-105'
+              : 'text-black/75 hover:text-black font-bold'
+          }`}
+        >
+          <Search className="w-5 h-5 stroke-[2]" />
+          <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Search</span>
+        </button>
+
+        {/* 4. Cart */}
+        <button
+          onClick={() => {
+            setActiveBottomNavTab('cart');
+            setIsCollectionsOpen(false);
+            setIsMobileProfileOpen(false);
+            setIsSearchOpen(false);
+            setIsCartOpen(!isCartOpen);
+          }}
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all relative cursor-pointer ${
+            isCartOpen || activeBottomNavTab === 'cart' || (pathname === '/cart' && !isSearchOpen && !isCollectionsOpen && !isMobileProfileOpen)
+              ? 'text-[#E63B2E] font-black scale-105'
+              : 'text-black/75 hover:text-black font-bold'
+          }`}
+        >
+          <div className="relative">
+            <ShoppingBag className="w-5 h-5 stroke-[2]" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1.5 -right-2.5 w-4 h-4 bg-[#E63B2E] text-white border border-black rounded-full text-[9px] font-black attiz-mono flex items-center justify-center shadow-[1px_1px_0_0_#000]">
+                {cartCount}
+              </span>
+            )}
+          </div>
+          <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Cart</span>
+        </button>
+
+        {/* 5. Account */}
+        {user ? (
+          <button
+            onClick={() => {
+              setActiveBottomNavTab('account');
+              setIsCartOpen(false);
+              setIsCollectionsOpen(false);
+              setIsSearchOpen(false);
+              setIsMobileProfileOpen(!isMobileProfileOpen);
+            }}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
+              isMobileProfileOpen || (activeBottomNavTab === 'account' && !isCartOpen && !isSearchOpen && !isCollectionsOpen)
+                ? 'text-[#E63B2E] font-black scale-105'
+                : 'text-black/75 hover:text-black font-bold'
+            }`}
+          >
+            <User className="w-5 h-5 stroke-[2]" />
+            <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Account</span>
+          </button>
+        ) : (
+          <Link
+            href="/login"
+            onClick={() => {
+              setActiveBottomNavTab('account');
+              setIsCartOpen(false);
+              setIsCollectionsOpen(false);
+              setIsSearchOpen(false);
+              setIsMobileProfileOpen(false);
+            }}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
+              pathname === '/login' && !isSearchOpen && !isCollectionsOpen && !isCartOpen
+                ? 'text-[#E63B2E] font-black scale-105'
+                : 'text-black/75 hover:text-black font-bold'
+            }`}
+          >
+            <User className="w-5 h-5 stroke-[2]" />
+            <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Account</span>
+          </Link>
+        )}
+      </nav>
+
+      {/* ── MOBILE SEARCH PAGE VIEW OVERLAY (Dedicated Mobile Screen) ── */}
+      {isSearchOpen && (
+        <div className="fixed top-[56px] left-0 right-0 bottom-[56px] lg:top-20 lg:bottom-0 z-[9980] bg-[#FAF8F5] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200">
+
+          {/* Form & Input Header */}
+          <div className="p-3.5 bg-white border-b-2 border-black shrink-0">
+            <form onSubmit={handleSearchSubmit}>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search t-shirts, polos, hoodies, colors..."
+                  autoFocus
+                  className="w-full bg-[#FAF8F5] border-2 border-black py-3 px-4 pr-24 attiz-mono text-xs font-bold text-black focus:outline-none focus:ring-2 focus:ring-[#FFCB05]"
+                />
                 <button
-                  onClick={() => setIsMobileProfileOpen(false)}
-                  className="w-8 h-8 flex items-center justify-center bg-white/10 hover:bg-[#E63B2E] text-white transition-colors border border-white/20 cursor-pointer"
-                  aria-label="Close profile sidebar"
+                  type="submit"
+                  className="absolute right-1.5 py-1.5 px-3.5 bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors attiz-mono text-xs font-bold uppercase cursor-pointer border border-black"
                 >
-                  <X className="w-4.5 h-4.5" />
+                  Search
                 </button>
               </div>
+            </form>
+          </div>
 
-              {/* Sidebar Main Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {user ? (
-                  <div className="space-y-4">
-                    {/* User Profile Card */}
-                    <div className="p-4 bg-[#111111] border-2 border-black shadow-[4px_4px_0_0_#FFCB05] flex items-center space-x-3.5">
-                      <div className="w-10 h-10 bg-[#FFCB05] border-2 border-black flex items-center justify-center shrink-0">
-                        <span className="attiz-display text-lg font-bold text-black">
-                          {user.first_name?.[0]?.toUpperCase() ?? 'U'}
-                        </span>
-                      </div>
-                      <div className="min-w-0 grow">
-                        <p className="attiz-display text-sm tracking-wider text-white truncate">
-                          {user.first_name} {user.last_name}
-                        </p>
-                        <span className={`attiz-mono text-[9px] font-bold tracking-widest uppercase px-2 py-0.5 inline-block mt-0.5 ${user.role === 'admin' ? 'bg-[#E63B2E] text-white' : 'bg-[#FFCB05] text-black'}`}>
-                          {user.role}
-                        </span>
-                      </div>
-                    </div>
+          {/* Main Scrollable Content Body */}
+          <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {/* Live Search Results */}
+            {searchQuery.trim().length > 0 ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-widest">
+                    Matching Products ({liveSearchResults.length})
+                  </span>
+                  {liveSearchResults.length > 0 && (
+                    <button
+                      onClick={handleSearchSubmit}
+                      className="attiz-mono text-[9px] font-bold text-[#E63B2E] uppercase hover:underline cursor-pointer"
+                    >
+                      View Grid Results →
+                    </button>
+                  )}
+                </div>
 
-                    {/* Action Navigation Items */}
-                    <div className="divide-y divide-black/10 border-2 border-black bg-white shadow-[4px_4px_0_0_#111111]">
-                      <button
-                        onClick={() => { router.push('/orders'); setIsMobileProfileOpen(false); }}
-                        className="w-full flex items-center gap-3.5 px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                {liveSearchResults.length > 0 ? (
+                  <div className="space-y-2">
+                    {liveSearchResults.map((prod) => (
+                      <div
+                        key={prod.id}
+                        onClick={() => {
+                          setIsSearchOpen(false);
+                          router.push(`/product/${prod.id}`);
+                        }}
+                        className="flex items-center justify-between p-2.5 bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] hover:shadow-[5px_5px_0_0_#E63B2E] hover:border-black transition-all cursor-pointer group"
                       >
-                        <ClipboardList className="w-4.5 h-4.5 shrink-0 text-black/60" />
-                        <span>My Orders</span>
-                      </button>
-
-                      <button
-                        onClick={() => { router.push('/wishlist'); setIsMobileProfileOpen(false); }}
-                        className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
-                      >
-                        <div className="flex items-center gap-3.5">
-                          <Heart className="w-4.5 h-4.5 shrink-0 text-[#E63B2E]" />
-                          <span>My Wishlist</span>
+                        <div className="flex items-center space-x-3 min-w-0">
+                          <div className="w-12 h-14 bg-[#FAF8F5] border border-black/20 shrink-0 overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={prod.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                              alt={prod.title}
+                              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="attiz-mono text-xs font-bold text-black uppercase truncate group-hover:text-[#E63B2E] transition-colors">
+                              {prod.title}
+                            </h4>
+                            {prod.category?.name && (
+                              <span className="attiz-mono text-[9px] font-bold text-black/50 uppercase block mt-0.5">
+                                {prod.category.name}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        {wishlistItems.length > 0 && (
-                          <span className="bg-[#E63B2E] text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
-                            {wishlistItems.length}
+                        <div className="flex items-center space-x-2 shrink-0 ml-2">
+                          <span className="attiz-mono text-xs font-bold text-[#E63B2E]">
+                            ₹{prod.price?.toLocaleString('en-IN')}
                           </span>
-                        )}
-                      </button>
-
-                      {user.role === 'admin' && (
-                        <button
-                          onClick={() => { router.push('/admin'); setIsMobileProfileOpen(false); }}
-                          className="w-full flex items-center gap-3.5 px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/95 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
-                        >
-                          <Database className="w-4.5 h-4.5 shrink-0 text-black/60" />
-                          <span>Admin Panel</span>
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => { setIsMobileProfileOpen(false); logout().then(() => router.push('/')); }}
-                        className="w-full flex items-center gap-3.5 px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-[#E63B2E] hover:bg-red-50 transition-colors cursor-pointer uppercase text-left"
-                      >
-                        <LogOut className="w-4.5 h-4.5 shrink-0" />
-                        <span>Sign Out</span>
-                      </button>
-                    </div>
+                          <div className="w-6 h-6 bg-black text-[#FFCB05] group-hover:bg-[#E63B2E] group-hover:text-white flex items-center justify-center border border-black transition-colors">
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
-                  <div className="space-y-4 pt-2">
-                    <p className="attiz-mono text-xs text-black/60 font-semibold tracking-wider">
-                      Sign in to manage your orders, wishlist, and profile preferences.
-                    </p>
-                    <div className="grid grid-cols-1 gap-3">
-                      <button
-                        onClick={() => { router.push('/login'); setIsMobileProfileOpen(false); }}
-                        className="w-full py-3.5 border-2 border-black bg-white text-black attiz-mono text-xs font-bold tracking-widest uppercase shadow-[4px_4px_0_0_#111111] hover:bg-black hover:text-white transition-all cursor-pointer"
-                      >
-                        Sign In
-                      </button>
-                      <button
-                        onClick={() => { router.push('/signup'); setIsMobileProfileOpen(false); }}
-                        className="w-full py-3.5 border-2 border-black bg-black text-[#FFCB05] attiz-mono text-xs font-bold tracking-widest uppercase shadow-[4px_4px_0_0_#E63B2E] hover:bg-white hover:text-black transition-all cursor-pointer"
-                      >
-                        Sign Up
-                      </button>
-                    </div>
+                  <div className="p-6 bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] text-center attiz-mono text-xs text-black/60 uppercase">
+                    No matching products found for &quot;{searchQuery}&quot;
                   </div>
                 )}
               </div>
+            ) : (
+              /* Popular Searches & Quick Category Discovery */
+              <div className="space-y-4">
+                <div className="bg-white border-2 border-black p-3.5 shadow-[3px_3px_0_0_#111111] space-y-2">
+                  <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-widest block">
+                    Popular Searches
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Oversized', 'Polo', 'Black', 'Acid Wash', 'Heavyweight', 'Graphic'].map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => {
+                          setActiveBottomNavTab('search');
+                          setSearchQuery(tag);
+                          setIsSearchOpen(false);
+                          router.push(`/?q=${encodeURIComponent(tag)}#catalog-grid`);
+                          setTimeout(() => {
+                            const catalogEl = document.getElementById('catalog-grid');
+                            if (catalogEl) {
+                              catalogEl.scrollIntoView({ behavior: 'smooth' });
+                            }
+                          }, 100);
+                        }}
+                        className="py-1 px-2.5 bg-[#FAF8F5] border border-black/20 hover:border-black hover:bg-black hover:text-[#FFCB05] text-black attiz-mono text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {/* Sidebar Bottom Footer */}
-              <div className="p-4 border-t-2 border-black bg-white flex items-center justify-between shrink-0">
-                <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  INR (₹) | India
-                </span>
-                <span className="attiz-mono text-[9px] font-bold text-black/35 uppercase tracking-widest">
-                  ATTIZ® Account
-                </span>
+                {/* Quick Category Jump Grid */}
+                <div className="space-y-2">
+                  <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-widest block px-1">
+                    Quick Category Search
+                  </span>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {parentCategories.slice(0, 4).map((cat) => (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setActiveBottomNavTab('search');
+                          setIsSearchOpen(false);
+                          router.push(`/?category=${cat.id}#catalog-grid`);
+                        }}
+                        className="p-3 bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] hover:bg-[#FFCB05] text-left attiz-mono text-xs font-bold text-black uppercase transition-all cursor-pointer flex items-center justify-between"
+                      >
+                        <span className="truncate">{cat.name}</span>
+                        <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
+            )}
+          </div>
+        </div>
+      )}
 
+      {/* ── MOBILE COLLECTIONS PAGE MODAL (Aesthetic 2 Per Row Cards) ── */}
+      {isCollectionsOpen && (
+        <div className="fixed top-[56px] left-0 right-0 bottom-[56px] lg:top-20 z-[9980] bg-[#FAF8F5] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200">
+
+          {/* Scrollable Categories Grid */}
+          <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {/* View All Products Action Banner */}
+            <button
+              onClick={() => {
+                setIsCollectionsOpen(false);
+                if (pathname === '/') {
+                  const catalogEl = document.getElementById('catalog-grid');
+                  if (catalogEl) catalogEl.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                  router.push('/#catalog-grid');
+                }
+              }}
+              className="w-full py-3 px-4 bg-[#FFCB05] border-2 border-black text-black attiz-mono text-xs font-black uppercase tracking-widest shadow-[3px_3px_0_0_#111111] hover:bg-black hover:text-[#FFCB05] transition-all flex items-center justify-between cursor-pointer"
+            >
+              <span>View Full Catalog Grid</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center justify-between px-1">
+              <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-widest">
+                Main Collections ({parentCategories.length})
+              </span>
+              <span className="attiz-mono text-[9px] font-bold text-[#E63B2E] uppercase">
+                Tap to view
+              </span>
             </div>
+
+            {/* Aesthetic 2-Per-Row Category Grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {parentCategories.map((parent) => {
+                const subCats = categories.filter((c) => c.parent_id === parent.id);
+                return (
+                  <div
+                    key={parent.id}
+                    onClick={() => {
+                      setIsCollectionsOpen(false);
+                      router.push(`/?category=${parent.id}#catalog-grid`);
+                    }}
+                    className="bg-white border-2 border-black p-3.5 shadow-[3px_3px_0_0_#111111] hover:shadow-[5px_5px_0_0_#E63B2E] hover:border-black transition-all cursor-pointer flex flex-col justify-between group relative overflow-hidden min-h-[110px]"
+                  >
+                    {/* Top Accent Icon */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="w-6 h-6 bg-[#FAF8F5] border border-black/20 flex items-center justify-center group-hover:bg-[#FFCB05] transition-colors">
+                        <LayoutGrid className="w-3.5 h-3.5 text-black" />
+                      </div>
+                      <span className="attiz-mono text-[9px] font-black text-[#E63B2E] uppercase">
+                        {subCats.length > 0 ? `${subCats.length} Styles` : 'Top Item'}
+                      </span>
+                    </div>
+
+                    {/* Category Title & Info */}
+                    <div>
+                      <h3 className="attiz-mono text-sm font-black uppercase text-black group-hover:text-[#E63B2E] transition-colors leading-tight line-clamp-2">
+                        {parent.name}
+                      </h3>
+                    </div>
+
+                    {/* Bottom Action Footer */}
+                    <div className="pt-2 mt-2 border-t border-black/10 flex items-center justify-between">
+                      <span className="attiz-mono text-[9px] font-bold text-black/60 group-hover:text-black uppercase">
+                        Explore
+                      </span>
+                      <div className="w-5 h-5 bg-black text-[#FFCB05] group-hover:bg-[#E63B2E] group-hover:text-white flex items-center justify-center border border-black transition-colors">
+                        <ChevronRight className="w-3 h-3" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Quick Sub-Categories Section */}
+            {categories.some(c => c.parent_id) && (
+              <div className="pt-2 space-y-2">
+                <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-widest block px-1">
+                  Popular Sub-Categories
+                </span>
+                <div className="flex flex-wrap gap-1.5 bg-white border-2 border-black p-3 shadow-[3px_3px_0_0_#111111]">
+                  {categories
+                    .filter((c) => c.parent_id)
+                    .map((sub) => (
+                      <button
+                        key={sub.id}
+                        onClick={() => {
+                          setIsCollectionsOpen(false);
+                          router.push(`/?category=${sub.id}#catalog-grid`);
+                        }}
+                        className="py-1 px-2.5 bg-[#FAF8F5] border border-black/20 hover:border-black hover:bg-black hover:text-[#FFCB05] text-black attiz-mono text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                      >
+                        {sub.name}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

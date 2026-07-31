@@ -24,7 +24,7 @@ import { useAuth } from '@/context/AuthContext';
 export default function WishlistPage() {
   const { wishlistItems, loading, removeFromWishlist, clearWishlist } = useWishlist();
   const { addToCart, setIsCartOpen } = useCart();
-  const { user } = useAuth();
+  const { user, sessionLoading } = useAuth();
   const router = useRouter();
 
   const [sortBy, setSortBy] = useState<'newest' | 'price-low' | 'price-high' | 'discount'>('newest');
@@ -187,7 +187,7 @@ export default function WishlistPage() {
         )}
 
         {/* Loading State */}
-        {loading ? (
+        {(loading || sessionLoading) && wishlistItems.length === 0 ? (
           <div className="py-24 flex flex-col items-center justify-center text-center">
             <Loader2 className="w-10 h-10 animate-spin text-[#E63B2E] mb-4" />
             <p className="attiz-mono text-xs font-bold tracking-widest text-black/70 uppercase">
