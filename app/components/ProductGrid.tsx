@@ -161,11 +161,20 @@ function ProductGridInner() {
     }
   }
 
+  const qParam = searchParams.get('q');
+
   const filteredProducts = allProducts.filter((product) => {
     if (activeFilterCatIds) {
       const pCats = product.category_ids || (product.category_id ? [product.category_id] : []);
       const matches = pCats.some((id) => activeFilterCatIds.includes(id));
       if (!matches) return false;
+    }
+    if (qParam) {
+      const query = qParam.toLowerCase().trim();
+      const titleMatch = product.title.toLowerCase().includes(query);
+      const catMatch = product.category?.name?.toLowerCase().includes(query);
+      const descMatch = product.description?.toLowerCase().includes(query);
+      if (!titleMatch && !catMatch && !descMatch) return false;
     }
     return true;
   });
