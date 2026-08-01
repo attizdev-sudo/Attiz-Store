@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, User, ShoppingBag, ChevronDown, ChevronRight, Menu, X, ClipboardList, Database, LogOut, Heart, Home, LayoutGrid, Package } from 'lucide-react';
+import { Search, User, ShoppingBag, ChevronDown, ChevronRight, Menu, X, ClipboardList, Database, LogOut, Heart, Home, LayoutGrid, Package, Loader2, Check } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
@@ -23,6 +23,36 @@ export default function Navbar() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isCollectionsHovered, setIsCollectionsHovered] = useState(false);
   const [hoverTimeoutId, setHoverTimeoutId] = useState<any>(null);
+
+  const [isNavigatingOrders, setIsNavigatingOrders] = useState(false);
+  const [isNavigatingWishlist, setIsNavigatingWishlist] = useState(false);
+  const [isNavigatingAdmin, setIsNavigatingAdmin] = useState(false);
+
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsNavigatingOrders(false);
+    setIsNavigatingWishlist(false);
+    setIsNavigatingAdmin(false);
+    setIsMobileProfileOpen(false);
+    setIsProfileDropdownOpen(false);
+  }, [pathname]);
+
+  const handleNavigateOrders = () => {
+    setIsNavigatingOrders(true);
+    router.push('/orders');
+  };
+
+  const handleNavigateWishlist = () => {
+    setIsNavigatingWishlist(true);
+    router.push('/wishlist');
+  };
+
+  const handleNavigateAdmin = () => {
+    setIsNavigatingAdmin(true);
+    router.push('/admin');
+  };
 
   const toggleParentCategory = (parentId: string) => {
     setExpandedParentIds((prev) =>
@@ -49,26 +79,14 @@ export default function Navbar() {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     setActiveBottomNavTab('search');
-    setIsSearchOpen(false);
-    setIsMobileMenuOpen(false);
-    setIsMobileProfileOpen(false);
-    setIsCollectionsOpen(false);
-    setIsCartOpen(false);
-    router.push(`/?q=${encodeURIComponent(searchQuery.trim())}#catalog-grid`);
-    setTimeout(() => {
-      const catalogEl = document.getElementById('catalog-grid');
-      if (catalogEl) {
-        catalogEl.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 100);
+    setIsSearchOpen(true);
   };
 
-  const { cartItems, isCartOpen, setIsCartOpen } = useCart();
+  const [addedCardId, setAddedCardId] = useState<string | null>(null);
+  const { cartItems, isCartOpen, setIsCartOpen, addToCart } = useCart();
   const { user, logout } = useAuth();
   const { categories, products } = useStore();
-  const { wishlistItems } = useWishlist();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { wishlistItems, isWishlisted, toggleWishlist } = useWishlist();
 
   // Prevent background body scroll when any overlay or mobile drawer is open
   useEffect(() => {
@@ -84,14 +102,14 @@ export default function Navbar() {
 
   const liveSearchResults = searchQuery.trim().length > 0
     ? products.filter((p) => {
-        const q = searchQuery.toLowerCase();
+        const q = searchQuery.toLowerCase().trim();
         const titleMatch = p.title.toLowerCase().includes(q);
         const descMatch = p.description?.toLowerCase().includes(q);
         const catMatch = p.category?.name?.toLowerCase().includes(q);
         const colorMatch = p.product_variants?.some((v: any) => v.color?.toLowerCase().includes(q));
         return titleMatch || descMatch || catMatch || colorMatch;
-      }).slice(0, 5)
-    : [];
+      })
+    : products;
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -246,33 +264,51 @@ export default function Navbar() {
                         <div className="absolute right-0 mt-2 w-48 border-2 border-black bg-[#FAF8F5] shadow-[4px_4px_0_0_#111111] z-50">
                           <div className="py-1" onMouseLeave={() => setIsProfileDropdownOpen(false)}>
                             <button
-                              onClick={() => { setIsProfileDropdownOpen(false); router.push('/orders'); }}
-                              className="w-full text-left flex items-center space-x-2 px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
+                              onClick={handleNavigateOrders}
+                              disabled={isNavigatingOrders}
+                              className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer disabled:opacity-80"
                             >
-                              <ClipboardList className="w-3.5 h-3.5" />
-                              <span>My Orders</span>
+                              <div className="flex items-center space-x-2">
+                                <ClipboardList className="w-3.5 h-3.5" />
+                                <span>My Orders</span>
+                              </div>
+                              {isNavigatingOrders && (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E63B2E]" />
+                              )}
                             </button>
                             <button
-                              onClick={() => { setIsProfileDropdownOpen(false); router.push('/wishlist'); }}
-                              className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
+                              onClick={handleNavigateWishlist}
+                              disabled={isNavigatingWishlist}
+                              className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer disabled:opacity-80"
                             >
                               <div className="flex items-center space-x-2">
                                 <Heart className="w-3.5 h-3.5 text-[#E63B2E]" />
                                 <span>My Wishlist</span>
                               </div>
-                              {wishlistItems.length > 0 && (
-                                <span className="bg-[#E63B2E] text-white text-[9px] px-1.5 py-0.5 rounded-full font-mono">
-                                  {wishlistItems.length}
-                                </span>
-                              )}
+                              <div className="flex items-center space-x-1.5">
+                                {wishlistItems.length > 0 && (
+                                  <span className="bg-[#E63B2E] text-white text-[9px] px-1.5 py-0.5 rounded-full font-mono">
+                                    {wishlistItems.length}
+                                  </span>
+                                )}
+                                {isNavigatingWishlist && (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E63B2E]" />
+                                )}
+                              </div>
                             </button>
                             {user.role === 'admin' && (
                               <button
-                                onClick={() => { setIsProfileDropdownOpen(false); router.push('/admin'); }}
-                                className="w-full text-left flex items-center space-x-2 px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/95 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
+                                onClick={handleNavigateAdmin}
+                                disabled={isNavigatingAdmin}
+                                className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/95 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer disabled:opacity-80"
                               >
-                                <Database className="w-3.5 h-3.5" />
-                                <span>Admin Panel</span>
+                                <div className="flex items-center space-x-2">
+                                  <Database className="w-3.5 h-3.5" />
+                                  <span>Admin Panel</span>
+                                </div>
+                                {isNavigatingAdmin && (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E63B2E]" />
+                                )}
                               </button>
                             )}
                             <button
@@ -346,19 +382,25 @@ export default function Navbar() {
                 {/* Account Navigation Grid */}
                 <div className="divide-y divide-black/10 border-2 border-black bg-white shadow-[4px_4px_0_0_#111111]">
                   <button
-                    onClick={() => { router.push('/orders'); setIsMobileProfileOpen(false); }}
-                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                    onClick={handleNavigateOrders}
+                    disabled={isNavigatingOrders}
+                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left disabled:opacity-80"
                   >
                     <div className="flex items-center gap-3.5">
                       <ClipboardList className="w-4.5 h-4.5 shrink-0 text-black/60" />
                       <span>My Orders</span>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-black/40" />
+                    {isNavigatingOrders ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-[#E63B2E] stroke-[2.5]" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-black/40" />
+                    )}
                   </button>
 
                   <button
-                    onClick={() => { router.push('/wishlist'); setIsMobileProfileOpen(false); }}
-                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                    onClick={handleNavigateWishlist}
+                    disabled={isNavigatingWishlist}
+                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left disabled:opacity-80"
                   >
                     <div className="flex items-center gap-3.5">
                       <Heart className="w-4.5 h-4.5 shrink-0 text-[#E63B2E]" />
@@ -370,20 +412,29 @@ export default function Navbar() {
                           {wishlistItems.length}
                         </span>
                       )}
-                      <ChevronRight className="w-4 h-4 text-black/40" />
+                      {isNavigatingWishlist ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-[#E63B2E] stroke-[2.5]" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-black/40" />
+                      )}
                     </div>
                   </button>
 
                   {user.role === 'admin' && (
                     <button
-                      onClick={() => { router.push('/admin'); setIsMobileProfileOpen(false); }}
-                      className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/95 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                      onClick={handleNavigateAdmin}
+                      disabled={isNavigatingAdmin}
+                      className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/95 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left disabled:opacity-80"
                     >
                       <div className="flex items-center gap-3.5">
                         <Database className="w-4.5 h-4.5 shrink-0 text-black/60" />
                         <span>Admin Panel</span>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-black/40" />
+                      {isNavigatingAdmin ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-[#E63B2E] stroke-[2.5]" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-black/40" />
+                      )}
                     </button>
                   )}
 
@@ -461,7 +512,7 @@ export default function Navbar() {
             setIsCartOpen(false);
             setIsSearchOpen(false);
             setIsMobileProfileOpen(false);
-            setIsCollectionsOpen(!isCollectionsOpen);
+            setIsCollectionsOpen(true);
           }}
           className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
             isCollectionsOpen || (activeBottomNavTab === 'collections' && !isCartOpen && !isSearchOpen && !isMobileProfileOpen)
@@ -476,15 +527,11 @@ export default function Navbar() {
         {/* 3. Search */}
         <button
           onClick={() => {
-            if (activeBottomNavTab === 'search' && !isSearchOpen) {
-              setIsSearchOpen(true);
-            } else {
-              setActiveBottomNavTab('search');
-              setIsCartOpen(false);
-              setIsCollectionsOpen(false);
-              setIsMobileProfileOpen(false);
-              setIsSearchOpen(!isSearchOpen);
-            }
+            setActiveBottomNavTab('search');
+            setIsCartOpen(false);
+            setIsCollectionsOpen(false);
+            setIsMobileProfileOpen(false);
+            setIsSearchOpen(true);
           }}
           className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
             isSearchOpen || (activeBottomNavTab === 'search' && !isCartOpen && !isCollectionsOpen && !isMobileProfileOpen)
@@ -503,7 +550,7 @@ export default function Navbar() {
             setIsCollectionsOpen(false);
             setIsMobileProfileOpen(false);
             setIsSearchOpen(false);
-            setIsCartOpen(!isCartOpen);
+            setIsCartOpen(true);
           }}
           className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all relative cursor-pointer ${
             isCartOpen || activeBottomNavTab === 'cart' || (pathname === '/cart' && !isSearchOpen && !isCollectionsOpen && !isMobileProfileOpen)
@@ -530,7 +577,7 @@ export default function Navbar() {
               setIsCartOpen(false);
               setIsCollectionsOpen(false);
               setIsSearchOpen(false);
-              setIsMobileProfileOpen(!isMobileProfileOpen);
+              setIsMobileProfileOpen(true);
             }}
             className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
               isMobileProfileOpen || (activeBottomNavTab === 'account' && !isCartOpen && !isSearchOpen && !isCollectionsOpen)
@@ -567,18 +614,27 @@ export default function Navbar() {
       {isSearchOpen && (
         <div className="fixed top-[56px] left-0 right-0 bottom-[56px] lg:top-20 lg:bottom-0 z-[9980] bg-[#FAF8F5] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-200">
 
-          {/* Form & Input Header */}
-          <div className="p-3.5 bg-white border-b-2 border-black shrink-0">
+          {/* Form & Static Input Header */}
+          <div className="p-3.5 bg-white border-b-2 border-black shrink-0 shadow-sm sticky top-0 z-10">
             <form onSubmit={handleSearchSubmit}>
               <div className="relative flex items-center">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search t-shirts, polos, hoodies, colors..."
+                  placeholder="Search Skull, Polo, Oversized, Hoodies..."
                   autoFocus
                   className="w-full bg-[#FAF8F5] border-2 border-black py-3 px-4 pr-24 attiz-mono text-xs font-bold text-black focus:outline-none focus:ring-2 focus:ring-[#FFCB05]"
                 />
+                {searchQuery.trim().length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-20 text-black/50 hover:text-black p-1 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
                 <button
                   type="submit"
                   className="absolute right-1.5 py-1.5 px-3.5 bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors attiz-mono text-xs font-bold uppercase cursor-pointer border border-black"
@@ -589,129 +645,179 @@ export default function Navbar() {
             </form>
           </div>
 
-          {/* Main Scrollable Content Body */}
+          {/* Main Scrollable Content Body - Product Grid */}
           <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {/* Live Search Results */}
-            {searchQuery.trim().length > 0 ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between px-1">
-                  <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-widest">
-                    Matching Products ({liveSearchResults.length})
-                  </span>
-                  {liveSearchResults.length > 0 && (
-                    <button
-                      onClick={handleSearchSubmit}
-                      className="attiz-mono text-[9px] font-bold text-[#E63B2E] uppercase hover:underline cursor-pointer"
-                    >
-                      View Grid Results →
-                    </button>
-                  )}
-                </div>
+            
+            {/* Popular Quick Search Pills */}
+            <div className="bg-white border-2 border-black p-3 shadow-[3px_3px_0_0_#111111] space-y-2">
+              <span className="attiz-mono text-[9px] font-black text-black/60 uppercase tracking-widest block">
+                Popular Searches
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {['Skull', 'Oversized', 'Polo', 'Black', 'Acid Wash', 'Heavyweight', 'Graphic'].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      setActiveBottomNavTab('search');
+                      setSearchQuery(tag);
+                    }}
+                    className={`py-1 px-2.5 border attiz-mono text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
+                      searchQuery.toLowerCase() === tag.toLowerCase()
+                        ? 'bg-[#FFCB05] text-black border-black shadow-[2px_2px_0_0_#000]'
+                        : 'bg-[#FAF8F5] border-black/20 hover:border-black hover:bg-black hover:text-[#FFCB05] text-black'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                {liveSearchResults.length > 0 ? (
-                  <div className="space-y-2">
-                    {liveSearchResults.map((prod) => (
-                      <div
-                        key={prod.id}
-                        onClick={() => {
-                          setIsSearchOpen(false);
-                          router.push(`/product/${prod.id}`);
-                        }}
-                        className="flex items-center justify-between p-2.5 bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] hover:shadow-[5px_5px_0_0_#E63B2E] hover:border-black transition-all cursor-pointer group"
+            {/* Results Title Header */}
+            <div className="flex items-center justify-between px-1">
+              <span className="attiz-mono text-[10px] font-black text-black uppercase tracking-widest">
+                {searchQuery.trim().length > 0
+                  ? `Results for "${searchQuery}" (${liveSearchResults.length})`
+                  : `All Products (${liveSearchResults.length})`}
+              </span>
+              {searchQuery.trim().length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="attiz-mono text-[9px] font-bold text-[#E63B2E] uppercase hover:underline cursor-pointer"
+                >
+                  Clear Filter ✕
+                </button>
+              )}
+            </div>
+
+            {/* Product Grid - Identical to ProductGrid.tsx */}
+            {liveSearchResults.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-x-3.5 gap-y-6">
+                {liveSearchResults.map((product) => {
+                  const discount = product.discount || 0;
+                  const originalPrice = parseFloat(String(product.price || 0));
+                  const finalPrice = discount > 0 ? Math.round(originalPrice * (1 - discount / 100)) : originalPrice;
+                  const isLiked = isWishlisted(product.id);
+
+                  const handleQuickAdd = (e: React.MouseEvent) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const selectedSize = product.sizes ? product.sizes.split(',')[0].trim() : 'M';
+                    addToCart({
+                      ...product,
+                      price: finalPrice,
+                      quantity: 1,
+                      selectedSize,
+                      selectedColor: (product as any).color || '',
+                    } as any, false);
+
+                    setAddedCardId(product.id);
+                    setTimeout(() => setAddedCardId(null), 1500);
+                  };
+
+                  return (
+                    <div key={product.id} className="group relative flex flex-col justify-between">
+                      <Link
+                        href={`/product/${product.id}`}
+                        onClick={() => setIsSearchOpen(false)}
+                        className="flex flex-col h-full relative"
                       >
-                        <div className="flex items-center space-x-3 min-w-0">
-                          <div className="w-12 h-14 bg-[#FAF8F5] border border-black/20 shrink-0 overflow-hidden">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={prod.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
-                              alt={prod.title}
-                              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform"
-                            />
-                          </div>
-                          <div className="min-w-0">
-                            <h4 className="attiz-mono text-xs font-bold text-black uppercase truncate group-hover:text-[#E63B2E] transition-colors">
-                              {prod.title}
+                        {/* Media container */}
+                        <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden transition-all duration-500 ease-out group-hover:shadow-xl group-hover:shadow-black/5">
+                          {/* Product Image */}
+                          <Image
+                            src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                            alt={product.title}
+                            fill
+                            className="object-cover object-center transition-all duration-700 ease-out scale-100 group-hover:scale-105"
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                          />
+
+                          {/* Floating Discount Badge */}
+                          {discount > 0 && (
+                            <div className="absolute top-2 left-2 z-20 bg-black text-white px-1.5 py-0.5 attiz-mono text-[8px] sm:text-[9px] font-bold tracking-wider uppercase">
+                              Save {discount}%
+                            </div>
+                          )}
+
+                          {/* Wishlist Button */}
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleWishlist(product);
+                            }}
+                            className="absolute top-2.5 right-2.5 z-20 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:bg-white active:scale-90 transition-transform duration-100 cursor-pointer"
+                            aria-label="Wishlist item"
+                          >
+                            <Heart className={`w-3.5 h-3.5 transition-colors duration-100 ${isLiked ? 'fill-[#E63B2E] stroke-[#E63B2E]' : 'stroke-black fill-none'}`} />
+                          </button>
+                        </div>
+
+                        {/* Metadata Content */}
+                        <div className="pt-3 flex flex-col justify-between grow">
+                          <div>
+                            <h4 className="attiz-body text-[13px] sm:text-[14px] font-medium text-black/90 group-hover:text-black transition-colors line-clamp-2 leading-snug">
+                              {product.title}
                             </h4>
-                            {prod.category?.name && (
-                              <span className="attiz-mono text-[9px] font-bold text-black/50 uppercase block mt-0.5">
-                                {prod.category.name}
-                              </span>
-                            )}
+                          </div>
+
+                          <div className="flex items-baseline justify-between mt-2.5 pt-2 border-t border-black/5">
+                            <div className="flex items-baseline gap-1.5">
+                              {discount > 0 ? (
+                                <>
+                                  <span className="attiz-mono text-[14px] sm:text-[15px] font-bold text-[#E63B2E]">
+                                    ₹{finalPrice.toLocaleString('en-IN')}
+                                  </span>
+                                  <span className="attiz-body text-xs text-black/85 line-through font-light">
+                                    ₹{originalPrice.toLocaleString('en-IN')}
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="attiz-mono text-[14px] sm:text-[15px] font-bold text-black">
+                                  ₹{originalPrice.toLocaleString('en-IN')}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Mobile Action Button Trigger */}
+                            <button
+                              onClick={handleQuickAdd}
+                              className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-none cursor-pointer transition-colors ${
+                                addedCardId === product.id ? 'bg-emerald-600 text-white' : 'bg-black text-white'
+                              }`}
+                              aria-label="Add to cart"
+                            >
+                              {addedCardId === product.id ? (
+                                <Check className="w-3.5 h-3.5" />
+                              ) : (
+                                <ShoppingBag className="w-3.5 h-3.5" />
+                              )}
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2 shrink-0 ml-2">
-                          <span className="attiz-mono text-xs font-bold text-[#E63B2E]">
-                            ₹{prod.price?.toLocaleString('en-IN')}
-                          </span>
-                          <div className="w-6 h-6 bg-black text-[#FFCB05] group-hover:bg-[#E63B2E] group-hover:text-white flex items-center justify-center border border-black transition-colors">
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-6 bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] text-center attiz-mono text-xs text-black/60 uppercase">
-                    No matching products found for &quot;{searchQuery}&quot;
-                  </div>
-                )}
+                      </Link>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
-              /* Popular Searches & Quick Category Discovery */
-              <div className="space-y-4">
-                <div className="bg-white border-2 border-black p-3.5 shadow-[3px_3px_0_0_#111111] space-y-2">
-                  <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-widest block">
-                    Popular Searches
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {['Oversized', 'Polo', 'Black', 'Acid Wash', 'Heavyweight', 'Graphic'].map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => {
-                          setActiveBottomNavTab('search');
-                          setSearchQuery(tag);
-                          setIsSearchOpen(false);
-                          router.push(`/?q=${encodeURIComponent(tag)}#catalog-grid`);
-                          setTimeout(() => {
-                            const catalogEl = document.getElementById('catalog-grid');
-                            if (catalogEl) {
-                              catalogEl.scrollIntoView({ behavior: 'smooth' });
-                            }
-                          }, 100);
-                        }}
-                        className="py-1 px-2.5 bg-[#FAF8F5] border border-black/20 hover:border-black hover:bg-black hover:text-[#FFCB05] text-black attiz-mono text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Quick Category Jump Grid */}
-                <div className="space-y-2">
-                  <span className="attiz-mono text-[10px] font-bold text-black/60 uppercase tracking-widest block px-1">
-                    Quick Category Search
-                  </span>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {parentCategories.slice(0, 4).map((cat) => (
-                      <button
-                        key={cat.id}
-                        onClick={() => {
-                          setActiveBottomNavTab('search');
-                          setIsSearchOpen(false);
-                          router.push(`/?category=${cat.id}#catalog-grid`);
-                        }}
-                        className="p-3 bg-white border-2 border-black shadow-[3px_3px_0_0_#111111] hover:bg-[#FFCB05] text-left attiz-mono text-xs font-bold text-black uppercase transition-all cursor-pointer flex items-center justify-between"
-                      >
-                        <span className="truncate">{cat.name}</span>
-                        <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              <div className="p-8 bg-white border-2 border-black shadow-[4px_4px_0_0_#111111] text-center space-y-3">
+                <span className="attiz-mono text-xs font-bold text-black/70 uppercase block">
+                  No matching products found for &quot;{searchQuery}&quot;
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="py-2 px-4 bg-black text-[#FFCB05] attiz-mono text-xs font-bold uppercase border border-black"
+                >
+                  View All Products
+                </button>
               </div>
             )}
+
           </div>
         </div>
       )}

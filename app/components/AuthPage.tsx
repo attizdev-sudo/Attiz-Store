@@ -212,7 +212,12 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
 
   const handleGoogleSignIn = () => {
     setGoogleLoading(true);
-    window.location.href = '/api/auth/google';
+    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const redirectUrl = params?.get('redirect');
+    const googleUrl = redirectUrl && redirectUrl.startsWith('/')
+      ? `/api/auth/google?redirect=${encodeURIComponent(redirectUrl)}`
+      : '/api/auth/google';
+    window.location.href = googleUrl;
   };
 
   const switchMode = () => {

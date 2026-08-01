@@ -8,6 +8,7 @@ import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Sta
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useAuth } from '@/context/AuthContext';
 import type { CartItem, Product } from '@/lib/types';
 
 const getProductImages = (product: Product) => {
@@ -53,6 +54,7 @@ function ProductDetailsInner() {
   const { addToCart, startBuyNow, setIsCartOpen } = useCart();
   const { products, dbLoading } = useStore();
   const { isWishlisted: checkIsWishlisted, toggleWishlist } = useWishlist();
+  const { user } = useAuth();
 
   const product = products.find((p) => p.id === id);
 
@@ -231,7 +233,11 @@ function ProductDetailsInner() {
         quantity,
       } as any);
       setIsCartOpen(false);
-      router.push('/checkout');
+      if (!user) {
+        router.push('/login?redirect=/checkout');
+      } else {
+        router.push('/checkout');
+      }
     }
   };
 

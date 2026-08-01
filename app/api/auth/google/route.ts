@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const redirectTarget = searchParams.get('redirect');
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const redirectUri = `${appUrl}/api/auth/google/callback`;
@@ -27,6 +29,16 @@ export async function GET() {
     path: '/',
     maxAge: 600, // 10 minutes
   });
+
+  if (redirectTarget && redirectTarget.startsWith('/')) {
+    cookieStore.set('auth_redirect_to', redirectTarget, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 600,
+    });
+  }
 
   // Construct Google's OAuth 2.0 authorization URL
   const googleAuthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
