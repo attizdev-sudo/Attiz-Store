@@ -178,10 +178,18 @@ export async function GET(request: Request) {
     const { token: sessionToken, expiresAt } = await createSession(userId, ipAddress, userAgent);
     await setSessionCookie(sessionToken, expiresAt);
 
+    const cookieStore = await cookies();
+    const redirectToCookie = cookieStore.get('auth_redirect_to')?.value;
+    cookieStore.delete('auth_redirect_to');
+
+    const redirectSuffix = redirectToCookie && redirectToCookie.startsWith('/')
+      ? `&redirect=${encodeURIComponent(redirectToCookie)}`
+      : '';
+
     // Redirect back to login page with google=success so the AuthPage shows
     // a "Signing you in..." screen while AuthContext re-checks the session
-    // and then auto-redirects to home (or /admin for admin users).
-    return NextResponse.redirect(`${appUrl}/login?google=success`);
+    // and then auto-redirects to target page or home.
+    return NextResponse.redirect(`${appUrl}/login?google=success${redirectSuffix}`);
   } catch (error) {
     console.error('Unexpected error in Google OAuth callback route:', error);
     return NextResponse.redirect(`${appUrl}/login?error=auth_internal_error`);

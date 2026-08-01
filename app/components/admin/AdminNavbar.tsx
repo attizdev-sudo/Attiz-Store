@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { ChevronDown, Menu, X, ClipboardList, LogOut, Heart, Store, User, Database } from 'lucide-react';
+import { useRouter, usePathname } from 'next/navigation';
+import { ChevronDown, ChevronRight, Menu, X, ClipboardList, LogOut, Heart, Store, User, Database, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useWishlist } from '@/context/WishlistContext';
 
@@ -12,9 +12,30 @@ export default function AdminNavbar() {
   const [isMobileProfileOpen, setIsMobileProfileOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
+  const [isNavigatingOrders, setIsNavigatingOrders] = useState(false);
+  const [isNavigatingWishlist, setIsNavigatingWishlist] = useState(false);
+
   const { user, logout } = useAuth();
   const { wishlistItems } = useWishlist();
   const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setIsNavigatingOrders(false);
+    setIsNavigatingWishlist(false);
+    setIsMobileProfileOpen(false);
+    setIsProfileDropdownOpen(false);
+  }, [pathname]);
+
+  const handleNavigateOrders = () => {
+    setIsNavigatingOrders(true);
+    router.push('/orders');
+  };
+
+  const handleNavigateWishlist = () => {
+    setIsNavigatingWishlist(true);
+    router.push('/wishlist');
+  };
 
   if (!user) return null;
 
@@ -126,26 +147,38 @@ export default function AdminNavbar() {
                         </button>
 
                         <button
-                          onClick={() => { setIsProfileDropdownOpen(false); router.push('/orders'); }}
-                          className="w-full text-left flex items-center space-x-2 px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
+                          onClick={handleNavigateOrders}
+                          disabled={isNavigatingOrders}
+                          className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer disabled:opacity-80"
                         >
-                          <ClipboardList className="w-3.5 h-3.5" />
-                          <span>My Orders</span>
+                          <div className="flex items-center space-x-2">
+                            <ClipboardList className="w-3.5 h-3.5" />
+                            <span>My Orders</span>
+                          </div>
+                          {isNavigatingOrders && (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E63B2E]" />
+                          )}
                         </button>
 
                         <button
-                          onClick={() => { setIsProfileDropdownOpen(false); router.push('/wishlist'); }}
-                          className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
+                          onClick={handleNavigateWishlist}
+                          disabled={isNavigatingWishlist}
+                          className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer disabled:opacity-80"
                         >
                           <div className="flex items-center space-x-2">
                             <Heart className="w-3.5 h-3.5 text-[#E63B2E]" />
                             <span>My Wishlist</span>
                           </div>
-                          {wishlistItems.length > 0 && (
-                            <span className="bg-[#E63B2E] text-white text-[9px] px-1.5 py-0.5 rounded-full font-mono">
-                              {wishlistItems.length}
-                            </span>
-                          )}
+                          <div className="flex items-center space-x-1.5">
+                            {wishlistItems.length > 0 && (
+                              <span className="bg-[#E63B2E] text-white text-[9px] px-1.5 py-0.5 rounded-full font-mono">
+                                {wishlistItems.length}
+                              </span>
+                            )}
+                            {isNavigatingWishlist && (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E63B2E]" />
+                            )}
+                          </div>
                         </button>
 
                         <button
@@ -287,26 +320,42 @@ export default function AdminNavbar() {
                     </button>
 
                     <button
-                      onClick={() => { router.push('/orders'); setIsMobileProfileOpen(false); }}
-                      className="w-full flex items-center gap-3.5 px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/80 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                      onClick={handleNavigateOrders}
+                      disabled={isNavigatingOrders}
+                      className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/80 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left disabled:opacity-80"
                     >
-                      <ClipboardList className="w-4.5 h-4.5 shrink-0 text-black/60" />
-                      <span>My Orders</span>
+                      <div className="flex items-center gap-3.5">
+                        <ClipboardList className="w-4.5 h-4.5 shrink-0 text-black/60" />
+                        <span>My Orders</span>
+                      </div>
+                      {isNavigatingOrders ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-[#E63B2E] stroke-[2.5]" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-black/40" />
+                      )}
                     </button>
 
                     <button
-                      onClick={() => { router.push('/wishlist'); setIsMobileProfileOpen(false); }}
-                      className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/80 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
+                      onClick={handleNavigateWishlist}
+                      disabled={isNavigatingWishlist}
+                      className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/80 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left disabled:opacity-80"
                     >
                       <div className="flex items-center gap-3.5">
                         <Heart className="w-4.5 h-4.5 shrink-0 text-[#E63B2E]" />
                         <span>My Wishlist</span>
                       </div>
-                      {wishlistItems.length > 0 && (
-                        <span className="bg-[#E63B2E] text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
-                          {wishlistItems.length}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {wishlistItems.length > 0 && (
+                          <span className="bg-[#E63B2E] text-white text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
+                            {wishlistItems.length}
+                          </span>
+                        )}
+                        {isNavigatingWishlist ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-[#E63B2E] stroke-[2.5]" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-black/40" />
+                        )}
+                      </div>
                     </button>
 
                     <button

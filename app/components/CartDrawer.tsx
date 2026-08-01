@@ -30,6 +30,7 @@ export default function CartDrawer() {
   // Close cart drawer automatically when route/pathname changes
   useEffect(() => {
     setIsCartOpen(false);
+    setIsNavigating(false);
   }, [pathname, setIsCartOpen]);
 
   if (!isCartOpen) return null;
@@ -39,6 +40,7 @@ export default function CartDrawer() {
   const handleGoToCheckout = () => {
     setIsNavigating(true);
     if (!user) {
+      setIsCartOpen(false);
       router.push('/login?redirect=/checkout');
     } else {
       router.push('/checkout');
