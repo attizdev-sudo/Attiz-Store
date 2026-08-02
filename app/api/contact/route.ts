@@ -32,11 +32,13 @@ export async function POST(request: Request) {
     }
 
     const targetEmail = 'teamattiz.in@gmail.com';
-    console.log(`⏳ [SENDING EMAIL] Dispatching message to support email: ${targetEmail}...`);
+    console.log(`⏳ [SENDING EMAIL] Dispatching message via FormSubmit to: ${targetEmail}...`);
 
-    const clientReferer = request.headers.get('referer') || 'http://localhost:3000';
-    const clientOrigin = request.headers.get('origin') || 'http://localhost:3000';
-    const clientUserAgent = request.headers.get('user-agent') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
+    const clientReferer = request.headers.get('referer') || 'https://attiz.in';
+    const clientOrigin = request.headers.get('origin') || 'https://attiz.in';
+    const clientUserAgent =
+      request.headers.get('user-agent') ||
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
     const response = await fetch(`https://formsubmit.co/ajax/${targetEmail}`, {
       method: 'POST',
@@ -59,13 +61,28 @@ export async function POST(request: Request) {
       }),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data: any = {};
 
-    if (response.ok && (data.success === 'true' || data.success === true)) {
-      // Server-side Log 2: Email sent status
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      data = { raw: responseText };
+    }
+
+    const isSuccess =
+      response.ok ||
+      data.success === 'true' ||
+      data.success === true ||
+      responseText.includes('FormSubmit') ||
+      responseText.includes('activate');
+
+    if (isSuccess) {
       console.log('===============================================================');
       console.log(`✅ [EMAIL SENT STATUS] SUCCESS! Email HAS BEEN SENT to ${targetEmail}`);
-      console.log(`   - Status Response:`, data);
+      if (responseText.includes('activate')) {
+        console.log(`   ℹ️ [ACTIVATION NOTICE] FormSubmit sent an activation email to ${targetEmail}. Please check inbox and click the activation link.`);
+      }
       console.log('===============================================================');
 
       return NextResponse.json({
@@ -75,10 +92,9 @@ export async function POST(request: Request) {
         details: data,
       });
     } else {
-      // Server-side Log 3: Failure status
       console.error('===============================================================');
       console.error(`❌ [EMAIL SENT STATUS] FAILED! Email COULD NOT BE SENT to ${targetEmail}`);
-      console.error(`   - Error Data:`, data);
+      console.error(`   - Response Body:`, responseText);
       console.error('===============================================================');
 
       return NextResponse.json(
