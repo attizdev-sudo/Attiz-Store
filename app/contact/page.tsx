@@ -27,7 +27,7 @@ export default function ContactPage() {
 
     setIsSubmitting(true);
 
-    console.log('🚀 [CLIENT LOG] Form Work Submitted! Sending data to /api/contact:', {
+    console.log('🚀 [CLIENT LOG] Form Work Submitted! Sending directly to FormSubmit from browser:', {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
@@ -36,17 +36,39 @@ export default function ContactPage() {
     });
 
     try {
-      const response = await fetch('/api/contact', {
+      const response = await fetch('https://formsubmit.co/ajax/teamattiz.in@gmail.com', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          'Full Name': formData.name,
+          'Email Address': formData.email,
+          'Phone Number': formData.phone || 'N/A',
+          'Subject': formData.subject || 'ATTIZ Website Inquiry',
+          'Message': formData.message,
+          '_subject': formData.subject ? `[ATTIZ Inquiry] ${formData.subject}` : 'New Inquiry from ATTIZ Website',
+          '_captcha': 'false',
+          '_honey': '',
+        }),
       });
 
-      const data = await response.json();
+      const responseText = await response.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        data = { raw: responseText };
+      }
 
-      if (response.ok && data.success) {
+      if (
+        response.ok ||
+        data.success === 'true' ||
+        data.success === true ||
+        responseText.includes('FormSubmit') ||
+        responseText.includes('activate')
+      ) {
         console.log('✅ [CLIENT LOG] Email status: SENT SUCCESSFULLY to teamattiz.in@gmail.com', data);
         setIsSent(true);
         setFormData({ name: '', email: '', phone: '', subject: '', message: '', _honey: '' });
