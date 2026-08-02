@@ -1,18 +1,64 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Clock, ShieldCheck, HelpCircle, Share2, Check } from 'lucide-react';
+import { Mail, Clock, ShieldCheck, HelpCircle, Share2, Check, Loader2, AlertCircle } from 'lucide-react';
 
 export default function ContactPage() {
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: '', message: '', _honey: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.email && formData.message) {
+    setErrorMsg(null);
+
+    // Spam honeypot check
+    if (formData._honey) {
+      console.warn('⚠️ [CLIENT LOG] Bot detected via honeypot.');
       setIsSent(true);
-      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
-      setTimeout(() => setIsSent(false), 5000);
+      return;
+    }
+
+    if (!formData.name || !formData.email || !formData.message) {
+      setErrorMsg('Please fill in all required fields (*)');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    console.log('🚀 [CLIENT LOG] Form Work Submitted! Sending data to /api/contact:', {
+      name: formData.name,
+      email: formData.email,
+      phone: formData.phone,
+      subject: formData.subject,
+      message: formData.message,
+    });
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('✅ [CLIENT LOG] Email status: SENT SUCCESSFULLY to teamattiz.in@gmail.com', data);
+        setIsSent(true);
+        setFormData({ name: '', email: '', phone: '', subject: '', message: '', _honey: '' });
+      } else {
+        console.error('❌ [CLIENT LOG] Email status: NOT SENT to teamattiz.in@gmail.com', data);
+        throw new Error(data.message || 'Failed to send message. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('❌ [CLIENT LOG] Exception during submission:', err);
+      setErrorMsg(err.message || 'An unexpected error occurred while sending your message.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -56,7 +102,7 @@ export default function ContactPage() {
                 <div className="space-y-3 attiz-body text-xs text-black/75 font-light leading-relaxed">
                   <p>For all inquiries, please reach out to our help desk:</p>
                   <p className="font-semibold text-black">
-                    Email: <a href="mailto:support@attiz.com" className="attiz-mono text-xs font-bold text-[#E63B2E] hover:underline">support@attiz.com</a>
+                    Email: <a href="mailto:teamattiz.in@gmail.com" className="attiz-mono text-xs font-bold text-[#E63B2E] hover:underline">teamattiz.in@gmail.com</a>
                   </p>
                   <div className="pt-2 border-t border-black/5 flex gap-2">
                     <Clock className="w-3.5 h-3.5 mt-0.5 text-black/85 shrink-0" />
@@ -94,7 +140,7 @@ export default function ContactPage() {
                 <div className="space-y-2 attiz-body text-xs text-black/75 font-light leading-relaxed">
                   <p>For wholesale, partnerships, influencer drops, and marketing requests:</p>
                   <p className="font-semibold text-black">
-                    Email: <a href="mailto:business@attiz.com" className="attiz-mono text-xs font-bold text-[#E63B2E] hover:underline">business@attiz.com</a>
+                    Email: <a href="mailto:teamattiz.in@gmail.com" className="attiz-mono text-xs font-bold text-[#E63B2E] hover:underline">teamattiz.in@gmail.com</a>
                   </p>
                 </div>
               </div>
@@ -129,10 +175,34 @@ export default function ContactPage() {
                     <p className="attiz-body text-xs text-white/70 font-light max-w-sm">
                       Our customer care team will review your inquiry and get back to you within 24–48 business hours.
                     </p>
+                    <button
+                      onClick={() => setIsSent(false)}
+                      className="mt-4 px-4 py-2 border border-[#FFCB05] text-[#FFCB05] attiz-mono text-[10px] font-bold uppercase hover:bg-[#FFCB05] hover:text-black transition-colors"
+                    >
+                      Send Another Message
+                    </button>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-5">
                     
+                    {/* Honeypot for Bot Prevention */}
+                    <input
+                      type="text"
+                      name="_honey"
+                      value={formData._honey}
+                      onChange={(e) => setFormData({ ...formData, _honey: e.target.value })}
+                      className="hidden"
+                      tabIndex={-1}
+                      autoComplete="off"
+                    />
+
+                    {errorMsg && (
+                      <div className="bg-[#E63B2E]/10 border-2 border-[#E63B2E] p-3 flex items-center gap-2 text-[#E63B2E] attiz-mono text-xs font-bold">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{errorMsg}</span>
+                      </div>
+                    )}
+
                     {/* Name input */}
                     <div className="space-y-1">
                       <label className="attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase block">Full Name *</label>
@@ -200,9 +270,17 @@ export default function ContactPage() {
                     <div className="pt-2">
                       <button
                         type="submit"
-                        className="w-full py-3.5 border-[3px] border-black attiz-display text-xs tracking-[0.15em] uppercase bg-black text-[#FFCB05] shadow-[4px_4px_0_0_#E63B2E] hover:bg-white hover:text-black hover:shadow-[2px_2px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer"
+                        disabled={isSubmitting}
+                        className="w-full py-3.5 border-[3px] border-black attiz-display text-xs tracking-[0.15em] uppercase bg-black text-[#FFCB05] shadow-[4px_4px_0_0_#E63B2E] hover:bg-white hover:text-black hover:shadow-[2px_2px_0_0_#111111] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                       >
-                        Send Message
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>SENDING MESSAGE...</span>
+                          </>
+                        ) : (
+                          <span>Send Message</span>
+                        )}
                       </button>
                     </div>
 
