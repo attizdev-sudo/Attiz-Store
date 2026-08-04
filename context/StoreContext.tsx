@@ -28,6 +28,8 @@ interface StoreContextValue {
   addLookbookStyle: (data: Partial<LookbookStyle>) => Promise<{ data: unknown; error: unknown }>;
   deleteLookbookStyle: (id: string) => Promise<{ data: unknown; error: unknown }>;
   updateOrderStatus: (orderId: string, nextStatus: string) => Promise<{ data: unknown; error: unknown }>;
+  updateOrderDetails: (orderId: string, updates: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+  deleteOrder: (orderId: string) => Promise<{ data: unknown; error: unknown }>;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -265,6 +267,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return result;
   };
 
+  const updateOrderDetails = async (orderId: string, updates: Record<string, unknown>) => {
+    const result = await apiFetch(`/api/orders/${orderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
+    if (!result.error) await refreshData();
+    return result;
+  };
+
+  const deleteOrder = async (orderId: string) => {
+    const result = await apiFetch(`/api/orders/${orderId}`, { method: 'DELETE' });
+    if (!result.error) await refreshData();
+    return result;
+  };
+
   return (
     <StoreContext.Provider value={{
       products, categories, orders, banners, editorialBanners, lookbookStyles, dbLoading, refreshData,
@@ -274,6 +288,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       addEditorialBanner, deleteEditorialBanner,
       addLookbookStyle, deleteLookbookStyle,
       updateOrderStatus,
+      updateOrderDetails,
+      deleteOrder,
     }}>
       {children}
     </StoreContext.Provider>

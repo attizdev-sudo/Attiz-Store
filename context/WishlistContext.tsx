@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthContext';
 import type { WishlistItem, Product } from '@/lib/types';
@@ -21,54 +21,75 @@ const WishlistContext = createContext<WishlistContextValue | null>(null);
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const router = useRouter();
+
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>(() => {
     if (typeof window !== 'undefined') {
       try {
         const cached = localStorage.getItem('attiz_wishlist_items');
         return cached ? JSON.parse(cached) : [];
-      } catch { return []; }
+      } catch {
+        return [];
+      }
     }
     return [];
   });
-  const [loading, setLoading] = useState(wishlistItems.length === 0);
+
+  const [loading, setLoading] = useState(false);
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set());
 
+  // Sync to localStorage whenever wishlistItems changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('attiz_wishlist_items', JSON.stringify(wishlistItems));
+      } catch { /* ignore */ }
+    }
+  }, [wishlistItems]);
+
+  // Stable fetch function depending ONLY on user identity
   const fetchWishlist = useCallback(async () => {
     if (!user) {
       setWishlistItems([]);
+      if (typeof window !== 'undefined') {
+        try { localStorage.removeItem('attiz_wishlist_items'); } catch { /* ignore */ }
+      }
       setLoading(false);
       return;
     }
+
     try {
-      if (wishlistItems.length === 0) setLoading(true);
       const res = await fetch('/api/wishlist', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         const items = Array.isArray(data) ? data : [];
         setWishlistItems(items);
-        try {
-          localStorage.setItem('attiz_wishlist_items', JSON.stringify(items));
-        } catch { /* ignore */ }
-      } else {
-        setWishlistItems([]);
       }
     } catch (err) {
       console.error('Error fetching wishlist:', err);
     } finally {
       setLoading(false);
     }
-  }, [user, wishlistItems.length]);
+  }, [user?.id]);
 
+  // Fetch only when user changes or logs in
   useEffect(() => {
-    fetchWishlist();
-  }, [fetchWishlist]);
+    if (user?.id) {
+      fetchWishlist();
+    } else {
+      setWishlistItems([]);
+    }
+  }, [user?.id, fetchWishlist]);
 
-  const isWishlisted = useCallback((id: string) => {
-    if (!id) return false;
-    return wishlistItems.some(
-      (item) => item.product_id === id || item.variant_id === id || item.id === id
-    );
-  }, [wishlistItems]);
+  // Check if product or variant is wishlisted
+  const isWishlisted = useCallback(
+    (id: string) => {
+      if (!id) return false;
+      return wishlistItems.some(
+        (item) => item.product_id === id || item.variant_id === id || item.id === id
+      );
+    },
+    [wishlistItems]
+  );
 
   const toggleWishlist = async (
     product: Partial<Product> & { id: string },
@@ -89,12 +110,11 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       // ── OPTIMISTIC REMOVE ──
       const previousItems = [...wishlistItems];
       setWishlistItems((prev) =>
-        prev.filter(
-          (item) =>
-            item.product_id !== product.id &&
-            item.variant_id !== variantId &&
-            item.id !== product.id
-        )
+        prev.filter((item) => {
+          const matchProd = item.product_id === product.id || item.id === product.id;
+          const matchVar = variantId ? item.variant_id === variantId : false;
+          return !matchProd && !matchVar;
+        })
       );
 
       try {
@@ -159,13 +179,18 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (!res.ok) {
-          // Revert on error
           setWishlistItems(previousItems);
           return { success: false, isWishlisted: false };
         }
 
-        // Refresh official background state
-        fetchWishlist();
+        const data = await res.json();
+        if (data.item?.id) {
+          // Replace temp item with real DB item ID smoothly without triggering refetch
+          setWishlistItems((prev) =>
+            prev.map((it) => (it.id === tempItem.id ? { ...it, id: data.item.id } : it))
+          );
+        }
+
         return { success: true, isWishlisted: true };
       } catch (err) {
         console.error('Error adding to wishlist:', err);
@@ -188,7 +213,6 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   }): Promise<boolean> => {
     if (!user) return false;
 
-    // Optimistically filter item out
     const previousItems = [...wishlistItems];
     setWishlistItems((prev) =>
       prev.filter(
@@ -228,7 +252,6 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     setWishlistItems([]);
 
     try {
-      // Remove each item or bulk delete
       await Promise.all(
         previousItems.map((item) =>
           fetch(`/api/wishlist?id=${item.id}`, { method: 'DELETE', credentials: 'include' })

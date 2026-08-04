@@ -79,6 +79,23 @@ export default function CheckoutPage() {
   const shippingCharge = 0;
   const grandTotal = subtotal;
 
+  // Dynamic Delivery Date Range Calculation (Current Date + 4 days to Current Date + 8 days)
+  const deliveryRange = React.useMemo(() => {
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() + 4);
+
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 8);
+
+    const formatDate = (d: Date) => `${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}`;
+
+    return {
+      start: formatDate(startDate),
+      end: formatDate(endDate),
+    };
+  }, []);
+
   // Protect route & prefill user details
   useEffect(() => {
     if (!sessionLoading) {
@@ -748,6 +765,24 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* Estimated Delivery Expectation Card */}
+              <div className="p-3.5 bg-[#FAF8F5] border border-black/15 flex items-center space-x-3 text-xs attiz-mono">
+                <Truck className="w-5 h-5 text-[#E63B2E] shrink-0" />
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="bg-[#FFCB05] text-black border border-black px-1.5 py-0.2 text-[9px] font-extrabold tracking-widest uppercase">
+                      FREE SHIPPING
+                    </span>
+                    <span className="text-[9px] font-bold text-black/60 uppercase">
+                      All Over India
+                    </span>
+                  </div>
+                  <p className="text-xs font-bold text-black uppercase pt-0.5">
+                    Delivery expected: <span className="text-[#E63B2E] font-extrabold">{deliveryRange.start}</span> to <span className="text-[#E63B2E] font-extrabold">{deliveryRange.end}</span>
+                  </p>
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-3 pt-1">
                 <button
                   type="button"
@@ -788,6 +823,14 @@ export default function CheckoutPage() {
                 </div>
                 <span className="attiz-mono text-xl font-bold text-[#FFCB05]">
                   ₹{grandTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+
+              {/* Estimated Delivery Banner */}
+              <div className="p-3 bg-[#FAF8F5] border border-black/15 flex items-center space-x-3 text-xs attiz-mono">
+                <Truck className="w-4 h-4 text-[#E63B2E] shrink-0" />
+                <span className="text-xs font-bold text-black uppercase">
+                  Delivery Expected: <span className="text-[#E63B2E] font-extrabold">{deliveryRange.start}</span> to <span className="text-[#E63B2E] font-extrabold">{deliveryRange.end}</span>
                 </span>
               </div>
 
