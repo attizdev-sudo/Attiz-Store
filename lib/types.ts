@@ -89,6 +89,11 @@ export interface Order {
   shipping_state?: string;
   shipping_country?: string;
   shipping_postal_code?: string;
+  payment_status?: string;
+  subtotal?: number;
+  discount?: number;
+  shipping_charge?: number;
+  tax?: number;
   items: CartItem[];
   total_price: number;
   status: string;

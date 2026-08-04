@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Star, CheckCircle, ShoppingBag, ArrowRight, X, Ruler, Loader2 } from 'lucide-react';
+import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Star, CheckCircle, ShoppingBag, ArrowRight, X, Ruler, Loader2, Truck } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -103,15 +103,40 @@ function ProductDetailsInner() {
   const [isZoomed, setIsZoomed] = useState(false);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const lastClickTime = useRef(0);
   const swipeStartX = useRef<number | null>(null);
   const mainImageRef = useRef<HTMLImageElement>(null);
+  const thumbnailScrollRef = useRef<HTMLDivElement>(null);
+
+  const scrollThumbnails = (direction: 'left' | 'right') => {
+    if (thumbnailScrollRef.current) {
+      const scrollAmount = direction === 'left' ? -120 : 120;
+      thumbnailScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+    goToCard(direction === 'left' ? -1 : 1);
+  };
   const [accordionOpen, setAccordionOpen] = useState({ description: true, specifications: false, washCare: false });
   const [isTouchDevice, setIsTouchDevice] = useState(false);
-  const [isImageLoading, setIsImageLoading] = useState(false);
-
   const [isMobile, setIsMobile] = useState(false);
+
+  // Dynamic Delivery Date Range Calculation (Current Date + 4 days to Current Date + 8 days)
+  const deliveryRange = React.useMemo(() => {
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() + 4);
+
+    const endDate = new Date(today);
+    endDate.setDate(today.getDate() + 8);
+
+    const formatDate = (d: Date) => `${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}`;
+
+    return {
+      start: formatDate(startDate),
+      end: formatDate(endDate),
+    };
+  }, []);
 
   useEffect(() => {
     setIsTouchDevice(typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
@@ -660,18 +685,45 @@ function ProductDetailsInner() {
                 )}
               </div>
 
-              {/* Dot / tab indicators */}
+              {/* Small-sized product image thumbnails list per color */}
               {thumbnails.length > 1 && (
-                <div className="flex items-center gap-2 flex-wrap justify-center pt-5">
-                  {thumbnails.map((thumb, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleThumbnailClick(idx)}
-                      aria-label={`View image ${idx + 1}`}
-                      className={`h-2.5 border-2 border-black transition-all cursor-pointer ${activeThumbIdx === idx ? 'w-7 bg-[#E63B2E]' : 'w-2.5 bg-white hover:bg-[#FFCB05]'
-                        }`}
-                    />
-                  ))}
+                <div className="w-full max-w-[420px] pt-4 pb-1">
+                  <div className="flex items-center gap-3 overflow-x-auto py-2.5 px-1 scrollbar-thin justify-start sm:justify-center">
+                    {thumbnails.map((thumb, idx) => {
+                      const isActive = activeThumbIdx === idx;
+
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            handleThumbnailClick(idx);
+                            if (thumb.color && thumb.color !== selectedColor) {
+                              setSelectedColor(thumb.color);
+                            }
+                          }}
+                          aria-label={`View ${thumb.color ? `${thumb.color} image` : `image ${idx + 1}`}`}
+                          className={`relative w-14 h-16 sm:w-16 sm:h-20 bg-white shrink-0 transition-all cursor-pointer overflow-hidden ${
+                            isActive
+                              ? 'border-2 border-black opacity-100'
+                              : 'border border-black/25 opacity-60 hover:opacity-100 hover:border-black'
+                          }`}
+                        >
+                          {/* Small Image Thumbnail */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={thumb.url}
+                            alt={thumb.color || `Thumbnail ${idx + 1}`}
+                            className="w-full h-full object-cover object-center"
+                          />
+
+                          {/* Sleek Active Indicator: Red Bottom Accent Bar */}
+                          {isActive && (
+                            <div className="absolute bottom-0 inset-x-0 h-1 bg-[#E63B2E]" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
@@ -856,6 +908,24 @@ function ProductDetailsInner() {
                       <span>{isOutOfStock ? 'Out of Stock' : 'Buy It Now'}</span>
                     )}
                   </button>
+                </div>
+
+                {/* Estimated Delivery Expectation Card */}
+                <div className="bg-[#FAF8F5] border-2 border-black p-3.5 mt-4 flex items-center space-x-3 shadow-[3px_3px_0_0_#111111]">
+                  <Truck className="w-5 h-5 text-[#E63B2E] shrink-0" />
+                  <div className="space-y-1 attiz-mono">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="bg-[#FFCB05] text-black border border-black px-2 py-0.5 text-[9px] font-extrabold tracking-widest uppercase">
+                        FREE SHIPPING
+                      </span>
+                      <span className="text-[9px] font-bold text-black/60 uppercase">
+                        All Over India
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-black uppercase pt-0.5">
+                      Delivery expected: <span className="text-[#E63B2E] font-extrabold">{deliveryRange.start}</span> to <span className="text-[#E63B2E] font-extrabold">{deliveryRange.end}</span>
+                    </p>
+                  </div>
                 </div>
               </div>
 
