@@ -766,19 +766,22 @@ export default function CheckoutPage() {
               </div>
 
               {/* Estimated Delivery Expectation Card */}
-              <div className="p-3.5 bg-[#FAF8F5] border border-black/15 flex items-center space-x-3 text-xs attiz-mono">
+              <div className="p-3 sm:p-3.5 bg-[#FAF8F5] border border-black/15 flex items-center space-x-2.5 sm:space-x-3 text-xs attiz-mono">
                 <Truck className="w-5 h-5 text-[#E63B2E] shrink-0" />
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="bg-[#FFCB05] text-black border border-black px-1.5 py-0.2 text-[9px] font-extrabold tracking-widest uppercase">
+                <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                    <span className="bg-[#FFCB05] text-black border border-black px-1.5 py-0.5 text-[8.5px] sm:text-[9px] font-extrabold tracking-widest uppercase shrink-0">
                       FREE SHIPPING
                     </span>
-                    <span className="text-[9px] font-bold text-black/60 uppercase">
+                    <span className="text-[8.5px] sm:text-[9px] font-bold text-black/60 uppercase shrink-0">
                       All Over India
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-black uppercase pt-0.5">
-                    Delivery expected: <span className="text-[#E63B2E] font-extrabold">{deliveryRange.start}</span> to <span className="text-[#E63B2E] font-extrabold">{deliveryRange.end}</span>
+                  <p className="text-[10.5px] sm:text-xs font-bold text-black uppercase pt-0.5 leading-tight">
+                    Delivery expected:{' '}
+                    <span className="whitespace-nowrap">
+                      <span className="text-[#E63B2E] font-extrabold">{deliveryRange.start}</span> to <span className="text-[#E63B2E] font-extrabold">{deliveryRange.end}</span>
+                    </span>
                   </p>
                 </div>
               </div>
@@ -827,10 +830,13 @@ export default function CheckoutPage() {
               </div>
 
               {/* Estimated Delivery Banner */}
-              <div className="p-3 bg-[#FAF8F5] border border-black/15 flex items-center space-x-3 text-xs attiz-mono">
+              <div className="p-2.5 sm:p-3 bg-[#FAF8F5] border border-black/15 flex items-center space-x-2.5 sm:space-x-3 text-xs attiz-mono">
                 <Truck className="w-4 h-4 text-[#E63B2E] shrink-0" />
-                <span className="text-xs font-bold text-black uppercase">
-                  Delivery Expected: <span className="text-[#E63B2E] font-extrabold">{deliveryRange.start}</span> to <span className="text-[#E63B2E] font-extrabold">{deliveryRange.end}</span>
+                <span className="text-[10.5px] sm:text-xs font-bold text-black uppercase leading-tight">
+                  Delivery Expected:{' '}
+                  <span className="whitespace-nowrap">
+                    <span className="text-[#E63B2E] font-extrabold">{deliveryRange.start}</span> to <span className="text-[#E63B2E] font-extrabold">{deliveryRange.end}</span>
+                  </span>
                 </span>
               </div>
 
