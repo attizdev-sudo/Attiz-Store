@@ -157,9 +157,16 @@ export default function OrdersPage() {
                   <h1 className="attiz-display text-xl sm:text-2xl uppercase text-black">
                     {selectedDetail.item.title}
                   </h1>
-                  <p className="attiz-mono text-xs text-black/70 uppercase mt-1">
-                    Order No: <strong className="text-black">{selectedDetail.order.order_number || selectedDetail.order.id.slice(0, 8).toUpperCase()}</strong>
-                  </p>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 attiz-mono text-xs text-black/70 uppercase mt-1">
+                    <p>
+                      Order No: <strong className="text-black">{selectedDetail.order.order_number || selectedDetail.order.id.slice(0, 8).toUpperCase()}</strong>
+                    </p>
+                    {selectedDetail.order.created_at && (
+                      <p>
+                        Ordered At: <strong className="text-black">{new Date(selectedDetail.order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</strong>
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="text-right">
@@ -169,8 +176,12 @@ export default function OrdersPage() {
                 </div>
               </div>
 
-              {/* Expected Delivery Banner (Order Placed Date + 8 Days) */}
+              {/* Expected Delivery Banner (Order Placed Date + 8 Days) - Hidden if Delivered or Cancelled */}
               {(() => {
+                const detailStatusLower = (selectedDetail.order.status || '').toLowerCase();
+                const isDetailFinished = detailStatusLower === 'delivered' || detailStatusLower.includes('cancel');
+                if (isDetailFinished) return null;
+
                 const expectedInfo = getExpectedDeliveryInfo(selectedDetail.order.created_at);
                 return (
                   <div className="bg-[#FAF8F5] border border-black/15 p-3 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs attiz-mono uppercase">
@@ -394,9 +405,13 @@ export default function OrdersPage() {
                     }];
 
                   return rawItems.map((item: CartItem, idx: number) => {
-                    const isDelivered = order.status === 'Delivered';
+                    const statusLower = (order.status || '').toLowerCase();
+                    const isDelivered = statusLower === 'delivered';
+                    const isCancelled = statusLower.includes('cancel');
+                    const isFinishedStatus = isDelivered || isCancelled;
                     const itemImg = item.image && item.image !== '/placeholder.png' ? item.image : DEFAULT_IMAGE;
                     const colorVal = item.color || item.selectedColor;
+                    const expectedInfo = !isFinishedStatus ? getExpectedDeliveryInfo(order.created_at) : null;
 
                     return (
                       <div
@@ -405,11 +420,28 @@ export default function OrdersPage() {
                         tabIndex={0}
                         role="button"
                         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedDetail({ order, item }); }}
-                        className="bg-white border border-black/15 p-3.5 sm:p-4 transition-all hover:border-black hover:shadow-xs cursor-pointer group flex items-center justify-between gap-4"
+                        className="bg-white border border-black/15 p-3.5 sm:p-4 transition-all hover:border-black hover:shadow-xs cursor-pointer group space-y-2.5"
                       >
-                        {/* Left: Product Thumbnail & Title Info */}
-                        <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
-                          {/* Product Thumbnail with onError Fallback */}
+                        {/* Header Row: Title & Total Price */}
+                        <div className="flex items-start justify-between gap-3 border-b border-black/10 pb-2">
+                          <h3 className="attiz-mono text-xs sm:text-sm font-bold text-black uppercase group-hover:text-[#E63B2E] transition-colors truncate flex-1">
+                            {item.title}
+                          </h3>
+
+                          <div className="flex items-center space-x-2 shrink-0 text-right">
+                            <div>
+                              <span className="attiz-mono text-[9px] text-black/50 block uppercase leading-none">Total</span>
+                              <span className="attiz-mono text-xs sm:text-sm font-bold text-black block leading-tight">
+                                ₹{((item.price || 0) * item.quantity).toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                            <ChevronRight className="w-4 h-4 text-black/40 group-hover:text-black group-hover:translate-x-0.5 transition-all" />
+                          </div>
+                        </div>
+
+                        {/* Body Row: Thumbnail & Product Specs */}
+                        <div className="flex items-start space-x-3 sm:space-x-4">
+                          {/* Product Thumbnail */}
                           <div className="relative w-14 h-16 sm:w-16 sm:h-20 bg-[#FAF8F5] border border-black/10 shrink-0 overflow-hidden group-hover:scale-105 transition-transform">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
@@ -422,57 +454,55 @@ export default function OrdersPage() {
                             />
                           </div>
 
-                          {/* Title & Variant Details */}
-                          <div className="min-w-0">
-                            <h3 className="attiz-mono text-xs sm:text-sm font-bold text-black uppercase truncate group-hover:text-[#E63B2E] transition-colors mb-1">
-                              {item.title}
-                            </h3>
-
-                            <div className="flex flex-wrap items-center gap-2 text-[10px] attiz-mono text-black/70 mb-1.5">
+                          {/* Variant Badges & Status Details */}
+                          <div className="min-w-0 flex-1 space-y-1.5">
+                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] attiz-mono text-black/70">
                               {item.selectedSize && (
-                                <span className="bg-black text-white px-1.5 py-0.2 font-bold uppercase">
+                                <span className="bg-black text-white px-1.5 py-0.5 font-bold uppercase">
                                   Size: {item.selectedSize}
                                 </span>
                               )}
                               {colorVal && (
-                                <span className="bg-black/10 px-1.5 py-0.2 font-bold text-black uppercase">
+                                <span className="bg-black/10 text-black px-1.5 py-0.5 font-bold uppercase">
                                   Color: {colorVal}
                                 </span>
                               )}
-                              <span>Qty: {item.quantity}</span>
+                              <span className="font-semibold text-black/70">Qty: {item.quantity}</span>
                             </div>
 
                             {/* Status Indicator */}
-                            <div className="flex items-center space-x-1.5 text-[11px] attiz-mono uppercase">
-                              <span className={`w-2 h-2 rounded-full shrink-0 ${isDelivered ? 'bg-green-600' : 'bg-[#E63B2E] animate-pulse'}`} />
-                              <span className={`font-bold ${isDelivered ? 'text-green-700' : 'text-[#E63B2E]'}`}>
+                            <div className="flex items-center space-x-1.5 text-[11px] attiz-mono uppercase pt-0.5">
+                              <span
+                                className={`w-2 h-2 rounded-full shrink-0 ${
+                                  isCancelled
+                                    ? 'bg-red-600'
+                                    : isDelivered
+                                    ? 'bg-green-600'
+                                    : 'bg-[#E63B2E] animate-pulse'
+                                }`}
+                              />
+                              <span
+                                className={`font-bold ${
+                                  isCancelled
+                                    ? 'text-red-600'
+                                    : isDelivered
+                                    ? 'text-green-700'
+                                    : 'text-[#E63B2E]'
+                                }`}
+                              >
                                 {order.status || 'Order Placed'}
                               </span>
-                              <span className="text-black/40 hidden sm:inline">· {orderDate}</span>
+                              <span className="text-black/40 text-[10px]">· {orderDate}</span>
                             </div>
 
-                            {/* Expected Delivery Line (Order Placed Date + 8 Days) */}
-                            {(() => {
-                              const expectedInfo = getExpectedDeliveryInfo(order.created_at);
-                              return (
-                                <div className="text-[10px] attiz-mono text-black/70 uppercase mt-1 flex items-center space-x-1">
-                                  <Truck className="w-3 h-3 text-[#E63B2E] shrink-0" />
-                                  <span>Expected: <strong className="text-black font-bold">{expectedInfo.fullDateString}</strong></span>
-                                </div>
-                              );
-                            })()}
+                            {/* Expected Delivery Line (Hidden if Delivered or Cancelled) */}
+                            {expectedInfo && (
+                              <div className="text-[10px] sm:text-[11px] attiz-mono text-black/80 uppercase pt-0.5 flex items-center space-x-1">
+                                <Truck className="w-3.5 h-3.5 text-[#E63B2E] shrink-0" />
+                                <span>Expected: <strong className="text-black font-extrabold">{expectedInfo.fullDateString}</strong></span>
+                              </div>
+                            )}
                           </div>
-                        </div>
-
-                        {/* Right: Price & Chevron Navigation Indicator */}
-                        <div className="flex items-center space-x-3 shrink-0 text-right">
-                          <div>
-                            <span className="attiz-mono text-[9px] text-black/50 block uppercase">Total</span>
-                            <span className="attiz-mono text-xs sm:text-sm font-bold text-black block">
-                              ₹{((item.price || 0) * item.quantity).toLocaleString('en-IN')}
-                            </span>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-black/40 group-hover:text-black group-hover:translate-x-1 transition-all" />
                         </div>
                       </div>
                     );

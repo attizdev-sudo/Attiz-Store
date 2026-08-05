@@ -319,6 +319,21 @@ function ProductDetailsInner() {
     }
   }, [selectedColor, thumbnails, activeThumbIdx]);
 
+  // Auto-scroll active thumbnail into view when activeThumbIdx changes
+  useEffect(() => {
+    if (thumbnailScrollRef.current) {
+      const activeThumbElem = thumbnailScrollRef.current.children[activeThumbIdx] as HTMLElement;
+      if (activeThumbElem) {
+        activeThumbElem.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center',
+        });
+      }
+    }
+  }, [activeThumbIdx]);
+
+
   if (dbLoading && !product) {
     return (
       <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center space-y-4">
@@ -688,7 +703,10 @@ function ProductDetailsInner() {
               {/* Small-sized product image thumbnails list per color */}
               {thumbnails.length > 1 && (
                 <div className="w-full max-w-[420px] pt-4 pb-1">
-                  <div className="flex items-center gap-3 overflow-x-auto py-2.5 px-1 scrollbar-thin justify-start sm:justify-center">
+                  <div
+                    ref={thumbnailScrollRef}
+                    className="flex items-center gap-3 overflow-x-auto py-2.5 px-1 scrollbar-thin justify-start"
+                  >
                     {thumbnails.map((thumb, idx) => {
                       const isActive = activeThumbIdx === idx;
 
@@ -911,19 +929,22 @@ function ProductDetailsInner() {
                 </div>
 
                 {/* Estimated Delivery Expectation Card */}
-                <div className="bg-[#FAF8F5] border-2 border-black p-3.5 mt-4 flex items-center space-x-3 shadow-[3px_3px_0_0_#111111]">
+                <div className="bg-[#FAF8F5] border-2 border-black p-3 sm:p-3.5 mt-4 flex items-center space-x-2.5 sm:space-x-3 shadow-[3px_3px_0_0_#111111]">
                   <Truck className="w-5 h-5 text-[#E63B2E] shrink-0" />
-                  <div className="space-y-1 attiz-mono">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="bg-[#FFCB05] text-black border border-black px-2 py-0.5 text-[9px] font-extrabold tracking-widest uppercase">
+                  <div className="space-y-0.5 sm:space-y-1 attiz-mono min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                      <span className="bg-[#FFCB05] text-black border border-black px-1.5 sm:px-2 py-0.5 text-[8.5px] sm:text-[9px] font-extrabold tracking-widest uppercase shrink-0">
                         FREE SHIPPING
                       </span>
-                      <span className="text-[9px] font-bold text-black/60 uppercase">
+                      <span className="text-[8.5px] sm:text-[9px] font-bold text-black/60 uppercase shrink-0">
                         All Over India
                       </span>
                     </div>
-                    <p className="text-xs font-bold text-black uppercase pt-0.5">
-                      Delivery expected: <span className="text-[#E63B2E] font-extrabold">{deliveryRange.start}</span> to <span className="text-[#E63B2E] font-extrabold">{deliveryRange.end}</span>
+                    <p className="text-[10.5px] sm:text-xs font-bold text-black uppercase pt-0.5 leading-tight">
+                      Delivery expected:{' '}
+                      <span className="whitespace-nowrap">
+                        <span className="text-[#E63B2E] font-extrabold">{deliveryRange.start}</span> to <span className="text-[#E63B2E] font-extrabold">{deliveryRange.end}</span>
+                      </span>
                     </p>
                   </div>
                 </div>
