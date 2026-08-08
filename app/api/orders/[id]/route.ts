@@ -71,6 +71,11 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     'shipping_charge',
     'tax',
     'total_price',
+    'awb_code',
+    'courier_name',
+    'tracking_url',
+    'shiprocket_order_id',
+    'shiprocket_shipment_id',
   ];
 
   const orderUpdates: Record<string, any> = {};

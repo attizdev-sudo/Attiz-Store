@@ -30,11 +30,19 @@ export default function ProductPreviewCard({
     target.image ||
     'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
   const displayTitle = target.title || 'Premium Garment';
+  const mrp = parseFloat(String(target.price || '0'));
   const discountVal = parseFloat(String(target.discount || '0'));
   const isDiscounted = discountVal > 0 && discountVal <= 100;
-  const finalPrice = isDiscounted
-    ? Math.round(parseFloat(String(target.price || 0)) * (1 - discountVal / 100))
-    : parseFloat(String(target.price || 0));
+
+  const taxablePrice = Math.max(0, mrp - (mrp * discountVal) / 100);
+  const autoGst = taxablePrice > 2500 ? 18 : 5;
+  const rawGst = (target as any).gst_rate;
+  const effectiveGst = rawGst !== undefined && rawGst !== '' ? parseFloat(String(rawGst)) : autoGst;
+  const gstRateUsed = isNaN(effectiveGst) ? autoGst : effectiveGst;
+
+  const gstAmount = (taxablePrice * gstRateUsed) / 100;
+  const finalPrice = taxablePrice + gstAmount;
+  const mrpInclusiveGst = mrp * (1 + gstRateUsed / 100);
 
   const pSizes = (target.sizes || '')
     .split(',')
@@ -81,7 +89,7 @@ export default function ProductPreviewCard({
                     ↓{discountVal}%
                   </span>
                   <span className="font-sans text-[9px] text-brand-dark/40 line-through shrink-0">
-                    {parseFloat(String(target.price || 0)).toFixed(0)}
+                    ₹{mrp.toFixed(0)}
                   </span>
                   <span className="font-sans text-[10px] font-bold text-brand-dark whitespace-nowrap">
                     ₹{finalPrice.toFixed(0)}
@@ -89,7 +97,7 @@ export default function ProductPreviewCard({
                 </div>
               ) : (
                 <span className="font-sans text-[10px] font-bold text-brand-brown">
-                  ₹{parseFloat(String(target.price || 0)).toFixed(0)}
+                  ₹{finalPrice.toFixed(0)}
                 </span>
               )}
               <span className="bg-brand-brown text-white text-[7px] font-bold tracking-wider px-2 py-0.5 rounded cursor-pointer hover:bg-brand-brown-dark transition-colors shrink-0">

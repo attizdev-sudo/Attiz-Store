@@ -439,9 +439,10 @@ function ProductGridInner() {
                   : product.id;
                 const images = getProductImages(product);
                 const nextImage = (product as any).colorSpecificAltImage || images[1];
-                const finalPrice = product.discount && product.discount > 0
-                  ? Math.round((product.price || 0) * (1 - (product.discount || 0) / 100))
-                  : (product.price || 0);
+                const itemGst = (product as any).gst_rate || product.product_variants?.[0]?.gst_rate || 0;
+                const taxablePrice = Math.max(0, (product.price || 0) * (1 - (product.discount || 0) / 100));
+                const finalPrice = Math.round(taxablePrice * (1 + itemGst / 100));
+                const mrpInclusiveGst = Math.round((product.price || 0) * (1 + itemGst / 100));
 
                 const handleQuickAdd = (e: React.MouseEvent) => {
                   e.preventDefault();
@@ -456,7 +457,12 @@ function ProductGridInner() {
 
                   addToCart({
                     ...product,
+                    variant_id: targetVariant?.id,
+                    sku: targetVariant?.sku,
                     price: finalPrice,
+                    discount: product.discount || 0,
+                    original_mrp: product.price,
+                    gst_rate: itemGst,
                     quantity: 1,
                     selectedSize,
                     selectedColor: targetColor || (targetVariant?.color) || '',

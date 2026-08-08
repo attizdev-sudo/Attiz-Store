@@ -140,7 +140,7 @@ function ProductDetailsInner() {
 
   useEffect(() => {
     setIsTouchDevice(typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
-    
+
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -158,7 +158,7 @@ function ProductDetailsInner() {
     if (variants.length > 0) {
       const colors = Array.from(new Set(variants.map(v => v.color))).filter(Boolean);
       const sizes = sortSizes(Array.from(new Set(variants.map(v => v.size))).filter(Boolean));
-      
+
       const matchedColor = initialColorParam && colors.some(c => c.toLowerCase() === initialColorParam.toLowerCase())
         ? colors.find(c => c.toLowerCase() === initialColorParam.toLowerCase()) || ''
         : '';
@@ -206,10 +206,10 @@ function ProductDetailsInner() {
 
   const handleAddToCart = () => {
     if (product && activeVariant) {
-      const finalPrice = displayDiscount > 0
-        ? Math.round(displayPrice * (1 - displayDiscount / 100))
-        : displayPrice;
-      
+      const activeGst = activeVariant.gst_rate || (product as any).gst_rate || 0;
+      const taxablePrice = Math.max(0, displayPrice * (1 - displayDiscount / 100));
+      const finalPrice = Math.round(taxablePrice * (1 + activeGst / 100));
+
       const variantImage = activeVariant.product_variant_images?.[0]?.image_url
         || thumbnails.find((t) => t.color && selectedColor && t.color.toLowerCase() === selectedColor.toLowerCase())?.url
         || thumbnails[activeThumbIdx]?.url
@@ -220,8 +220,12 @@ function ProductDetailsInner() {
         ...product,
         product_id: product.id,
         variant_id: activeVariant.id,
+        sku: activeVariant.sku,
         image: variantImage,
         price: finalPrice,
+        discount: displayDiscount,
+        original_mrp: displayPrice,
+        gst_rate: activeGst,
         selectedSize,
         selectedColor,
         color: selectedColor,
@@ -236,9 +240,9 @@ function ProductDetailsInner() {
   const handleBuyNow = () => {
     if (product && activeVariant) {
       setIsNavigatingBuyNow(true);
-      const finalPrice = displayDiscount > 0
-        ? Math.round(displayPrice * (1 - displayDiscount / 100))
-        : displayPrice;
+      const activeGst = activeVariant.gst_rate || (product as any).gst_rate || 0;
+      const taxablePrice = Math.max(0, displayPrice * (1 - displayDiscount / 100));
+      const finalPrice = Math.round(taxablePrice * (1 + activeGst / 100));
 
       const variantImage = activeVariant.product_variant_images?.[0]?.image_url
         || thumbnails.find((t) => t.color && selectedColor && t.color.toLowerCase() === selectedColor.toLowerCase())?.url
@@ -250,8 +254,12 @@ function ProductDetailsInner() {
         ...product,
         product_id: product.id,
         variant_id: activeVariant.id,
+        sku: activeVariant.sku,
         image: variantImage,
         price: finalPrice,
+        discount: displayDiscount,
+        original_mrp: displayPrice,
+        gst_rate: activeGst,
         selectedSize,
         selectedColor,
         color: selectedColor,
@@ -558,7 +566,7 @@ function ProductDetailsInner() {
   const getCardStyle = (idx: number): React.CSSProperties => {
     const total = thumbnails.length;
     const relative = (idx - activeThumbIdx + total) % total;
-    
+
     if (isMobile) {
       if (relative === 0) {
         return { transform: 'translate(0px, 0px) rotate(0deg) scale(1)', zIndex: 40, opacity: 1 };
@@ -611,7 +619,7 @@ function ProductDetailsInner() {
                     >
                       {isFront ? (
                         <div
-                           className={`relative w-full h-full select-none touch-none ${getCursorClass()}`}
+                          className={`relative w-full h-full select-none touch-none ${getCursorClass()}`}
                           onMouseDown={handleMouseDown}
                           onMouseMove={handleMouseMove}
                           onMouseUp={handleMouseUp}
@@ -720,11 +728,10 @@ function ProductDetailsInner() {
                             }
                           }}
                           aria-label={`View ${thumb.color ? `${thumb.color} image` : `image ${idx + 1}`}`}
-                          className={`relative w-14 h-16 sm:w-16 sm:h-20 bg-white shrink-0 transition-all cursor-pointer overflow-hidden ${
-                            isActive
+                          className={`relative w-14 h-16 sm:w-16 sm:h-20 bg-white shrink-0 transition-all cursor-pointer overflow-hidden ${isActive
                               ? 'border-2 border-black opacity-100'
                               : 'border border-black/25 opacity-60 hover:opacity-100 hover:border-black'
-                          }`}
+                            }`}
                         >
                           {/* Small Image Thumbnail */}
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -773,29 +780,40 @@ function ProductDetailsInner() {
               <span className="attiz-mono text-[9px] font-bold text-black/85 tracking-widest uppercase mb-3 block">SKU: {activeVariant?.sku || `ATZTS-${product.id.slice(0, 5).toUpperCase()}`}</span>
 
               <div className="flex items-center gap-2.5 mb-3 flex-wrap">
-                {displayDiscount > 0 ? (
-                  <>
-                    <span className="text-white attiz-mono font-bold text-[10px] flex items-center gap-1 bg-[#E63B2E] border-2 border-black px-1.5 py-0.5 shrink-0 rotate-[-2deg]">
-                      ↓{displayDiscount}%
-                    </span>
-                    <span className="attiz-body text-xs text-black/85 line-through shrink-0">
-                      ₹{parseFloat(String(displayPrice)).toLocaleString('en-IN')}
-                    </span>
+                {(() => {
+                  const activeGst = activeVariant?.gst_rate || 0;
+                  const taxableDisplay = Math.max(0, displayPrice * (1 - displayDiscount / 100));
+                  const finalDisplayPrice = Math.round(taxableDisplay * (1 + activeGst / 100));
+                  const mrpInclusiveGst = Math.round(displayPrice * (1 + activeGst / 100));
+
+                  if (displayDiscount > 0) {
+                    return (
+                      <>
+                        <span className="text-white attiz-mono font-bold text-[10px] flex items-center gap-1 bg-[#E63B2E] border-2 border-black px-1.5 py-0.5 shrink-0 rotate-[-2deg]">
+                          ↓{displayDiscount}%
+                        </span>
+                        <span className="attiz-body text-xs text-black/85 line-through shrink-0">
+                          ₹{mrpInclusiveGst.toLocaleString('en-IN')}
+                        </span>
+                        <span className="relative inline-block">
+                          <span className="absolute inset-x-0 bottom-0.5 h-[45%] bg-[#FFCB05] -rotate-1 -z-0" />
+                          <span className="relative z-10 attiz-display text-xl text-black px-0.5">
+                            ₹{finalDisplayPrice.toLocaleString('en-IN')}
+                          </span>
+                        </span>
+                      </>
+                    );
+                  }
+
+                  return (
                     <span className="relative inline-block">
                       <span className="absolute inset-x-0 bottom-0.5 h-[45%] bg-[#FFCB05] -rotate-1 -z-0" />
                       <span className="relative z-10 attiz-display text-xl text-black px-0.5">
-                        ₹{Math.round(displayPrice * (1 - displayDiscount / 100)).toLocaleString('en-IN')}
+                        ₹{finalDisplayPrice.toLocaleString('en-IN')}
                       </span>
                     </span>
-                  </>
-                ) : (
-                  <span className="relative inline-block">
-                    <span className="absolute inset-x-0 bottom-0.5 h-[45%] bg-[#FFCB05] -rotate-1 -z-0" />
-                    <span className="relative z-10 attiz-display text-xl text-black px-0.5">
-                      ₹{parseFloat(String(displayPrice)).toLocaleString('en-IN')}
-                    </span>
-                  </span>
-                )}
+                  );
+                })()}
               </div>
 
               {isOutOfStock && (
@@ -1022,7 +1040,7 @@ function ProductDetailsInner() {
                   <span>Verified Buyer</span>
                 </span>
               </div>
-            <span className="attiz-mono text-[10px] text-black/85 font-bold">05/20/2026</span>
+              <span className="attiz-mono text-[10px] text-black/85 font-bold">05/20/2026</span>
             </div>
             <h4 className="attiz-display text-sm text-black mb-1.5 tracking-wide">Super</h4>
             <p className="attiz-body text-[13px] text-black/90 tracking-wide leading-relaxed">Super product. Worth for money. The fit is absolute elegance, and the fabric is incredibly soft.</p>
@@ -1038,9 +1056,10 @@ function ProductDetailsInner() {
                 const isLiked = checkIsWishlisted(prod.id);
                 const images = getProductImages(prod);
                 const nextImage = images[1];
-                const finalPrice = prod.discount && prod.discount > 0
-                  ? Math.round((prod.price || 0) * (1 - (prod.discount || 0) / 100))
-                  : (prod.price || 0);
+                const prodGst = (prod as any).gst_rate || prod.product_variants?.[0]?.gst_rate || 0;
+                const taxableProd = Math.max(0, (prod.price || 0) * (1 - (prod.discount || 0) / 100));
+                const finalPrice = Math.round(taxableProd * (1 + prodGst / 100));
+                const mrpInclusiveGst = Math.round((prod.price || 0) * (1 + prodGst / 100));
 
                 const handleQuickAdd = (e: React.MouseEvent) => {
                   e.preventDefault();
@@ -1048,6 +1067,8 @@ function ProductDetailsInner() {
                   addToCart({
                     ...prod,
                     price: finalPrice,
+                    discount: 0,
+                    original_mrp: prod.price,
                     quantity: 1,
                     selectedSize: prod.sizes ? prod.sizes.split(',')[0].trim() : 'M',
                   } as any, !isMobile);
@@ -1056,10 +1077,10 @@ function ProductDetailsInner() {
                 return (
                   <div key={prod.id} className="group relative flex flex-col justify-between">
                     <Link href={`/product/${prod.id}`} className="flex flex-col h-full relative">
-                      
+
                       {/* Media container */}
                       <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden transition-all duration-500 ease-out group-hover:shadow-xl group-hover:shadow-black/5">
-                        
+
                         {/* Product Base Image */}
                         <Image
                           src={prod.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
@@ -1125,12 +1146,12 @@ function ProductDetailsInner() {
                                   ₹{finalPrice.toLocaleString('en-IN')}
                                 </span>
                                 <span className="attiz-body text-[10px] sm:text-xs text-black/85 line-through font-light">
-                                  ₹{parseFloat(String(prod.price || 0)).toLocaleString('en-IN')}
+                                  ₹{mrpInclusiveGst.toLocaleString('en-IN')}
                                 </span>
                               </>
                             ) : (
                               <span className="attiz-mono text-xs sm:text-[15px] font-bold text-black">
-                                ₹{parseFloat(String(prod.price || 0)).toLocaleString('en-IN')}
+                                ₹{finalPrice.toLocaleString('en-IN')}
                               </span>
                             )}
                           </div>
@@ -1165,7 +1186,7 @@ function ProductDetailsInner() {
           <div className="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-6 bg-black/75 backdrop-blur-md animate-fadeIn">
             {/* Modal Box */}
             <div className="relative bg-[#FAF8F5] border-[3px] border-black shadow-[8px_8px_0_0_#111111] max-w-2xl w-full max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden animate-scale-in">
-              
+
               {/* Header */}
               <div className="p-3.5 sm:p-4 bg-[#111111] text-white flex items-center justify-between border-b-[3px] border-black shrink-0">
                 <div className="flex items-center gap-2.5">
@@ -1182,8 +1203,8 @@ function ProductDetailsInner() {
                   </div>
                 </div>
 
-                <button 
-                  onClick={() => setIsSizeChartOpen(false)} 
+                <button
+                  onClick={() => setIsSizeChartOpen(false)}
                   className="w-7 h-7 sm:w-8 sm:h-8 bg-white text-black hover:bg-[#E63B2E] hover:text-white border-2 border-black shadow-[2px_2px_0_0_#111111] active:translate-x-[1px] active:translate-y-[1px] active:shadow-none flex items-center justify-center transition-all duration-150 cursor-pointer shrink-0"
                   aria-label="Close size guide"
                 >

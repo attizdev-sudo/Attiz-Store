@@ -102,13 +102,13 @@ export default function Navbar() {
 
   const liveSearchResults = searchQuery.trim().length > 0
     ? products.filter((p) => {
-        const q = searchQuery.toLowerCase().trim();
-        const titleMatch = p.title.toLowerCase().includes(q);
-        const descMatch = p.description?.toLowerCase().includes(q);
-        const catMatch = p.category?.name?.toLowerCase().includes(q);
-        const colorMatch = p.product_variants?.some((v: any) => v.color?.toLowerCase().includes(q));
-        return titleMatch || descMatch || catMatch || colorMatch;
-      })
+      const q = searchQuery.toLowerCase().trim();
+      const titleMatch = p.title.toLowerCase().includes(q);
+      const descMatch = p.description?.toLowerCase().includes(q);
+      const catMatch = p.category?.name?.toLowerCase().includes(q);
+      const colorMatch = p.product_variants?.some((v: any) => v.color?.toLowerCase().includes(q));
+      return titleMatch || descMatch || catMatch || colorMatch;
+    })
     : products;
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -495,11 +495,10 @@ export default function Navbar() {
               }
             }
           }}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
-            activeBottomNavTab === 'home' || (!activeBottomNavTab && pathname === '/' && !isCollectionsOpen && !isSearchOpen && !isMobileProfileOpen && !isCartOpen)
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${activeBottomNavTab === 'home' || (!activeBottomNavTab && pathname === '/' && !isCollectionsOpen && !isSearchOpen && !isMobileProfileOpen && !isCartOpen)
               ? 'text-[#E63B2E] font-black scale-105'
               : 'text-black/75 hover:text-black font-bold'
-          }`}
+            }`}
         >
           <Home className="w-5 h-5 stroke-[2]" />
           <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Home</span>
@@ -514,11 +513,10 @@ export default function Navbar() {
             setIsMobileProfileOpen(false);
             setIsCollectionsOpen(true);
           }}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
-            isCollectionsOpen || (activeBottomNavTab === 'collections' && !isCartOpen && !isSearchOpen && !isMobileProfileOpen)
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${isCollectionsOpen || (activeBottomNavTab === 'collections' && !isCartOpen && !isSearchOpen && !isMobileProfileOpen)
               ? 'text-[#E63B2E] font-black scale-105'
               : 'text-black/75 hover:text-black font-bold'
-          }`}
+            }`}
         >
           <LayoutGrid className="w-5 h-5 stroke-[2]" />
           <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Collections</span>
@@ -533,11 +531,10 @@ export default function Navbar() {
             setIsMobileProfileOpen(false);
             setIsSearchOpen(true);
           }}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
-            isSearchOpen || (activeBottomNavTab === 'search' && !isCartOpen && !isCollectionsOpen && !isMobileProfileOpen)
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${isSearchOpen || (activeBottomNavTab === 'search' && !isCartOpen && !isCollectionsOpen && !isMobileProfileOpen)
               ? 'text-[#E63B2E] font-black scale-105'
               : 'text-black/75 hover:text-black font-bold'
-          }`}
+            }`}
         >
           <Search className="w-5 h-5 stroke-[2]" />
           <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Search</span>
@@ -552,11 +549,10 @@ export default function Navbar() {
             setIsSearchOpen(false);
             setIsCartOpen(true);
           }}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all relative cursor-pointer ${
-            isCartOpen || activeBottomNavTab === 'cart' || (pathname === '/cart' && !isSearchOpen && !isCollectionsOpen && !isMobileProfileOpen)
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all relative cursor-pointer ${isCartOpen || activeBottomNavTab === 'cart' || (pathname === '/cart' && !isSearchOpen && !isCollectionsOpen && !isMobileProfileOpen)
               ? 'text-[#E63B2E] font-black scale-105'
               : 'text-black/75 hover:text-black font-bold'
-          }`}
+            }`}
         >
           <div className="relative">
             <ShoppingBag className="w-5 h-5 stroke-[2]" />
@@ -579,11 +575,10 @@ export default function Navbar() {
               setIsSearchOpen(false);
               setIsMobileProfileOpen(true);
             }}
-            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
-              isMobileProfileOpen || (activeBottomNavTab === 'account' && !isCartOpen && !isSearchOpen && !isCollectionsOpen)
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${isMobileProfileOpen || (activeBottomNavTab === 'account' && !isCartOpen && !isSearchOpen && !isCollectionsOpen)
                 ? 'text-[#E63B2E] font-black scale-105'
                 : 'text-black/75 hover:text-black font-bold'
-            }`}
+              }`}
           >
             <User className="w-5 h-5 stroke-[2]" />
             <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Account</span>
@@ -598,11 +593,10 @@ export default function Navbar() {
               setIsSearchOpen(false);
               setIsMobileProfileOpen(false);
             }}
-            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${
-              pathname === '/login' && !isSearchOpen && !isCollectionsOpen && !isCartOpen
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded transition-all cursor-pointer ${pathname === '/login' && !isSearchOpen && !isCollectionsOpen && !isCartOpen
                 ? 'text-[#E63B2E] font-black scale-105'
                 : 'text-black/75 hover:text-black font-bold'
-            }`}
+              }`}
           >
             <User className="w-5 h-5 stroke-[2]" />
             <span className="attiz-mono text-[9px] uppercase tracking-wider mt-0.5 font-extrabold">Account</span>
@@ -647,7 +641,7 @@ export default function Navbar() {
 
           {/* Main Scrollable Content Body - Product Grid */}
           <div className="flex-1 overflow-y-auto overscroll-contain p-3.5 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            
+
             {/* Popular Quick Search Pills */}
             <div className="bg-white border-2 border-black p-3 shadow-[3px_3px_0_0_#111111] space-y-2">
               <span className="attiz-mono text-[9px] font-black text-black/60 uppercase tracking-widest block">
@@ -662,11 +656,10 @@ export default function Navbar() {
                       setActiveBottomNavTab('search');
                       setSearchQuery(tag);
                     }}
-                    className={`py-1 px-2.5 border attiz-mono text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${
-                      searchQuery.toLowerCase() === tag.toLowerCase()
+                    className={`py-1 px-2.5 border attiz-mono text-[10px] font-extrabold uppercase tracking-wider transition-all cursor-pointer ${searchQuery.toLowerCase() === tag.toLowerCase()
                         ? 'bg-[#FFCB05] text-black border-black shadow-[2px_2px_0_0_#000]'
                         : 'bg-[#FAF8F5] border-black/20 hover:border-black hover:bg-black hover:text-[#FFCB05] text-black'
-                    }`}
+                      }`}
                   >
                     {tag}
                   </button>
@@ -698,7 +691,10 @@ export default function Navbar() {
                 {liveSearchResults.map((product) => {
                   const discount = product.discount || 0;
                   const originalPrice = parseFloat(String(product.price || 0));
-                  const finalPrice = discount > 0 ? Math.round(originalPrice * (1 - discount / 100)) : originalPrice;
+                  const itemGst = (product as any).gst_rate || product.product_variants?.[0]?.gst_rate || 0;
+                  const taxable = Math.max(0, originalPrice * (1 - discount / 100));
+                  const finalPrice = Math.round(taxable * (1 + itemGst / 100));
+                  const mrpInclusiveGst = Math.round(originalPrice * (1 + itemGst / 100));
                   const isLiked = isWishlisted(product.id);
 
                   const handleQuickAdd = (e: React.MouseEvent) => {
@@ -772,12 +768,12 @@ export default function Navbar() {
                                     ₹{finalPrice.toLocaleString('en-IN')}
                                   </span>
                                   <span className="attiz-body text-xs text-black/85 line-through font-light">
-                                    ₹{originalPrice.toLocaleString('en-IN')}
+                                    ₹{mrpInclusiveGst.toLocaleString('en-IN')}
                                   </span>
                                 </>
                               ) : (
-                                <span className="attiz-mono text-[14px] sm:text-[15px] font-bold text-black">
-                                  ₹{originalPrice.toLocaleString('en-IN')}
+                                <span className="attiz-mono text-[14px] sm:text-[15px] font-bold text-black font-semibold">
+                                  ₹{finalPrice.toLocaleString('en-IN')}
                                 </span>
                               )}
                             </div>
@@ -785,9 +781,8 @@ export default function Navbar() {
                             {/* Mobile Action Button Trigger */}
                             <button
                               onClick={handleQuickAdd}
-                              className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-none cursor-pointer transition-colors ${
-                                addedCardId === product.id ? 'bg-emerald-600 text-white' : 'bg-black text-white'
-                              }`}
+                              className={`w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center rounded-none cursor-pointer transition-colors ${addedCardId === product.id ? 'bg-emerald-600 text-white' : 'bg-black text-white'
+                                }`}
                               aria-label="Add to cart"
                             >
                               {addedCardId === product.id ? (

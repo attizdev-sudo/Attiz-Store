@@ -87,32 +87,42 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Insert variants and variant images
+    // 2. Bulk insert variants and variant images
     if (variants && variants.length > 0) {
-      for (const variant of variants) {
-        const { images, ...variantData } = variant;
-        const { data: varData, error: varErr } = await supabase
-          .from('product_variants')
-          .insert({ ...variantData, product_id: prodData.id })
-          .select()
-          .single();
+      const variantPayloads = variants.map((v: any) => {
+        const { images, id: _vId, ...variantData } = v;
+        return { ...variantData, product_id: prodData.id };
+      });
 
-        if (varErr) {
-          console.error('Variant insert error:', varErr);
-          continue;
-        }
+      const { data: insertedVariants, error: varErr } = await supabase
+        .from('product_variants')
+        .insert(variantPayloads)
+        .select();
 
-        if (images && images.length > 0) {
-          const imagePayload = images.map((img: string, idx: number) => ({
-            variant_id: varData.id,
-            image_url: img,
-            sort_order: idx,
-          }));
+      if (varErr) {
+        console.error('Variant bulk insert error:', varErr);
+      } else if (insertedVariants && insertedVariants.length > 0) {
+        const allImagePayloads: any[] = [];
+        insertedVariants.forEach((varData: any, vIdx: number) => {
+          const origVariant = variants[vIdx];
+          const images = origVariant?.images || [];
+          images.forEach((img: string, idx: number) => {
+            if (img) {
+              allImagePayloads.push({
+                variant_id: varData.id,
+                image_url: img,
+                sort_order: idx,
+              });
+            }
+          });
+        });
+
+        if (allImagePayloads.length > 0) {
           const { error: imgErr } = await supabase
             .from('product_variant_images')
-            .insert(imagePayload);
+            .insert(allImagePayloads);
           if (imgErr) {
-            console.error('Variant images insert error:', imgErr);
+            console.error('Variant images bulk insert error:', imgErr);
           }
         }
       }

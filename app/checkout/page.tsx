@@ -21,8 +21,48 @@ import {
   FileText,
   Edit2
 } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
+import type { CartItem } from '@/lib/types';
+
+const INDIAN_STATES = [
+  'Andhra Pradesh',
+  'Arunachal Pradesh',
+  'Assam',
+  'Bihar',
+  'Chhattisgarh',
+  'Goa',
+  'Gujarat',
+  'Haryana',
+  'Himachal Pradesh',
+  'Jharkhand',
+  'Karnataka',
+  'Kerala',
+  'Madhya Pradesh',
+  'Maharashtra',
+  'Manipur',
+  'Meghalaya',
+  'Mizoram',
+  'Nagaland',
+  'Odisha',
+  'Punjab',
+  'Rajasthan',
+  'Sikkim',
+  'Tamil Nadu',
+  'Telangana',
+  'Tripura',
+  'Uttar Pradesh',
+  'Uttarakhand',
+  'West Bengal',
+  'Andaman and Nicobar Islands',
+  'Chandigarh',
+  'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi',
+  'Jammu and Kashmir',
+  'Ladakh',
+  'Lakshadweep',
+  'Puducherry',
+];
 
 interface SavedAddress {
   id: string;
@@ -65,6 +105,53 @@ export default function CheckoutPage() {
   });
   const [saveAddressToBook, setSaveAddressToBook] = useState(true);
   const [step1Error, setStep1Error] = useState('');
+  const [isPincodeLoading, setIsPincodeLoading] = useState(false);
+
+  // Phone Input Sanitizer (Removes +91 and non-digits, max 10)
+  const stripCountryCode = (p?: string) => {
+    if (!p) return '';
+    return p.replace(/^\+?91[\s-]?/, '').replace(/\D/g, '').slice(0, 10);
+  };
+
+  const handlePhoneChange = (val: string, target: 'profile' | 'form') => {
+    const numericVal = stripCountryCode(val);
+    if (target === 'profile') {
+      setPhone(numericVal);
+      setAddressForm((prev) => ({ ...prev, phone: numericVal }));
+    } else {
+      setAddressForm((prev) => ({ ...prev, phone: numericVal }));
+    }
+  };
+
+  // PIN Code Sanitizer & Auto State/City Lookup
+  const handlePincodeChange = async (val: string) => {
+    const numericVal = val.replace(/\D/g, '').slice(0, 6);
+    setAddressForm((prev) => ({ ...prev, postalCode: numericVal }));
+
+    if (numericVal.length === 6) {
+      setIsPincodeLoading(true);
+      try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${numericVal}`);
+        const data = await res.json();
+        if (data && data[0]?.Status === 'Success' && data[0]?.PostOffice?.length > 0) {
+          const postOffice = data[0].PostOffice[0];
+          const matchedState = INDIAN_STATES.find(
+            (s) => s.toLowerCase() === postOffice.State.toLowerCase()
+          ) || postOffice.State;
+
+          setAddressForm((prev) => ({
+            ...prev,
+            city: prev.city || postOffice.District || postOffice.Name || '',
+            state: matchedState || prev.state,
+          }));
+        }
+      } catch (err) {
+        console.warn('Pincode auto-lookup error:', err);
+      } finally {
+        setIsPincodeLoading(false);
+      }
+    }
+  };
 
   // Payment Method State
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'Online'>('COD');
@@ -103,11 +190,12 @@ export default function CheckoutPage() {
         router.push('/login?redirect=/checkout');
         return;
       }
-      setPhone(user.phone || '');
+      const cleanUserPhone = stripCountryCode(user.phone);
+      setPhone(cleanUserPhone);
       setAddressForm((prev) => ({
         ...prev,
         recipientName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-        phone: user.phone || '',
+        phone: cleanUserPhone,
       }));
       fetchAddresses();
     }
@@ -133,7 +221,7 @@ export default function CheckoutPage() {
           populateFormWithSavedAddress(defaultAddr);
 
           // If user has saved phone & valid saved address, jump directly to Step 2: Order Summary
-          const userHasPhone = Boolean((user?.phone && user.phone.trim().length >= 7) || (defaultAddr.phone && defaultAddr.phone.trim().length >= 7));
+          const userHasPhone = Boolean((user?.phone && stripCountryCode(user.phone).length >= 10) || (defaultAddr.phone && stripCountryCode(defaultAddr.phone).length >= 10));
           const userHasAddress = Boolean(defaultAddr.address_line1 && defaultAddr.city && defaultAddr.state && defaultAddr.postal_code);
 
           if (userHasPhone && userHasAddress) {
@@ -147,9 +235,10 @@ export default function CheckoutPage() {
   };
 
   const populateFormWithSavedAddress = (addr: SavedAddress) => {
+    const cleanPhone = stripCountryCode(addr.phone);
     setAddressForm({
       recipientName: addr.recipient_name,
-      phone: addr.phone,
+      phone: cleanPhone,
       addressLine1: addr.address_line1,
       addressLine2: addr.address_line2 || '',
       city: addr.city,
@@ -157,15 +246,16 @@ export default function CheckoutPage() {
       postalCode: addr.postal_code,
       country: addr.country || 'India',
     });
-    if (addr.phone) setPhone(addr.phone);
+    if (addr.phone) setPhone(cleanPhone);
   };
 
   const handleSelectSavedAddress = (addrId: string) => {
     setSelectedAddressId(addrId);
     if (addrId === 'new') {
+      const cleanUserPhone = stripCountryCode(phone || user?.phone);
       setAddressForm({
         recipientName: `${user?.first_name || ''} ${user?.last_name || ''}`.trim(),
-        phone: phone || user?.phone || '',
+        phone: cleanUserPhone,
         addressLine1: '',
         addressLine2: '',
         city: '',
@@ -185,8 +275,23 @@ export default function CheckoutPage() {
     setStep1Error('');
 
     const cleanPhone = phone.trim() || addressForm.phone.trim();
-    if (!cleanPhone || cleanPhone.length < 7) {
-      setStep1Error('Please enter a valid mobile phone number (min 7 digits).');
+    if (!cleanPhone || cleanPhone.length < 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      setStep1Error('Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9).');
+      return;
+    }
+
+    if (addressForm.recipientName.trim().length < 3) {
+      setStep1Error('Recipient name must be at least 3 characters long.');
+      return;
+    }
+
+    if (addressForm.addressLine1.trim().length < 10) {
+      setStep1Error('Street Address Line 1 must be at least 10 characters (include house/flat no., street, and area) for Shiprocket courier dispatch.');
+      return;
+    }
+
+    if (!/^\d{6}$/.test(addressForm.postalCode.trim())) {
+      setStep1Error('PIN code must be a valid 6-digit number.');
       return;
     }
 
@@ -204,6 +309,38 @@ export default function CheckoutPage() {
     // Update phone in profile if requested
     if (updateProfilePhone && user && cleanPhone !== user.phone) {
       await updateUserPhone(cleanPhone);
+    }
+
+    // Update existing saved address in DB if user modified any field
+    if (selectedAddressId && selectedAddressId !== 'new' && user) {
+      try {
+        const updateRes = await fetch('/api/user/addresses', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: selectedAddressId,
+            recipient_name: addressForm.recipientName.trim(),
+            phone: addressForm.phone.trim(),
+            address_line1: addressForm.addressLine1.trim(),
+            address_line2: addressForm.addressLine2.trim() || null,
+            city: addressForm.city.trim(),
+            state: addressForm.state.trim(),
+            postal_code: addressForm.postalCode.trim(),
+            country: addressForm.country.trim(),
+          }),
+        });
+
+        if (updateRes.ok) {
+          const updatedJson = await updateRes.json();
+          if (updatedJson.address) {
+            setSavedAddresses((prev) =>
+              prev.map((a) => (a.id === selectedAddressId ? updatedJson.address : a))
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Error updating saved address:', err);
+      }
     }
 
     setCurrentStep(2);
@@ -241,6 +378,7 @@ export default function CheckoutPage() {
           id: item.id,
           product_id: item.product_id || (item.id.includes('-') ? item.id.split('-')[0] : item.id),
           variant_id: item.variant_id || null,
+          sku: item.sku || null,
           title: item.title,
           price: Number(item.price) || 0,
           quantity: item.quantity,
@@ -455,20 +593,33 @@ export default function CheckoutPage() {
                     <label className="block attiz-mono text-[10px] font-bold text-black uppercase tracking-wider mb-1">
                       Mobile Phone Number <span className="text-[#E63B2E]">*</span>
                     </label>
-                    <div className="relative">
+                    <div className="flex border border-black/25 focus-within:border-black focus-within:bg-white bg-white">
+                      <div className="bg-[#FAF8F5] border-r border-black/20 px-3 flex items-center justify-center attiz-mono text-xs font-bold text-black select-none shrink-0">
+                        <Phone className="w-3.5 h-3.5 text-black/60 mr-1.5" />
+                        <span>+91</span>
+                      </div>
                       <input
                         type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={10}
                         required
-                        placeholder="+91 9876543210"
+                        placeholder="9876543210"
                         value={phone}
-                        onChange={(e) => {
-                          setPhone(e.target.value);
-                          setAddressForm((prev) => ({ ...prev, phone: e.target.value }));
-                        }}
-                        className="w-full border border-black/25 p-2.5 pl-9 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black focus:bg-white"
+                        onChange={(e) => handlePhoneChange(e.target.value, 'profile')}
+                        className="w-full p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none bg-transparent"
                       />
-                      <Phone className="w-3.5 h-3.5 text-black/60 absolute left-3 top-3" />
                     </div>
+                    {phone.length > 0 && phone.length < 10 && (
+                      <p className="attiz-mono text-[9px] text-[#E63B2E] mt-1 font-bold">
+                        ⚠️ Please enter full 10-digit mobile number ({phone.length}/10 digits)
+                      </p>
+                    )}
+                    {phone.length === 10 && /^[6-9]\d{9}$/.test(phone) && (
+                      <p className="attiz-mono text-[9px] text-green-700 mt-1 font-bold">
+                        ✓ Valid 10-digit mobile number
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-2 pt-0.5">
@@ -538,11 +689,12 @@ export default function CheckoutPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block attiz-mono text-[10px] font-bold text-black/80 uppercase tracking-wider mb-1">
-                        Recipient Name <span className="text-[#E63B2E]">*</span>
+                        Recipient Full Name <span className="text-[#E63B2E]">*</span>
                       </label>
                       <input
                         type="text"
                         required
+                        placeholder="e.g. Rahul Sharma"
                         value={addressForm.recipientName}
                         onChange={(e) => setAddressForm({ ...addressForm, recipientName: e.target.value })}
                         className="w-full border border-black/25 p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black"
@@ -553,37 +705,57 @@ export default function CheckoutPage() {
                       <label className="block attiz-mono text-[10px] font-bold text-black/80 uppercase tracking-wider mb-1">
                         Delivery Phone <span className="text-[#E63B2E]">*</span>
                       </label>
-                      <input
-                        type="tel"
-                        required
-                        value={addressForm.phone}
-                        onChange={(e) => setAddressForm({ ...addressForm, phone: e.target.value })}
-                        className="w-full border border-black/25 p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black"
-                      />
+                      <div className="flex border border-black/25 focus-within:border-black focus-within:bg-white bg-white">
+                        <div className="bg-[#FAF8F5] border-r border-black/20 px-2.5 flex items-center justify-center attiz-mono text-xs font-bold text-black select-none shrink-0">
+                          <span>+91</span>
+                        </div>
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={10}
+                          required
+                          placeholder="9876543210"
+                          value={addressForm.phone}
+                          onChange={(e) => handlePhoneChange(e.target.value, 'form')}
+                          className="w-full p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none bg-transparent"
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block attiz-mono text-[10px] font-bold text-black/80 uppercase tracking-wider mb-1">
-                      Street Address Line 1 <span className="text-[#E63B2E]">*</span>
+                    <label className="block attiz-mono text-[10px] font-bold text-black/80 uppercase tracking-wider mb-1 flex items-center justify-between">
+                      <span>Street Address Line 1 (House No, Flat, Street, Area) <span className="text-[#E63B2E]">*</span></span>
+                      <span className="text-[9px] text-black/60 font-normal">Min 10 chars</span>
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="House No, Building Name, Street"
+                      placeholder="e.g. Flat 4B, Emerald Heights, MG Road, Indiranagar"
                       value={addressForm.addressLine1}
                       onChange={(e) => setAddressForm({ ...addressForm, addressLine1: e.target.value })}
                       className="w-full border border-black/25 p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black"
                     />
+                    {addressForm.addressLine1.trim().length > 0 && addressForm.addressLine1.trim().length < 10 && (
+                      <p className="attiz-mono text-[9px] text-[#E63B2E] mt-1 font-bold">
+                        ⚠️ Please enter at least 10 characters for courier delivery ({addressForm.addressLine1.trim().length}/10 chars)
+                      </p>
+                    )}
+                    {addressForm.addressLine1.trim().length >= 10 && (
+                      <p className="attiz-mono text-[9px] text-green-700 mt-1 font-bold">
+                        ✓ Valid address length for Shiprocket courier dispatch
+                      </p>
+                    )}
                   </div>
 
                   <div>
                     <label className="block attiz-mono text-[10px] font-bold text-black/80 uppercase tracking-wider mb-1">
-                      Address Line 2 (Optional)
+                      Address Line 2 / Landmark (Optional)
                     </label>
                     <input
                       type="text"
-                      placeholder="Apartment, Landmark, Suite"
+                      placeholder="e.g. Near HDFC Bank, Opposite City Mall"
                       value={addressForm.addressLine2}
                       onChange={(e) => setAddressForm({ ...addressForm, addressLine2: e.target.value })}
                       className="w-full border border-black/25 p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black"
@@ -592,12 +764,31 @@ export default function CheckoutPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
+                      <label className="block attiz-mono text-[10px] font-bold text-black/80 uppercase tracking-wider mb-1 flex items-center justify-between">
+                        <span>PIN Code <span className="text-[#E63B2E]">*</span></span>
+                        {isPincodeLoading && <span className="text-[9px] text-[#E63B2E] animate-pulse">Auto-filling...</span>}
+                      </label>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        required
+                        placeholder="6-digit PIN (e.g. 560001)"
+                        value={addressForm.postalCode}
+                        onChange={(e) => handlePincodeChange(e.target.value)}
+                        className="w-full border border-black/25 p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black"
+                      />
+                    </div>
+
+                    <div>
                       <label className="block attiz-mono text-[10px] font-bold text-black/80 uppercase tracking-wider mb-1">
                         City <span className="text-[#E63B2E]">*</span>
                       </label>
                       <input
                         type="text"
                         required
+                        placeholder="e.g. Bengaluru"
                         value={addressForm.city}
                         onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
                         className="w-full border border-black/25 p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black"
@@ -608,26 +799,19 @@ export default function CheckoutPage() {
                       <label className="block attiz-mono text-[10px] font-bold text-black/80 uppercase tracking-wider mb-1">
                         State <span className="text-[#E63B2E]">*</span>
                       </label>
-                      <input
-                        type="text"
+                      <select
                         required
                         value={addressForm.state}
                         onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
-                        className="w-full border border-black/25 p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block attiz-mono text-[10px] font-bold text-black/80 uppercase tracking-wider mb-1">
-                        PIN Code <span className="text-[#E63B2E]">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={addressForm.postalCode}
-                        onChange={(e) => setAddressForm({ ...addressForm, postalCode: e.target.value })}
-                        className="w-full border border-black/25 p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black"
-                      />
+                        className="w-full border border-black/25 p-2.5 attiz-mono text-xs uppercase font-bold text-black focus:outline-none focus:border-black bg-white cursor-pointer"
+                      >
+                        <option value="">Select State / UT</option>
+                        {INDIAN_STATES.map((st) => (
+                          <option key={st} value={st}>
+                            {st}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
 
@@ -667,11 +851,14 @@ export default function CheckoutPage() {
           {/* STEP 2: ORDER SUMMARY REVIEW */}
           {currentStep === 2 && (
             <div className="bg-white border border-black/15 p-5 sm:p-6 shadow-xs space-y-5">
-              <div className="border-b border-black/10 pb-3 flex items-center justify-between">
-                <h2 className="attiz-display text-base uppercase text-black flex items-center space-x-2">
-                  <FileText className="w-4 h-4 text-black/85" />
-                  <span>Step 2: Review Order Summary</span>
-                </h2>
+              <div className="border-b border-black/10 pb-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center space-x-2.5">
+                  <h2 className="attiz-display text-base uppercase text-black flex items-center space-x-2">
+                    <FileText className="w-4 h-4 text-black/85" />
+                    <span>Step 2: Review Order Summary</span>
+                  </h2>
+                  
+                </div>
 
                 <button
                   type="button"
@@ -738,9 +925,12 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    <span className="attiz-mono text-xs font-black text-[#E63B2E] shrink-0">
-                      ₹{((Number(item.price) || 0) * item.quantity).toLocaleString('en-IN')}
-                    </span>
+                    <div className="text-right shrink-0">
+                      <span className="attiz-mono text-xs font-black text-[#E63B2E] block">
+                        ₹{((Number(item.price) || 0) * item.quantity).toLocaleString('en-IN')}
+                      </span>
+                      
+                    </div>
                   </div>
                 ))}
               </div>
@@ -760,7 +950,10 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="pt-2 border-t border-black/10 flex justify-between items-center font-bold">
-                  <span className="attiz-mono text-sm uppercase text-black">Grand Total</span>
+                  <div>
+                    <span className="attiz-mono text-sm uppercase text-black block">Grand Total</span>
+                    <span className="attiz-mono text-[9.5px] font-bold text-emerald-700 block tracking-wider">(Inclusive of GST)</span>
+                  </div>
                   <span className="attiz-mono text-lg text-[#E63B2E]">₹{grandTotal.toLocaleString('en-IN')}</span>
                 </div>
               </div>

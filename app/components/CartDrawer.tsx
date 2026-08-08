@@ -55,11 +55,11 @@ export default function CartDrawer() {
   return (
     <div className="fixed inset-0 z-[9980] overflow-hidden">
       {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-300" 
-        onClick={() => setIsCartOpen(false)} 
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-xs transition-opacity duration-300"
+        onClick={() => setIsCartOpen(false)}
       />
-      
+
       <div className="absolute top-[56px] bottom-[56px] sm:top-0 sm:bottom-0 right-0 w-full sm:max-w-md flex">
         <div className="w-full bg-white flex flex-col h-full border-l-2 border-black relative transition-all shadow-2xl">
 
@@ -76,9 +76,9 @@ export default function CartDrawer() {
                 </span>
               </div>
             </div>
-            
-            <button 
-              onClick={() => setIsCartOpen(false)} 
+
+            <button
+              onClick={() => setIsCartOpen(false)}
               className="hidden sm:block text-black/85 hover:text-black p-1.5 transition-colors cursor-pointer border border-transparent hover:border-black rounded-none"
               aria-label="Close cart"
             >
@@ -109,12 +109,12 @@ export default function CartDrawer() {
                 <div key={`${item.id}-${item.selectedSize}-${idx}`} className="flex items-start gap-4 py-4">
                   {/* Product Image */}
                   <div className="relative w-20 h-24 bg-[#F5F1E6] border border-black overflow-hidden shrink-0">
-                    <Image 
-                      src={item.image || '/placeholder.png'} 
-                      alt={item.title} 
-                      fill 
-                      className="object-cover" 
-                      sizes="80px" 
+                    <Image
+                      src={item.image || '/placeholder.png'}
+                      alt={item.title}
+                      fill
+                      className="object-cover"
+                      sizes="80px"
                     />
                   </div>
 
@@ -125,9 +125,9 @@ export default function CartDrawer() {
                         <h4 className="attiz-mono text-xs font-bold text-black tracking-wide line-clamp-1 uppercase">
                           {item.title}
                         </h4>
-                        <button 
-                          onClick={() => removeFromCart(item.id, item.selectedSize)} 
-                          className="text-black/85 hover:text-[#E63B2E] transition-colors p-0.5 cursor-pointer" 
+                        <button
+                          onClick={() => removeFromCart(item.id, item.selectedSize)}
+                          className="text-black/85 hover:text-[#E63B2E] transition-colors p-0.5 cursor-pointer"
                           title="Remove item"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -155,8 +155,8 @@ export default function CartDrawer() {
                     <div className="flex items-center justify-between mt-2">
                       {/* Quantity selector */}
                       <div className="flex items-center border border-black bg-white">
-                        <button 
-                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)} 
+                        <button
+                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity - 1)}
                           className="p-1 px-2.5 text-black hover:bg-black/10 transition-colors cursor-pointer border-r border-black"
                           aria-label="Decrease quantity"
                         >
@@ -165,8 +165,8 @@ export default function CartDrawer() {
                         <span className="attiz-mono text-xs font-bold px-3 text-black select-none">
                           {item.quantity}
                         </span>
-                        <button 
-                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)} 
+                        <button
+                          onClick={() => updateQuantity(item.id, item.selectedSize, item.quantity + 1)}
                           className="p-1 px-2.5 text-black hover:bg-black/10 transition-colors cursor-pointer border-l border-black"
                           aria-label="Increase quantity"
                         >

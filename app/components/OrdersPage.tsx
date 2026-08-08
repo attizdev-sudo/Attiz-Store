@@ -261,6 +261,32 @@ export default function OrdersPage() {
                   </span>
                 </div>
 
+                {/* Courier & AWB Info Banner if available */}
+                {(selectedDetail.order.awb_code || selectedDetail.order.courier_name) && (
+                  <div className="p-3 bg-[#FAF8F5] border border-black/15 flex flex-wrap items-center justify-between gap-2 attiz-mono text-xs uppercase">
+                    <div className="flex items-center space-x-2">
+                      <Truck className="w-4 h-4 text-[#E63B2E] shrink-0" />
+                      <span>Courier: <strong className="text-black font-extrabold">{selectedDetail.order.courier_name || 'Express Courier'}</strong></span>
+                    </div>
+                    {selectedDetail.order.awb_code && (
+                      <div className="flex items-center space-x-2">
+                        <span>AWB: <strong className="text-black font-extrabold">{selectedDetail.order.awb_code}</strong></span>
+                        {selectedDetail.order.tracking_url && (
+                          <a
+                            href={selectedDetail.order.tracking_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#E63B2E] hover:underline font-bold flex items-center gap-0.5 text-[11px]"
+                          >
+                            <span>Track Package</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Multi-step Tracking Graph */}
                 <div className="p-4 bg-white border border-black/15">
                   <div className="flex items-center justify-between gap-1 relative">

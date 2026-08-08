@@ -105,3 +105,66 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: err?.message || 'Invalid request body.' }, { status: 400 });
   }
 }
+
+/**
+ * PUT /api/user/addresses
+ * Updates an existing shipping address for the authenticated user.
+ */
+export async function PUT(request: Request) {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('attiz_session')?.value;
+  if (!sessionCookie) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+  }
+
+  const sessionData = await validateSession(sessionCookie);
+  if (!sessionData) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+  }
+
+  const { user } = sessionData;
+
+  try {
+    const body = await request.json();
+    const {
+      id,
+      recipient_name,
+      phone,
+      address_line1,
+      address_line2,
+      city,
+      state,
+      country = 'India',
+      postal_code,
+    } = body;
+
+    if (!id || !recipient_name || !phone || !address_line1 || !city || !state || !postal_code) {
+      return NextResponse.json({ error: 'Address ID and required fields are missing.' }, { status: 400 });
+    }
+
+    const { data, error } = await supabase
+      .from('addresses')
+      .update({
+        recipient_name,
+        phone,
+        address_line1,
+        address_line2: address_line2 || null,
+        city,
+        state,
+        country,
+        postal_code,
+      })
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, address: data });
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || 'Invalid request body.' }, { status: 400 });
+  }
+}

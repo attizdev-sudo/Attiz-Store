@@ -9,13 +9,10 @@ import {
   Trash2,
   ShoppingBag,
   ArrowLeft,
-  Sparkles,
   Loader2,
   Check,
   ArrowUpDown,
-  Layers,
   ShoppingBag as CartIcon,
-  Tag,
 } from 'lucide-react';
 import { useWishlist } from '@/context/WishlistContext';
 import { useCart } from '@/context/CartContext';
@@ -37,14 +34,15 @@ export default function WishlistPage() {
   };
 
   const handleAddToCart = (item: any) => {
-    const finalPrice = item.discount && item.discount > 0
-      ? Math.round(item.price * (1 - item.discount / 100))
-      : item.price;
+    const itemGst = item.gst_rate || 0;
+    const taxablePrice = Math.max(0, item.price * (1 - (item.discount || 0) / 100));
+    const finalPrice = Math.round(taxablePrice * (1 + itemGst / 100));
 
     addToCart({
       id: item.product_id || item.variant_id,
       title: item.title,
       price: finalPrice,
+      discount: 0,
       image: item.image,
       quantity: 1,
       selectedSize: item.size || 'M',
@@ -67,14 +65,15 @@ export default function WishlistPage() {
   const handleAddAllToCart = () => {
     if (wishlistItems.length === 0) return;
     wishlistItems.forEach((item) => {
-      const finalPrice = item.discount && item.discount > 0
-        ? Math.round(item.price * (1 - item.discount / 100))
-        : item.price;
+      const itemGst = item.gst_rate || 0;
+      const taxablePrice = Math.max(0, item.price * (1 - (item.discount || 0) / 100));
+      const finalPrice = Math.round(taxablePrice * (1 + itemGst / 100));
 
       addToCart({
         id: item.product_id || item.variant_id,
         title: item.title,
         price: finalPrice,
+        discount: 0,
         image: item.image,
         quantity: 1,
         selectedSize: item.size || 'M',
@@ -196,148 +195,154 @@ export default function WishlistPage() {
           </div>
         ) : wishlistItems.length === 0 ? (
           /* Empty State */
-          <div className="max-w-lg mx-auto my-12 border-2 border-black bg-white p-8 sm:p-14 text-center shadow-[6px_6px_0_0_#111111] transition-all">
-            <div className="w-20 h-20 bg-[#FAF8F5] border-2 border-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-[4px_4px_0_0_#E63B2E]">
-              <Heart className="w-10 h-10 text-[#E63B2E]" />
+          <div className="bg-white border-2 border-black p-12 text-center shadow-[6px_6px_0_0_#111111] max-w-lg mx-auto my-12 space-y-6">
+            <div className="w-16 h-16 bg-[#FAF8F5] border-2 border-black flex items-center justify-center mx-auto text-black">
+              <Heart className="w-8 h-8 stroke-black text-[#E63B2E]" />
             </div>
-            <h2 className="attiz-display text-2xl sm:text-3xl uppercase tracking-wider text-black mb-3">
-              Your Wishlist is Empty
-            </h2>
-            <p className="attiz-body text-xs text-black/70 font-light mb-8 leading-relaxed max-w-sm mx-auto">
-              Save items you love by clicking the heart icon while browsing our catalog. They will appear here for easy access.
-            </p>
+            <div>
+              <h2 className="attiz-display text-2xl uppercase text-black mb-2">WISHLIST IS EMPTY</h2>
+              <p className="attiz-body text-sm text-black/60 max-w-xs mx-auto">
+                You haven't saved any garments to your archive yet. Browse our collection and save your favorites!
+              </p>
+            </div>
             <button
               onClick={() => router.push('/')}
-              className="w-full py-4 bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white border-2 border-black attiz-mono text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300 shadow-[4px_4px_0_0_#111111] cursor-pointer flex items-center justify-center gap-2"
+              className="inline-flex items-center justify-center px-6 py-3 bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors attiz-mono text-xs font-bold uppercase tracking-widest border-2 border-black shadow-[3px_3px_0_0_#111111] active:translate-y-0.5 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Explore Catalog</span>
+              EXPLORE CATALOG
             </button>
           </div>
         ) : (
-          /* Wishlist Items Grid */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-10">
-            {sortedItems.map((item) => {
-              const isAdded = addedIds.has(item.id);
-              const discountedPrice = item.discount && item.discount > 0
-                ? Math.round(item.price * (1 - item.discount / 100))
-                : item.price;
+          <div className="space-y-6">
+            {/* Filter / Sort bar */}
+            <div className="bg-white border-2 border-black p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-[3px_3px_0_0_#111111]">
+              <span className="attiz-mono text-xs font-bold text-black uppercase">
+                Showing {sortedItems.length} items
+              </span>
 
-              return (
-                <div
-                  key={item.id}
-                  className="group relative flex flex-col justify-between bg-white border-2 border-black shadow-[4px_4px_0_0_#111111] hover:shadow-[6px_6px_0_0_#E63B2E] transition-all duration-300 overflow-hidden"
+              <div className="flex items-center space-x-2">
+                <span className="attiz-mono text-xs text-black/60 uppercase font-bold">Sort:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e: any) => setSortBy(e.target.value)}
+                  className="bg-[#FAF8F5] border-2 border-black px-3 py-1 attiz-mono text-xs font-bold uppercase text-black focus:outline-none cursor-pointer"
                 >
-                  <div>
-                    {/* Media Container */}
-                    <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden border-b-2 border-black">
-                      <Image
-                        src={item.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
-                        alt={item.title}
-                        fill
-                        className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      />
+                  <option value="newest">Recently Added</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                  <option value="discount">Highest Discount</option>
+                </select>
+              </div>
+            </div>
 
-                      {/* Floating Discount Badge */}
-                      {item.discount && item.discount > 0 && (
-                        <div className="absolute top-3 left-3 bg-black text-[#FFCB05] px-2.5 py-1 attiz-mono text-[9px] font-bold tracking-widest uppercase border-2 border-black shadow-[2px_2px_0_0_#111111]">
-                          Save {item.discount}%
+            {/* Wishlist Items Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {sortedItems.map((item) => {
+                const isAdded = addedIds.has(item.id);
+                const itemGst = item.gst_rate || 0;
+                const taxablePrice = Math.max(0, item.price * (1 - (item.discount || 0) / 100));
+                const finalPrice = Math.round(taxablePrice * (1 + itemGst / 100));
+                const mrpInclusiveGst = Math.round(item.price * (1 + itemGst / 100));
+
+                return (
+                  <div
+                    key={item.id}
+                    className="group relative flex flex-col justify-between bg-white border-2 border-black shadow-[4px_4px_0_0_#111111] hover:shadow-[6px_6px_0_0_#E63B2E] transition-all duration-300 overflow-hidden"
+                  >
+                    <div>
+                      {/* Media Container */}
+                      <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden border-b-2 border-black">
+                        <Image
+                          src={item.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                          alt={item.title}
+                          fill
+                          className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        />
+
+                        {/* Floating Discount Badge */}
+                        {item.discount && item.discount > 0 && (
+                          <div className="absolute top-3 left-3 bg-black text-[#FFCB05] px-2.5 py-1 attiz-mono text-[9px] font-bold tracking-widest uppercase border-2 border-black shadow-[2px_2px_0_0_#111111]">
+                            Save {item.discount}%
+                          </div>
+                        )}
+
+                        {/* Stock Indicator */}
+                        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm border border-black px-2 py-0.5 attiz-mono text-[8px] font-bold tracking-wider uppercase text-black flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>In Stock</span>
                         </div>
-                      )}
 
-                      {/* Stock Indicator */}
-                      <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm border border-black px-2 py-0.5 attiz-mono text-[8px] font-bold tracking-wider uppercase text-black flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span>In Stock</span>
+                        {/* Quick Delete Button */}
+                        <button
+                          onClick={() => removeFromWishlist({ wishlistId: item.id, variantId: item.variant_id, productId: item.product_id || undefined })}
+                          className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center bg-white border-2 border-black text-black hover:bg-[#E63B2E] hover:text-white transition-all cursor-pointer shadow-[2px_2px_0_0_#111111] active:scale-90"
+                          title="Remove from Wishlist"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
 
-                      {/* Quick Delete Button */}
-                      <button
-                        onClick={() => removeFromWishlist({ wishlistId: item.id, variantId: item.variant_id, productId: item.product_id || undefined })}
-                        className="absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center bg-white border-2 border-black text-black hover:bg-[#E63B2E] hover:text-white transition-all cursor-pointer shadow-[2px_2px_0_0_#111111] active:scale-90"
-                        title="Remove from Wishlist"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                      {/* Content Section */}
+                      <div className="p-4 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="attiz-mono text-[9px] font-bold text-black/50 tracking-widest uppercase">
+                            ATTIZ ARCHIVE
+                          </span>
+                        </div>
 
-                    {/* Content Section */}
-                    <div className="p-4 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="attiz-mono text-[9px] font-bold text-black/50 tracking-widest uppercase">
-                          ATTIZ ARCHIVE
-                        </span>
-                      </div>
-
-                      {item.product_id ? (
-                        <Link href={`/product/${item.product_id}`}>
-                          <h3 className="attiz-display text-lg text-black hover:text-[#E63B2E] transition-colors uppercase leading-snug truncate">
+                        {item.product_id ? (
+                          <Link href={`/product/${item.product_id}`}>
+                            <h3 className="attiz-display text-lg text-black hover:text-[#E63B2E] transition-colors uppercase leading-snug truncate">
+                              {item.title}
+                            </h3>
+                          </Link>
+                        ) : (
+                          <h3 className="attiz-display text-lg text-black uppercase leading-snug truncate">
                             {item.title}
                           </h3>
-                        </Link>
-                      ) : (
-                        <h3 className="attiz-display text-lg text-black uppercase leading-snug truncate">
-                          {item.title}
-                        </h3>
-                      )}
+                        )}
 
-                      {/* Variant Specs */}
-                      {(item.size || item.color) && (
-                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                          {item.size && (
-                            <span className="bg-[#FAF8F5] border border-black/30 px-2 py-0.5 attiz-mono text-[9px] font-bold tracking-wider text-black uppercase">
-                              Size: {item.size}
-                            </span>
-                          )}
-                          {item.color && (
-                            <span className="bg-[#FAF8F5] border border-black/30 px-2 py-0.5 attiz-mono text-[9px] font-bold tracking-wider text-black uppercase">
-                              {item.color}
+                        {/* Price Section */}
+                        <div className="flex items-baseline space-x-2 pt-1">
+                          <span className="attiz-mono text-lg font-bold text-black">
+                            ₹{finalPrice.toLocaleString()}
+                          </span>
+                          {item.discount && item.discount > 0 && (
+                            <span className="attiz-mono text-xs text-black/40 line-through">
+                              ₹{mrpInclusiveGst.toLocaleString()}
                             </span>
                           )}
                         </div>
-                      )}
-
-                      {/* Price Section */}
-                      <div className="flex items-baseline space-x-2 pt-1">
-                        <span className="attiz-mono text-lg font-bold text-black">
-                          ₹{discountedPrice.toLocaleString()}
-                        </span>
-                        {item.discount && item.discount > 0 && (
-                          <span className="attiz-mono text-xs text-black/40 line-through">
-                            ₹{item.price.toLocaleString()}
-                          </span>
-                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Actions Footer */}
-                  <div className="p-4 pt-0">
-                    <button
-                      onClick={() => handleAddToCart(item)}
-                      disabled={isAdded}
-                      className={`w-full py-3 border-2 border-black attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-[2px_2px_0_0_#111111] active:translate-y-0.5 ${isAdded
-                          ? 'bg-emerald-600 text-white'
-                          : 'bg-[#FFCB05] hover:bg-black hover:text-white text-black'
+                    {/* Actions Footer */}
+                    <div className="p-4 pt-0">
+                      <button
+                        onClick={() => handleAddToCart(item)}
+                        disabled={isAdded}
+                        className={`w-full py-3 border-2 border-black attiz-mono text-[10px] font-bold tracking-widest uppercase transition-all duration-200 cursor-pointer flex items-center justify-center gap-2 shadow-[2px_2px_0_0_#111111] active:translate-y-0.5 ${
+                          isAdded ? 'bg-emerald-600 text-white' : 'bg-[#FFCB05] hover:bg-black hover:text-white text-black'
                         }`}
-                    >
-                      {isAdded ? (
-                        <>
-                          <Check className="w-4 h-4 stroke-[3]" />
-                          <span>Added to Cart</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingBag className="w-3.5 h-3.5" />
-                          <span>Add to Cart</span>
-                        </>
-                      )}
-                    </button>
+                      >
+                        {isAdded ? (
+                          <>
+                            <Check className="w-4 h-4 stroke-[3]" />
+                            <span>Added to Cart</span>
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingBag className="w-3.5 h-3.5" />
+                            <span>Add to Cart</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

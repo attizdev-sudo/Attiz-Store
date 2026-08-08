@@ -19,6 +19,7 @@ export interface CartItem {
   color?: string;
   stock?: number;
   discount?: number;
+  sku?: string;
   [key: string]: any;
 }
 
@@ -38,6 +39,7 @@ export interface ProductVariant {
   stock: number;
   price: number;
   discount?: number;
+  gst_rate?: number;
   sku?: string | null;
   created_at?: string;
   product_variant_images?: ProductVariantImage[];
@@ -98,6 +100,11 @@ export interface Order {
   total_price: number;
   status: string;
   created_at: string;
+  awb_code?: string;
+  courier_name?: string;
+  tracking_url?: string;
+  shiprocket_order_id?: number | string;
+  shiprocket_shipment_id?: number | string;
 }
 
 export interface Banner {
@@ -158,6 +165,7 @@ export interface WishlistItem {
   stock?: number;
   price: number;
   discount?: number;
+  gst_rate?: number;
   image: string;
   created_at?: string;
 }

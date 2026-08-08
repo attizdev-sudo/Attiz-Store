@@ -221,36 +221,20 @@ export async function deleteUnreferencedImages(urls: string[]): Promise<void> {
     const resolvedBucket = rest.substring(0, firstSlash);
     const filePath = rest.substring(firstSlash + 1);
 
-    // Check references in the database
-    // Check product_variant_images
-    const { count: variantImgCount } = await supabase
-      .from('product_variant_images')
-      .select('*', { count: 'exact', head: true })
-      .eq('image_url', url);
-
-    // Check products size_chart
-    const { count: productSizeChartCount } = await supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true })
-      .eq('size_chart', url);
-
-    // Check banners image
-    const { count: bannerImgCount } = await supabase
-      .from('banners')
-      .select('*', { count: 'exact', head: true })
-      .eq('image_url', url);
-
-    // Check editorial_banners image
-    const { count: editorialBannerImgCount } = await supabase
-      .from('editorial_banners')
-      .select('*', { count: 'exact', head: true })
-      .eq('image_url', url);
-
-    // Check lookbook_styles image
-    const { count: lookbookStyleImgCount } = await supabase
-      .from('lookbook_styles')
-      .select('*', { count: 'exact', head: true })
-      .eq('image_url', url);
+    // Check references in the database in parallel
+    const [
+      { count: variantImgCount },
+      { count: productSizeChartCount },
+      { count: bannerImgCount },
+      { count: editorialBannerImgCount },
+      { count: lookbookStyleImgCount },
+    ] = await Promise.all([
+      supabase.from('product_variant_images').select('*', { count: 'exact', head: true }).eq('image_url', url),
+      supabase.from('products').select('*', { count: 'exact', head: true }).eq('size_chart', url),
+      supabase.from('banners').select('*', { count: 'exact', head: true }).eq('image_url', url),
+      supabase.from('editorial_banners').select('*', { count: 'exact', head: true }).eq('image_url', url),
+      supabase.from('lookbook_styles').select('*', { count: 'exact', head: true }).eq('image_url', url),
+    ]);
 
     const totalRefs = (variantImgCount || 0) + (productSizeChartCount || 0) + (bannerImgCount || 0) + (editorialBannerImgCount || 0) + (lookbookStyleImgCount || 0);
 
