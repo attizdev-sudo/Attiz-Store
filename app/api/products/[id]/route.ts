@@ -135,39 +135,67 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     .delete()
     .eq('product_id', id);
 
-  // 3. Insert new variants and variant images
+  // 3. Bulk insert new variants and variant images
   if (variants && variants.length > 0) {
-    for (const variant of variants) {
-      const { images, ...variantData } = variant;
-      const { data: varData, error: varErr } = await supabase
-        .from('product_variants')
-        .insert({ ...variantData, product_id: id })
-        .select()
-        .single();
+    const variantPayloads = variants.map((v: any) => {
+      const { images, id: _vId, ...variantData } = v;
+      return { ...variantData, product_id: id };
+    });
 
-      if (varErr) {
-        console.error('Variant insert error:', varErr);
-        continue;
-      }
+    const { data: insertedVariants, error: varErr } = await supabase
+      .from('product_variants')
+      .insert(variantPayloads)
+      .select();
 
-      if (images && images.length > 0) {
-        const imagePayload = images.map((img: string, idx: number) => ({
-          variant_id: varData.id,
-          image_url: img,
-          sort_order: idx,
-        }));
+    if (varErr) {
+      console.error('Variant bulk insert error:', varErr);
+    } else if (insertedVariants && insertedVariants.length > 0) {
+      const allImagePayloads: any[] = [];
+      insertedVariants.forEach((varData: any, vIdx: number) => {
+        const origVariant = variants[vIdx];
+        const images = origVariant?.images || [];
+        images.forEach((img: string, idx: number) => {
+          if (img) {
+            allImagePayloads.push({
+              variant_id: varData.id,
+              image_url: img,
+              sort_order: idx,
+            });
+          }
+        });
+      });
+
+      if (allImagePayloads.length > 0) {
         const { error: imgErr } = await supabase
           .from('product_variant_images')
-          .insert(imagePayload);
+          .insert(allImagePayloads);
         if (imgErr) {
-          console.error('Variant images insert error:', imgErr);
+          console.error('Variant images bulk insert error:', imgErr);
         }
       }
     }
   }
 
+  // 4. Background cleanup for removed image URLs (asynchronous non-blocking)
   if (oldImageUrls.length > 0) {
-    await deleteUnreferencedImages(oldImageUrls);
+    const newImageUrls: string[] = [];
+    if (product.size_chart) newImageUrls.push(product.size_chart);
+    if (Array.isArray(variants)) {
+      variants.forEach((v: any) => {
+        if (Array.isArray(v.images)) {
+          v.images.forEach((img: string) => {
+            if (img && !newImageUrls.includes(img)) newImageUrls.push(img);
+          });
+        }
+      });
+    }
+
+    const removedUrls = oldImageUrls.filter((url) => !newImageUrls.includes(url));
+    if (removedUrls.length > 0) {
+      deleteUnreferencedImages(removedUrls).catch((err) =>
+        console.error('Async image cleanup error:', err)
+      );
+    }
   }
 
   return NextResponse.json({ ...prodData, category_ids: category_ids || [] });

@@ -275,29 +275,37 @@ export default function ProductsTable({
                       </span>
                     </td>
                     <td className="px-5 py-4.5">
-                      {prod.discount && prod.discount > 0 ? (
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-green-700 font-extrabold text-[10px] flex items-center">
-                              ↓{prod.discount}%
-                            </span>
-                            <span className="text-[10px] text-brand-dark/45 line-through">
-                              ₹{parseFloat(String(prod.price)).toFixed(0)}
-                            </span>
-                          </div>
-                          <span className="font-bold text-brand-dark text-xs">
-                            ₹
-                            {Math.round(
-                              parseFloat(String(prod.price)) *
-                                (1 - prod.discount / 100)
-                            ).toLocaleString('en-IN')}
+                      {(() => {
+                        const mrp = parseFloat(String(prod.price || 0));
+                        const disc = prod.discount && prod.discount > 0 ? prod.discount : 0;
+                        const gst = (prod as any).gst_rate || prod.product_variants?.[0]?.gst_rate || 0;
+                        const taxable = Math.max(0, mrp * (1 - disc / 100));
+                        const finalP = Math.round(taxable * (1 + gst / 100));
+
+                        if (disc > 0) {
+                          return (
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-green-700 font-extrabold text-[10px] flex items-center">
+                                  ↓{disc}%
+                                </span>
+                                <span className="text-[10px] text-brand-dark/45 line-through">
+                                  ₹{mrp.toFixed(0)}
+                                </span>
+                              </div>
+                              <span className="font-bold text-brand-dark text-xs">
+                                ₹{finalP.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <span className="font-bold text-brand-brown">
+                            ₹{finalP.toLocaleString('en-IN')}
                           </span>
-                        </div>
-                      ) : (
-                        <span className="font-bold text-brand-brown">
-                          ₹{parseFloat(String(prod.price)).toFixed(0)}
-                        </span>
-                      )}
+                        );
+                      })()}
                     </td>
                     <td className="px-5 py-4.5">
                       <span

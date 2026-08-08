@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import type { Product, Category, Order, Banner, EditorialBanner, LookbookStyle } from '@/lib/types';
 
 export type { Product, Category, Order, Banner, EditorialBanner, LookbookStyle };
@@ -28,11 +28,11 @@ interface StoreContextValue {
   addLookbookStyle: (data: Partial<LookbookStyle>) => Promise<{ data: unknown; error: unknown }>;
   deleteLookbookStyle: (id: string) => Promise<{ data: unknown; error: unknown }>;
   updateOrderStatus: (orderId: string, nextStatus: string) => Promise<{ data: unknown; error: unknown }>;
-  updateOrderDetails: (orderId: string, updates: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+  updateOrderDetails: (orderId: string, updates: Record<string, any>) => Promise<{ data: unknown; error: unknown }>;
   deleteOrder: (orderId: string) => Promise<{ data: unknown; error: unknown }>;
 }
 
-const StoreContext = createContext<StoreContextValue | null>(null);
+const StoreContext = createContext<StoreContextValue | undefined>(undefined);
 
 function getSessionToken(): string | null {
   if (typeof document === 'undefined') return null;
@@ -67,7 +67,56 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [lookbookStyles, setLookbookStyles] = useState<LookbookStyle[]>([]);
   const [dbLoading, setDbLoading] = useState(true);
 
+  const isFetchingRef = useRef(false);
+
+  const fetchProductsOnly = async () => {
+    try {
+      const sessionToken = getSessionToken();
+      const headers = sessionToken ? { 'x-attiz-session': sessionToken } : undefined;
+      const res = await fetch('/api/products', { credentials: 'include', headers });
+      const data = await res.json();
+      const enrichedProducts = Array.isArray(data)
+        ? data.map((p: any) => {
+          const variants = p.product_variants || [];
+          const uniqueSizes = Array.from(new Set(variants.map((v: any) => v.size))).join(',');
+          const uniqueColors = Array.from(new Set(variants.map((v: any) => v.color))).join(',');
+          const totalStock = variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
+          const firstVariant = variants[0];
+          const price = firstVariant ? parseFloat(String(firstVariant.price)) : 0;
+          const discount = firstVariant ? parseFloat(String(firstVariant.discount || 0)) : 0;
+
+          const imageUrls: string[] = [];
+          variants.forEach((v: any) => {
+            v.product_variant_images?.forEach((img: any) => {
+              if (img.image_url && !imageUrls.includes(img.image_url)) {
+                imageUrls.push(img.image_url);
+              }
+            });
+          });
+          const image = imageUrls[0] || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+          const images = imageUrls.join(',');
+
+          return {
+            ...p,
+            price,
+            discount,
+            image,
+            images,
+            sizes: uniqueSizes,
+            colors: uniqueColors,
+            stock: totalStock,
+          };
+        })
+        : [];
+      setProducts(enrichedProducts);
+    } catch (e) {
+      console.error('Error fetching products:', e);
+    }
+  };
+
   const refreshData = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
       setDbLoading(true);
       const sessionToken = getSessionToken();
@@ -123,61 +172,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      const fetchProducts = async () => {
-        try {
-          const res = await fetch('/api/products', { credentials: 'include', headers });
-          const data = await res.json();
-          const enrichedProducts = Array.isArray(data)
-            ? data.map((p: any) => {
-                const variants = p.product_variants || [];
-                const uniqueSizes = Array.from(new Set(variants.map((v: any) => v.size))).join(',');
-                const uniqueColors = Array.from(new Set(variants.map((v: any) => v.color))).join(',');
-                const totalStock = variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
-                const firstVariant = variants[0];
-                const price = firstVariant ? parseFloat(String(firstVariant.price)) : 0;
-                const discount = firstVariant ? parseFloat(String(firstVariant.discount || 0)) : 0;
-                
-                const imageUrls: string[] = [];
-                variants.forEach((v: any) => {
-                  v.product_variant_images?.forEach((img: any) => {
-                    if (img.image_url && !imageUrls.includes(img.image_url)) {
-                      imageUrls.push(img.image_url);
-                    }
-                  });
-                });
-                const image = imageUrls[0] || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
-                const images = imageUrls.join(',');
-
-                return {
-                  ...p,
-                  price,
-                  discount,
-                  image,
-                  images,
-                  sizes: uniqueSizes,
-                  colors: uniqueColors,
-                  stock: totalStock,
-                };
-              })
-            : [];
-          setProducts(enrichedProducts);
-        } catch (e) {
-          console.error('Error fetching products:', e);
-        }
-      };
-
       await Promise.all([
         fetchBanners(),
         fetchEditorialBanners(),
         fetchLookbookStyles(),
         fetchCategories(),
         fetchOrders(),
-        fetchProducts(),
+        fetchProductsOnly(),
       ]);
     } catch (e) {
       console.error('Error fetching store data:', e);
     } finally {
       setDbLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -185,19 +192,19 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const addProduct = async (data: Partial<Product>) => {
     const result = await apiFetch('/api/products', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    if (!result.error) await refreshData();
+    if (!result.error) await fetchProductsOnly();
     return result;
   };
 
   const editProduct = async (id: string, updates: Partial<Product>) => {
     const result = await apiFetch(`/api/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
-    if (!result.error) await refreshData();
+    if (!result.error) await fetchProductsOnly();
     return result;
   };
 
   const deleteProduct = async (id: string) => {
     const result = await apiFetch(`/api/products/${id}`, { method: 'DELETE' });
-    if (!result.error) await refreshData();
+    if (!result.error) await fetchProductsOnly();
     return result;
   };
 
@@ -267,7 +274,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return result;
   };
 
-  const updateOrderDetails = async (orderId: string, updates: Record<string, unknown>) => {
+  const updateOrderDetails = async (orderId: string, updates: Record<string, any>) => {
     const result = await apiFetch(`/api/orders/${orderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updates) });
     if (!result.error) await refreshData();
     return result;

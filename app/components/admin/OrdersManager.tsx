@@ -44,7 +44,7 @@ export default function OrdersManager({
   setErrorMsg,
   setSuccessMsg,
 }: OrdersManagerProps) {
-  const { orders, dbLoading, updateOrderStatus, updateOrderDetails, deleteOrder } = useStore();
+  const { orders, dbLoading, updateOrderStatus, updateOrderDetails, deleteOrder, refreshData } = useStore();
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -53,6 +53,29 @@ export default function OrdersManager({
 
   // Inline updating state
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [pushingOrderId, setPushingOrderId] = useState<string | null>(null);
+
+  const handlePushToShiprocket = async (orderId: string) => {
+    setPushingOrderId(orderId);
+    try {
+      const res = await fetch('/api/admin/shiprocket/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccessMsg(`Order successfully pushed to Shiprocket! (ID: ${data.shiprocket?.shiprocket_order_id || 'Done'})`);
+        if (refreshData) await refreshData();
+      } else {
+        setErrorMsg(data.error || 'Failed to push order to Shiprocket.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Network error pushing to Shiprocket.');
+    } finally {
+      setPushingOrderId(null);
+    }
+  };
 
   // Edit Modal State
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
@@ -67,6 +90,8 @@ export default function OrdersManager({
     shipping_state: string;
     shipping_postal_code: string;
     shipping_country: string;
+    discount: number;
+    shipping_charge: number;
     items: Array<{
       id?: string;
       product_id?: string;
@@ -164,6 +189,8 @@ export default function OrdersManager({
       shipping_state: order.shipping_state || '',
       shipping_postal_code: order.shipping_postal_code || '',
       shipping_country: order.shipping_country || 'India',
+      discount: Number(order.discount) || 0,
+      shipping_charge: Number(order.shipping_charge) || 0,
       items: (order.items || []).map((item) => ({
         id: item.id,
         product_id: item.product_id,
@@ -178,11 +205,19 @@ export default function OrdersManager({
     });
   };
 
-  // Calculate Subtotal & Total for edit form
-  const editCalculatedTotal = useMemo(() => {
+  // Calculate Subtotal & Grand Total for edit form
+  const editCalculatedSubtotal = useMemo(() => {
     if (!editForm) return 0;
     return editForm.items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
   }, [editForm]);
+
+  const editCalculatedTotal = useMemo(() => {
+    if (!editForm) return 0;
+    const sub = editCalculatedSubtotal;
+    const disc = Number(editForm.discount) || 0;
+    const ship = Number(editForm.shipping_charge) || 0;
+    return Math.max(0, sub + ship - disc);
+  }, [editForm, editCalculatedSubtotal]);
 
   // Handle Save Edit Form
   const handleSaveOrderEdits = async (e: React.FormEvent) => {
@@ -206,8 +241,10 @@ export default function OrdersManager({
         shipping_postal_code: editForm.shipping_postal_code,
         shipping_country: editForm.shipping_country,
         items: editForm.items,
+        subtotal: editCalculatedSubtotal,
+        discount: Number(editForm.discount) || 0,
+        shipping_charge: Number(editForm.shipping_charge) || 0,
         total_price: editCalculatedTotal,
-        subtotal: editCalculatedTotal,
       };
 
       const { error } = await updateOrderDetails(editingOrder.id, payload);
@@ -439,6 +476,20 @@ export default function OrdersManager({
 
                     {/* Action Buttons */}
                     <button
+                      onClick={() => handlePushToShiprocket(order.id)}
+                      disabled={pushingOrderId === order.id}
+                      className="px-2.5 py-1 bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors border border-black text-[10px] font-extrabold uppercase flex items-center space-x-1 cursor-pointer disabled:opacity-50"
+                      title="Push order to Shiprocket"
+                    >
+                      {pushingOrderId === order.id ? (
+                        <div className="w-3 h-3 border-2 border-[#FFCB05] border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Truck className="w-3 h-3" />
+                      )}
+                      <span>{order.shiprocket_order_id ? 'Re-Sync Shiprocket' : 'Shiprocket'}</span>
+                    </button>
+
+                    <button
                       onClick={() => openEditModal(order)}
                       className="px-2.5 py-1 bg-black text-white hover:bg-[#E63B2E] transition-colors border border-black text-[10px] font-extrabold uppercase flex items-center space-x-1 cursor-pointer"
                       title="Edit Order Details"
@@ -518,10 +569,41 @@ export default function OrdersManager({
                       ₹{(order.total_price || 0).toLocaleString('en-IN')}
                     </span>
                     <span className="text-[10px] font-bold text-black/70 block uppercase">
-                      {order.items?.reduce((sum, i) => sum + (i.quantity || 1), 0) || 1} Total Item(s)
+                      Payment: {order.payment_status || 'Pending'}
                     </span>
                   </div>
                 </div>
+
+                {/* Shiprocket Metadata Info Bar (If synced) */}
+                {(order.shiprocket_order_id || order.awb_code) && (
+                  <div className="px-4 py-2 bg-[#FFCB05]/15 border-t border-black/10 text-[10px] attiz-mono flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-extrabold text-black uppercase">🚀 Shiprocket Order ID:</span>
+                      <span className="font-extrabold text-[#E63B2E]">{order.shiprocket_order_id || 'N/A'}</span>
+                      {order.shiprocket_shipment_id && (
+                        <span className="text-black/60">(Shipment #{order.shiprocket_shipment_id})</span>
+                      )}
+                    </div>
+                    {order.awb_code && (
+                      <div className="flex items-center space-x-2">
+                        <span className="font-bold text-black">AWB:</span>
+                        <span className="font-extrabold text-black bg-white px-1.5 py-0.5 border border-black">{order.awb_code}</span>
+                        {order.courier_name && <span className="text-black/70">via {order.courier_name}</span>}
+                        {order.tracking_url && (
+                          <a
+                            href={order.tracking_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#E63B2E] hover:underline font-bold flex items-center gap-0.5"
+                          >
+                            <span>Track</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -815,12 +897,62 @@ export default function OrdersManager({
                   ))}
                 </div>
 
-                {/* Recalculated Total Footer */}
-                <div className="bg-black text-[#FFCB05] p-3 flex justify-between items-center border border-black">
-                  <span className="font-bold uppercase text-white text-xs">Calculated Total Price</span>
-                  <span className="attiz-display text-lg font-bold">
-                    ₹{editCalculatedTotal.toLocaleString('en-IN')}
-                  </span>
+                {/* Recalculated Total Footer with Discount & Shipping */}
+                <div className="bg-[#FAF8F5] p-3 border border-black/20 space-y-2 text-xs attiz-mono">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-bold text-black uppercase mb-1">
+                        Discount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editForm.discount}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            discount: Math.max(0, parseFloat(e.target.value) || 0),
+                          })
+                        }
+                        className="w-full border border-black/30 p-1.5 font-bold text-black focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-black uppercase mb-1">
+                        Shipping Charge (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={editForm.shipping_charge}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            shipping_charge: Math.max(0, parseFloat(e.target.value) || 0),
+                          })
+                        }
+                        className="w-full border border-black/30 p-1.5 font-bold text-black focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-black/10 flex flex-wrap justify-between items-center text-black font-bold text-xs gap-2">
+                    <div>
+                      <span>Subtotal: ₹{editCalculatedSubtotal.toLocaleString('en-IN')}</span>
+                      {Number(editForm.discount) > 0 && (
+                        <span className="text-[#E63B2E] ml-2">(-₹{Number(editForm.discount).toLocaleString('en-IN')})</span>
+                      )}
+                      {Number(editForm.shipping_charge) > 0 && (
+                        <span className="text-black/70 ml-2">(+₹{Number(editForm.shipping_charge).toLocaleString('en-IN')})</span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-black/50 block uppercase">Final Payable Total</span>
+                      <span className="attiz-display text-lg font-bold text-[#E63B2E]">
+                        ₹{editCalculatedTotal.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 

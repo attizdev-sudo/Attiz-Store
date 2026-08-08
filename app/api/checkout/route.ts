@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabase } from '@/lib/db';
 import { validateSession } from '@/lib/auth/session';
+import { createShiprocketOrder } from '@/lib/shiprocket';
 
 interface CheckoutBody {
   userId: string;
@@ -89,6 +90,23 @@ export async function POST(request: Request) {
 
   if (!recipientName || !shippingPhone || !address1 || !city || !state || !postalCode || !country) {
     return NextResponse.json({ error: 'Please provide all required shipping fields.' }, { status: 400 });
+  }
+
+  if (recipientName.length < 3) {
+    return NextResponse.json({ error: 'Recipient name must be at least 3 characters long.' }, { status: 400 });
+  }
+
+  const cleanPhoneNum = shippingPhone.replace(/\D/g, '').slice(-10);
+  if (cleanPhoneNum.length < 10 || !/^[6-9]\d{9}$/.test(cleanPhoneNum)) {
+    return NextResponse.json({ error: 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.' }, { status: 400 });
+  }
+
+  if (!/^\d{6}$/.test(postalCode.replace(/\D/g, ''))) {
+    return NextResponse.json({ error: 'PIN code must be a valid 6-digit number.' }, { status: 400 });
+  }
+
+  if (address1.length < 10) {
+    return NextResponse.json({ error: 'Street address line 1 must be at least 10 characters long (include house/flat no., street, and area) for courier shipping.' }, { status: 400 });
   }
 
   // 1. UPDATE USER'S PHONE IN `users` TABLE IF PROVIDED & CHANGED
@@ -186,6 +204,7 @@ export async function POST(request: Request) {
       order_id: orderId,
       product_id: cleanProdId,
       variant_id: item.variant_id || null,
+      sku: (item as any).sku || null,
       product_title: item.title || 'Product',
       color: item.color || (item as any).selectedColor || null,
       size: item.selectedSize || item.size || null,
@@ -220,12 +239,96 @@ export async function POST(request: Request) {
     console.warn('Payment record insert warning:', err);
   }
 
+  // 6. AUTOMATIC SHIPROCKET ORDER CREATION IF CREDENTIALS PRESENT AND ENABLED
+  let shiprocketResult: any = null;
+  const isShiprocketEnabled = process.env.ENABLE_SHIPROCKET !== 'false';
+
+  if (isShiprocketEnabled && process.env.SHIPROCKET_EMAIL && process.env.SHIPROCKET_PASSWORD) {
+    try {
+      const variantIds = cartItems.map((ci) => ci.variant_id).filter(Boolean);
+      let variantSkuMap: Record<string, string> = {};
+      let variantGstMap: Record<string, number> = {};
+      let variantDiscountMap: Record<string, number> = {};
+      let variantPriceMap: Record<string, number> = {};
+      if (variantIds.length > 0) {
+        const { data: vData } = await supabase
+          .from('product_variants')
+          .select('id, sku, gst_rate, discount, price')
+          .in('id', variantIds);
+        if (vData) {
+          vData.forEach((v: any) => {
+            if (v.sku) variantSkuMap[v.id] = v.sku;
+            if (v.gst_rate) variantGstMap[v.id] = v.gst_rate;
+            if (v.discount) variantDiscountMap[v.id] = v.discount;
+            if (v.price) variantPriceMap[v.id] = v.price;
+          });
+        }
+      }
+
+      const srRes = await createShiprocketOrder({
+        orderId,
+        orderNumber: orderData.order_number || orderId,
+        orderDate: new Date().toISOString(),
+        customerName: recipientName,
+        customerPhone: shippingPhone,
+        customerEmail: user.email || '',
+        shippingAddress1: address1,
+        shippingAddress2: address2 || '',
+        city,
+        state,
+        postalCode,
+        country,
+        paymentMethod,
+        subtotal,
+        totalPrice,
+        items: cartItems.map((ci) => {
+          const matchedSku = (ci as any).sku || (ci.variant_id ? variantSkuMap[ci.variant_id] : null);
+          const matchedGst = (ci as any).gst_rate || (ci.variant_id ? variantGstMap[ci.variant_id] : 0);
+          
+          const originalMrp = (ci as any).original_mrp || (ci.variant_id ? variantPriceMap[ci.variant_id] : 0) || Number(ci.price) || 0;
+          const discountPct = (ci.discount !== undefined && Number(ci.discount) > 0)
+            ? Number(ci.discount)
+            : (ci.variant_id ? variantDiscountMap[ci.variant_id] || 0 : 0);
+
+          const discountAmount = (discountPct > 0 && originalMrp > 0)
+            ? Math.round(originalMrp * (discountPct / 100))
+            : 0;
+
+          return {
+            title: ci.title || 'Product',
+            sku: matchedSku || undefined,
+            quantity: ci.quantity || 1,
+            price: Number(ci.price) || 0,
+            discount: discountAmount,
+            gst_rate: matchedGst,
+          };
+        }),
+      });
+
+      if (srRes.success) {
+        shiprocketResult = srRes;
+        const srUpdates: Record<string, any> = {
+          shiprocket_order_id: srRes.shiprocket_order_id,
+          shiprocket_shipment_id: srRes.shiprocket_shipment_id,
+        };
+        if (srRes.awb_code) srUpdates.awb_code = srRes.awb_code;
+
+        await supabase.from('orders').update(srUpdates).eq('id', orderId);
+      }
+    } catch (srErr) {
+      console.error('Shiprocket auto-order creation error (non-fatal):', srErr);
+    }
+  } else if (!isShiprocketEnabled) {
+    console.log('ℹ️ [CHECKOUT API] Shiprocket order creation skipped (ENABLE_SHIPROCKET is set to false).');
+  }
+
   return NextResponse.json(
     {
       success: true,
       message: 'Order placed successfully!',
       orderNumber: orderData.order_number,
       orderId,
+      shiprocket: shiprocketResult,
     },
     { status: 201 }
   );

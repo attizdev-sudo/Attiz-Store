@@ -34,6 +34,7 @@ export async function GET() {
           stock,
           price,
           discount,
+          gst_rate,
           sku,
           product_variant_images (
             image_url,
@@ -74,6 +75,7 @@ export async function GET() {
         stock: variant?.stock ?? 0,
         price: variant ? parseFloat(String(variant.price)) : 0,
         discount: variant ? parseFloat(String(variant.discount || 0)) : 0,
+        gst_rate: variant ? parseFloat(String(variant.gst_rate || 0)) : 0,
         image: primaryImage || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600',
         created_at: item.created_at,
       };

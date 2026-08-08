@@ -20,6 +20,51 @@ interface ProductFormProps {
   setSuccessMsg: (msg: string) => void;
 }
 
+const computeDefaultGstRate = (priceVal: number | string): number => {
+  const p = Number(priceVal) || 0;
+  return p > 2500 ? 18 : 5;
+};
+
+const computeStep5PriceBreakdown = (
+  mrpInput: number | string,
+  discInput: number | string,
+  gstRateInput?: number | string
+) => {
+  const mrp = Math.max(0, Number(mrpInput) || 0);
+  const discPercent = Math.max(0, Math.min(100, Number(discInput) || 0));
+  const discAmount = (mrp * discPercent) / 100;
+  const taxablePrice = Math.max(0, mrp - discAmount);
+
+  const autoGst = taxablePrice > 2500 ? 18 : 5;
+  const effectiveGst =
+    gstRateInput !== undefined && gstRateInput !== ''
+      ? Number(gstRateInput)
+      : autoGst;
+
+  const gstAmount = (taxablePrice * effectiveGst) / 100;
+  const finalCustomerPrice = Number((taxablePrice + gstAmount).toFixed(2));
+  const mrpInclusiveGst = Number((mrp * (1 + effectiveGst / 100)).toFixed(2));
+
+  const effectiveDiscountPercent =
+    mrpInclusiveGst > 0 && mrpInclusiveGst > finalCustomerPrice
+      ? Math.round(((mrpInclusiveGst - finalCustomerPrice) / mrpInclusiveGst) * 100)
+      : 0;
+
+  return {
+    mrp,
+    discPercent,
+    discAmount,
+    taxablePrice,
+    effectiveGst,
+    gstAmount,
+    cgstAmount: gstAmount / 2,
+    sgstAmount: gstAmount / 2,
+    finalCustomerPrice,
+    mrpInclusiveGst,
+    effectiveDiscountPercent,
+  };
+};
+
 export default function ProductForm({
   isOpen,
   onClose,
@@ -58,11 +103,12 @@ export default function ProductForm({
 
   // 5. Variant defaults for quick initialization
   const [defaultPrice, setDefaultPrice] = useState('799');
+  const [defaultGstRate, setDefaultGstRate] = useState('5');
   const [defaultDiscount, setDefaultDiscount] = useState('0');
   const [defaultStock, setDefaultStock] = useState('100');
 
-  // 6. Variant matrix: Record<`${color}-${size}`, { price, discount, stock, sku }>
-  const [variantInputs, setVariantInputs] = useState<Record<string, { price: string; discount: string; stock: string; sku: string }>>({});
+  // 6. Variant matrix: Record<`${color}-${size}`, { price, discount, stock, sku, gst_rate }>
+  const [variantInputs, setVariantInputs] = useState<Record<string, { price: string; discount: string; stock: string; sku: string; gst_rate: string }>>({});
 
   // Local UI temporary inputs
   const [customSize, setCustomSize] = useState('');
@@ -85,6 +131,19 @@ export default function ProductForm({
       });
 
       const variants = editingProduct.product_variants || [];
+      const firstVar = variants[0];
+      const pVal = firstVar?.price !== undefined ? String(firstVar.price) : String(editingProduct.price || 799);
+      const dVal = firstVar?.discount !== undefined ? String(firstVar.discount ?? 0) : String(editingProduct.discount || 0);
+      const sVal = firstVar?.stock !== undefined ? String(firstVar.stock) : '100';
+      const gVal = firstVar?.gst_rate !== undefined && firstVar?.gst_rate !== null 
+        ? String(firstVar.gst_rate) 
+        : String(computeDefaultGstRate(pVal));
+
+      setDefaultPrice(pVal);
+      setDefaultDiscount(dVal);
+      setDefaultStock(sVal);
+      setDefaultGstRate(gVal);
+
       const colorsList = Array.from(new Set(variants.map((v: any) => v.color))) as string[];
       const sizesList = Array.from(new Set(variants.map((v: any) => v.size))) as string[];
 
@@ -97,11 +156,14 @@ export default function ProductForm({
 
       variants.forEach((v: any) => {
         const key = `${v.color}-${v.size}`;
+        const p = Number(v.price) || 0;
+        const autoGst = computeDefaultGstRate(p);
         inputs[key] = {
           price: String(v.price),
           discount: String(v.discount ?? 0),
           stock: String(v.stock),
           sku: v.sku || '',
+          gst_rate: v.gst_rate !== undefined && v.gst_rate !== null ? String(v.gst_rate) : String(autoGst),
         };
 
         if (v.product_variant_images) {
@@ -132,6 +194,10 @@ export default function ProductForm({
         size_chart: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800',
         split_variants: false,
       });
+      setDefaultPrice('799');
+      setDefaultDiscount('0');
+      setDefaultStock('100');
+      setDefaultGstRate(String(computeDefaultGstRate(799)));
       setColors(['Black', 'Dark Wine', 'Teal']);
       setSizes(['S', 'M', 'L', 'XL', 'XXL']);
       setMediaPool([]);
@@ -155,11 +221,13 @@ export default function ProductForm({
           if (prev[key]) {
             next[key] = prev[key];
           } else {
+            const autoGst = defaultGstRate || String(computeDefaultGstRate(defaultPrice));
             next[key] = {
               price: defaultPrice,
               discount: defaultDiscount,
               stock: defaultStock,
               sku: '',
+              gst_rate: autoGst,
             };
           }
         });
@@ -300,25 +368,55 @@ export default function ProductForm({
         discount: defaultDiscount,
         stock: defaultStock,
         sku: '',
+        gst_rate: String(computeDefaultGstRate(Number(defaultPrice) - (Number(defaultPrice) * Number(defaultDiscount)) / 100)),
       };
+      
+      const updated = { ...current, [field]: value };
+      
+      // Auto-update GST Rate when price or discount changes (<= 2500 -> 5%, > 2500 -> 18%)
+      if (field === 'price' || field === 'discount') {
+        const p = Number(field === 'price' ? value : updated.price) || 0;
+        const d = Number(field === 'discount' ? value : updated.discount) || 0;
+        const sellingPrice = Math.max(0, p - (p * d) / 100);
+        updated.gst_rate = String(computeDefaultGstRate(sellingPrice));
+      }
+
       return {
         ...prev,
-        [key]: {
-          ...current,
-          [field]: value,
-        },
+        [key]: updated,
       };
     });
   };
 
   const handleDefaultPriceChange = (val: string) => {
     setDefaultPrice(val);
+    const mrp = Number(val) || 0;
+    const disc = Number(defaultDiscount) || 0;
+    const sellingPrice = Math.max(0, mrp - (mrp * disc) / 100);
+    const autoGst = String(computeDefaultGstRate(sellingPrice));
+    setDefaultGstRate(autoGst);
+
     setVariantInputs((prev) => {
       const next = { ...prev };
       Object.keys(next).forEach((key) => {
         next[key] = {
           ...next[key],
           price: val,
+          gst_rate: autoGst,
+        };
+      });
+      return next;
+    });
+  };
+
+  const handleDefaultGstRateChange = (val: string) => {
+    setDefaultGstRate(val);
+    setVariantInputs((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        next[key] = {
+          ...next[key],
+          gst_rate: val,
         };
       });
       return next;
@@ -428,12 +526,18 @@ export default function ProductForm({
             stock: defaultStock,
             sku: '',
           };
+          const mrpVal = parseFloat(input.price) || 0;
+          const discVal = parseFloat(input.discount) || 0;
+          const autoGst = computeDefaultGstRate(mrpVal - (mrpVal * discVal) / 100);
+          const gstRateVal = input.gst_rate !== undefined && input.gst_rate !== '' ? parseFloat(input.gst_rate) : autoGst;
+
           variantsPayload.push({
             color,
             size,
             stock: parseInt(input.stock, 10) || 0,
-            price: parseFloat(input.price) || 0,
-            discount: parseFloat(input.discount) || 0,
+            price: mrpVal,
+            discount: discVal,
+            gst_rate: isNaN(gstRateVal) ? autoGst : gstRateVal,
             sku: input.sku || null,
             images: colorImages[color] || [],
           });
@@ -811,24 +915,215 @@ export default function ProductForm({
             </div>
 
             {/* Quick Pricing & Stock Defaults */}
-            <div className="border border-brand-cream-dark bg-brand-cream/10 rounded-xl p-4 space-y-3">
-              <h5 className="font-serif text-[11px] font-bold text-brand-dark uppercase tracking-wider">Configure Defaults</h5>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className={labelCls}>Default Price (₹)</label>
-                  <input type="number" value={defaultPrice} onChange={(e) => handleDefaultPriceChange(e.target.value)} className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Default Discount (%)</label>
-                  <input type="number" min="0" max="100" value={defaultDiscount} onChange={(e) => handleDefaultDiscountChange(e.target.value)} className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>Default Stock</label>
-                  <input type="number" value={defaultStock} onChange={(e) => handleDefaultStockChange(e.target.value)} className={inputCls} />
-                </div>
+{(() => {
+  const defaultMrpNum = Number(defaultPrice) || 0;
+  const defaultDiscNum = Number(defaultDiscount) || 0;
+
+  // Step 1: Calculate discount amount
+  const defaultDiscAmount = (defaultMrpNum * defaultDiscNum) / 100;
+
+  // Step 2: Price after discount = Taxable Price
+  const defaultTaxablePrice = Math.max(0, defaultMrpNum - defaultDiscAmount);
+
+  // Step 3: Determine GST Rate (Threshold checked on Taxable Price)
+  const autoDefaultGst = defaultTaxablePrice > 2500 ? 18 : 5;
+  const effectiveDefaultGst = defaultGstRate !== undefined && defaultGstRate !== '' ? Number(defaultGstRate) : autoDefaultGst;
+
+  // Step 4: Calculate GST on Taxable Price
+  const defaultGstAmount = (defaultTaxablePrice * effectiveDefaultGst) / 100;
+
+  // Step 5: Final Customer Price (Taxable Price + GST)
+  const defaultSellingPrice = defaultTaxablePrice + defaultGstAmount;
+
+  // Step 6: GST Split
+  const defaultCgstAmount = defaultGstAmount / 2;
+  const defaultSgstAmount = defaultGstAmount / 2;
+
+  const isCustomGst = defaultGstRate !== undefined && defaultGstRate !== '';
+
+  return (
+    <div className="border border-brand-cream-dark bg-brand-cream/10 rounded-xl p-4.5 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-2 border-b border-brand-cream-dark/40">
+        <div>
+          <h5 className="font-serif text-xs font-bold text-brand-dark uppercase tracking-wider">
+            Configure Pricing, GST & Stock Defaults
+          </h5>
+          <p className="text-[10px] text-brand-dark/60 mt-0.5">
+            Discount is applied to the original price first, then GST is calculated on the discounted taxable price.
+          </p>
+        </div>
+        <span className="bg-emerald-100 text-emerald-800 font-bold text-[9px] px-2.5 py-1 rounded-full border border-emerald-300 uppercase tracking-wide">
+          Tax Inclusive Final Pricing
+        </span>
+      </div>
+
+      {/* Input Form Fields */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+        {/* Input 1: Original MRP */}
+        <div>
+          <label className={labelCls}>Original MRP (₹)</label>
+          <input
+            type="number"
+            value={defaultPrice}
+            onChange={(e) => handleDefaultPriceChange(e.target.value)}
+            className={inputCls}
+            placeholder="e.g. 740"
+          />
+          <span className="text-[9px] text-brand-dark/50 block mt-1">Base catalog MRP</span>
+        </div>
+
+        {/* Input 2: Discount */}
+        <div>
+          <label className={labelCls}>Discount (%)</label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={defaultDiscount}
+            onChange={(e) => handleDefaultDiscountChange(e.target.value)}
+            className={inputCls}
+            placeholder="e.g. 20"
+          />
+          <div className="mt-1 flex items-center justify-between text-[9px]">
+            <span className="text-brand-dark/60">Taxable Value:</span>
+            <span className="font-bold text-brand-dark">₹{defaultTaxablePrice.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Input 3: GST Rate */}
+        <div>
+          <div className="flex items-center justify-between">
+            <label className={labelCls}>GST Rate (%)</label>
+            <span className={`text-[8px] px-1.5 py-0.2 rounded font-semibold ${isCustomGst ? 'bg-amber-100 text-amber-800' : 'bg-brand-cream text-brand-brown'}`}>
+              {isCustomGst ? 'Custom' : `Auto (${autoDefaultGst}%)`}
+            </span>
+          </div>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            value={defaultGstRate}
+            onChange={(e) => handleDefaultGstRateChange(e.target.value)}
+            className={inputCls + ' font-bold text-brand-brown'}
+            placeholder={`${autoDefaultGst}`}
+          />
+          <div className="mt-1 flex items-center justify-between text-[9px]">
+            <span className="text-brand-dark/60">Calculated GST:</span>
+            <span className="font-semibold text-brand-dark">₹{defaultGstAmount.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Input 4: Stock */}
+        <div>
+          <label className={labelCls}>Default Stock</label>
+          <input
+            type="number"
+            value={defaultStock}
+            onChange={(e) => handleDefaultStockChange(e.target.value)}
+            className={inputCls}
+            placeholder="e.g. 100"
+          />
+          <span className="text-[9px] text-brand-dark/50 block mt-1">Available inventory</span>
+        </div>
+      </div>
+
+      {/* Live Waterfall Flow & Tax Calculation Summary */}
+      <div className="bg-white border border-brand-cream-dark p-3.5 rounded-lg space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="font-serif font-bold text-brand-dark uppercase tracking-wider text-[10px]">
+            Price & GST Calculation Waterfall
+          </span>
+          <div className="group relative flex items-center cursor-pointer text-brand-dark/60 hover:text-brand-dark">
+            <span className="text-[10px] font-medium mr-1">Calculation Info</span>
+            <span className="w-3.5 h-3.5 rounded-full bg-brand-cream-dark/30 flex items-center justify-center text-[9px] font-bold">?</span>
+            <div className="absolute right-0 bottom-full mb-1.5 hidden group-hover:block w-72 p-2.5 bg-brand-dark text-white text-[9px] rounded shadow-lg z-10 leading-relaxed">
+              <p className="font-bold text-brand-cream mb-1">Forward Tax Calculation Formula:</p>
+              1. <strong>Discounted Taxable Price</strong> = ₹{defaultMrpNum.toFixed(2)} - {defaultDiscNum}% = <strong>₹{defaultTaxablePrice.toFixed(2)}</strong><br />
+              2. <strong>GST ({effectiveDefaultGst}%)</strong> = ₹{defaultTaxablePrice.toFixed(2)} × {effectiveDefaultGst}% = <strong>₹{defaultGstAmount.toFixed(2)}</strong><br />
+              3. <strong>Final Customer Payable</strong> = ₹{defaultTaxablePrice.toFixed(2)} + ₹{defaultGstAmount.toFixed(2)} = <strong>₹{defaultSellingPrice.toFixed(2)}</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* 5-Step Waterfall Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 text-[10px] items-stretch">
+          {/* Step 1: Original Price */}
+          <div className="bg-gray-50 border border-gray-200 p-2 rounded flex flex-col justify-between">
+            <div>
+              <span className="text-brand-dark/50 block text-[8px] uppercase font-bold tracking-wider">Step 1</span>
+              <span className="text-brand-dark font-medium block text-[9.5px]">Original Price</span>
+            </div>
+            <span className="font-bold text-brand-dark text-xs mt-1">₹{defaultMrpNum.toFixed(2)}</span>
+          </div>
+
+          {/* Step 2: Discount */}
+          <div className="bg-red-50/60 border border-red-200 p-2 rounded flex flex-col justify-between">
+            <div>
+              <span className="text-red-500 block text-[8px] uppercase font-bold tracking-wider">Step 2</span>
+              <span className="text-red-700 font-medium block text-[9.5px]">Discount ({defaultDiscNum}%)</span>
+            </div>
+            <span className="font-bold text-red-600 text-xs mt-1">-₹{defaultDiscAmount.toFixed(2)}</span>
+          </div>
+
+          {/* Step 3: Taxable Price */}
+          <div className="bg-blue-50/50 border border-blue-200 p-2 rounded flex flex-col justify-between">
+            <div>
+              <span className="text-blue-600 block text-[8px] uppercase font-bold tracking-wider">Step 3</span>
+              <span className="text-blue-900 font-medium block text-[9.5px]">Taxable Price</span>
+            </div>
+            <span className="font-bold text-blue-900 text-xs mt-1">₹{defaultTaxablePrice.toFixed(2)}</span>
+          </div>
+
+          {/* Step 4: GST Addition */}
+          <div className="bg-amber-50/50 border border-amber-200 p-2 rounded flex flex-col justify-between">
+            <div>
+              <span className="text-amber-700 block text-[8px] uppercase font-bold tracking-wider">Step 4</span>
+              <span className="text-amber-900 font-medium block text-[9.5px]">GST ({effectiveDefaultGst}%)</span>
+            </div>
+            <div>
+              <span className="font-bold text-amber-800 text-xs block mt-1">+₹{defaultGstAmount.toFixed(2)}</span>
+              <div className="text-[7.5px] text-amber-700 mt-0.5 flex justify-between border-t border-amber-200/50 pt-0.5 font-mono">
+                <span>C: ₹{defaultCgstAmount.toFixed(2)}</span>
+                <span>S: ₹{defaultSgstAmount.toFixed(2)}</span>
               </div>
             </div>
+          </div>
 
+          {/* Step 5: Final Customer Payable */}
+          <div className="bg-emerald-50 border-2 border-emerald-500/50 p-2 rounded flex flex-col justify-between shadow-sm">
+            <div>
+              <span className="text-emerald-700 block text-[8px] uppercase font-extrabold tracking-wider">Step 5</span>
+              <span className="text-emerald-900 font-bold block text-[9.5px]">Customer Pays</span>
+              <span className="text-[7.5px] text-emerald-700 block">(Inclusive of GST)</span>
+            </div>
+            <span className="font-black text-emerald-700 text-xs mt-1">₹{defaultSellingPrice.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Summary Bar */}
+        <div className="pt-2 border-t border-brand-cream-dark/30 flex flex-wrap items-center justify-between gap-2 text-[9px] bg-slate-50 -mx-3.5 -mb-3.5 p-2.5 rounded-b-lg">
+          <div className="flex items-center space-x-1.5 text-brand-dark/75">
+            <span className="font-medium">Summary:</span>
+            <span className="text-brand-dark">
+              Taxable Price (<strong>₹{defaultTaxablePrice.toFixed(2)}</strong>) + GST {effectiveDefaultGst}% (<strong>₹{defaultGstAmount.toFixed(2)}</strong>) = Customer Payable (<strong>₹{defaultSellingPrice.toFixed(2)}</strong>)
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-2 text-[8.5px]">
+            <span className="bg-white border border-gray-200 text-brand-dark/70 px-2 py-0.5 rounded font-mono">
+              CGST ({(effectiveDefaultGst / 2).toFixed(1)}%): <strong className="text-brand-dark">₹{defaultCgstAmount.toFixed(2)}</strong>
+            </span>
+            <span className="bg-white border border-gray-200 text-brand-dark/70 px-2 py-0.5 rounded font-mono">
+              SGST ({(effectiveDefaultGst / 2).toFixed(1)}%): <strong className="text-brand-dark">₹{defaultSgstAmount.toFixed(2)}</strong>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+})()}
             {/* Colors Config Grid - Assigning Pool Images (Shopify Style) */}
             <div className="space-y-4">
               <h5 className="font-serif text-xs font-bold text-brand-dark uppercase tracking-wider">Colors Galleries & Size Variations</h5>
@@ -875,9 +1170,12 @@ export default function ProductForm({
                       <table className="w-full text-left text-[10px] border-collapse">
                         <thead>
                           <tr className="border-b border-brand-cream-dark/30 text-[8px] font-bold uppercase text-brand-dark/45">
-                            <th className="py-1 w-16">Size</th>
-                            <th className="py-1 px-2">Price (₹)</th>
+                            <th className="py-1 w-12">Size</th>
+                            <th className="py-1 px-2">MRP (₹)</th>
                             <th className="py-1 px-2">Discount (%)</th>
+                            <th className="py-1 px-2">Customer Price</th>
+                            <th className="py-1 px-2">GST Rate (%)</th>
+                            <th className="py-1 px-2">Tax Breakdown (Base + GST)</th>
                             <th className="py-1 px-2">Stock</th>
                             <th className="py-1 px-2">SKU (Optional)</th>
                           </tr>
@@ -885,7 +1183,16 @@ export default function ProductForm({
                         <tbody>
                           {sizes.map((size) => {
                             const key = `${color}-${size}`;
-                            const input = variantInputs[key] || { price: defaultPrice, discount: defaultDiscount, stock: defaultStock, sku: '' };
+                            const input = variantInputs[key] || {
+                              price: defaultPrice,
+                              discount: defaultDiscount,
+                              stock: defaultStock,
+                              sku: '',
+                              gst_rate: String(computeDefaultGstRate(defaultPrice)),
+                            };
+
+                            const b = computeStep5PriceBreakdown(input.price, input.discount, input.gst_rate);
+
                             return (
                               <tr key={size} className="border-b border-brand-cream-dark/20 last:border-0">
                                 <td className="py-1.5 font-bold text-brand-dark">{size}</td>
@@ -896,10 +1203,25 @@ export default function ProductForm({
                                   <input type="number" min="0" max="100" value={input.discount} onChange={(e) => handleVariantInputChange(color, size, 'discount', e.target.value)} className="w-12 px-1.5 py-0.5 text-[10px] border border-brand-cream-dark rounded outline-none" />
                                 </td>
                                 <td className="py-1 px-2">
+                                  <span className="font-bold text-blue-900 text-[10px]">₹{b.taxablePrice.toFixed(2)}</span>
+                                </td>
+                                <td className="py-1 px-2">
+                                  <input type="number" step="0.01" min="0" max="100" value={input.gst_rate} onChange={(e) => handleVariantInputChange(color, size, 'gst_rate', e.target.value)} className="w-14 px-1.5 py-0.5 text-[10px] border border-brand-cream-dark rounded outline-none font-bold text-brand-brown" />
+                                </td>
+                                <td className="py-1 px-2">
+                                  <div className="flex flex-col text-[8.5px] leading-tight font-mono">
+                                    <span className="font-semibold text-amber-800">+₹{b.gstAmount.toFixed(2)} GST ({b.effectiveGst}%)</span>
+                                    <span className="text-gray-500">C: ₹{b.cgstAmount.toFixed(2)} | S: ₹{b.sgstAmount.toFixed(2)}</span>
+                                  </div>
+                                </td>
+                                <td className="py-1 px-2">
+                                  <span className="font-black text-emerald-700 text-[10.5px]">₹{b.finalCustomerPrice.toFixed(2)}</span>
+                                </td>
+                                <td className="py-1 px-2">
                                   <input type="number" required value={input.stock} onChange={(e) => handleVariantInputChange(color, size, 'stock', e.target.value)} className="w-12 px-1.5 py-0.5 text-[10px] border border-brand-cream-dark rounded outline-none" />
                                 </td>
                                 <td className="py-1 px-2">
-                                  <input type="text" value={input.sku} onChange={(e) => handleVariantInputChange(color, size, 'sku', e.target.value)} className="w-24 px-1.5 py-0.5 text-[10px] border border-brand-cream-dark rounded outline-none" placeholder="SKU-123" />
+                                  <input type="text" value={input.sku} onChange={(e) => handleVariantInputChange(color, size, 'sku', e.target.value)} className="w-20 px-1.5 py-0.5 text-[10px] border border-brand-cream-dark rounded outline-none" placeholder="SKU-123" />
                                 </td>
                               </tr>
                             );
@@ -1042,6 +1364,7 @@ export default function ProductForm({
             title: productData.title,
             price: defaultPrice,
             discount: defaultDiscount,
+            gst_rate: defaultGstRate,
             sizes: sizes.join(','),
             colors: colors.join(','),
             image: colorImages[colors[0]]?.[0] || mediaPool[0] || '',
