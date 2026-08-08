@@ -44,47 +44,36 @@ export async function POST(request: Request) {
   }
 
   const rawItems = order.order_items || order.items || [];
-  const variantIds = rawItems.map((i: any) => i.variant_id).filter(Boolean);
+  const missingSkuVariantIds = rawItems
+    .filter((i: any) => !i.sku && i.variant_id)
+    .map((i: any) => i.variant_id);
 
   let variantSkuMap: Record<string, string> = {};
-  let variantGstMap: Record<string, number> = {};
-  let variantDiscountMap: Record<string, number> = {};
-  let variantPriceMap: Record<string, number> = {};
-  if (variantIds.length > 0) {
+  if (missingSkuVariantIds.length > 0) {
     const { data: vData } = await supabase
       .from('product_variants')
-      .select('id, sku, gst_rate, discount, price')
-      .in('id', variantIds);
+      .select('id, sku')
+      .in('id', missingSkuVariantIds);
     if (vData) {
       vData.forEach((v: any) => {
         if (v.sku) variantSkuMap[v.id] = v.sku;
-        if (v.gst_rate) variantGstMap[v.id] = v.gst_rate;
-        if (v.discount) variantDiscountMap[v.id] = v.discount;
-        if (v.price) variantPriceMap[v.id] = v.price;
       });
     }
   }
 
   const items = rawItems.map((item: any) => {
     const matchedSku = item.sku || (item.variant_id ? variantSkuMap[item.variant_id] : null);
-    const matchedGst = item.gst_rate || item.tax || (item.variant_id ? variantGstMap[item.variant_id] : 0);
-    
-    const originalMrp = item.original_mrp || (item.variant_id ? variantPriceMap[item.variant_id] : 0) || Number(item.unit_price || item.price || 0);
-    const discountPct = (item.discount !== undefined && Number(item.discount) > 0)
-      ? Number(item.discount)
-      : (item.variant_id ? variantDiscountMap[item.variant_id] || 0 : 0);
-
-    const discountAmount = (discountPct > 0 && originalMrp > 0)
-      ? Math.round(originalMrp * (discountPct / 100))
-      : 0;
+    const itemPrice = Number(item.unit_price || item.price || 0);
+    const itemDiscount = Number(item.discount || 0);
+    const itemGst = Number(item.gst_rate || item.tax || order.tax || (itemPrice > 2500 ? 18 : 5));
 
     return {
       title: item.product_title || item.title || 'Product',
       quantity: item.quantity || 1,
       sku: matchedSku || undefined,
-      price: Number(item.unit_price || item.price || 0),
-      discount: discountAmount,
-      gst_rate: matchedGst,
+      price: itemPrice,
+      discount: itemDiscount,
+      gst_rate: itemGst,
     };
   });
 
@@ -95,8 +84,8 @@ export async function POST(request: Request) {
     orderNumber: order.order_number || order.id,
     orderDate: order.created_at,
     customerName: order.shipping_name,
-    customerPhone: order.shipping_phone ,
-    customerEmail: (order as any).users?.email ,
+    customerPhone: order.shipping_phone,
+    customerEmail: (order as any).users?.email,
     shippingAddress1: address1,
     shippingAddress2: order.shipping_address2 || '',
     city: order.shipping_city,

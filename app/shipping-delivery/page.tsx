@@ -165,7 +165,7 @@ const sections = [
         <p className="attiz-body text-sm text-black/90 font-light">For shipping, delivery, or tracking-related assistance:</p>
         <div className="flex items-center gap-3 pt-1">
           <Diamond />
-          <a href="mailto:support@attiz.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">support@attiz.com</a>
+          <a href="mailto:teamattiz.in@gmail.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">teamattiz.in@gmail.com</a>
         </div>
         <div className="flex items-center gap-3">
           <Diamond />
