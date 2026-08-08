@@ -351,81 +351,191 @@ export default function CheckoutPage() {
     setCurrentStep(3);
   };
 
-  // Final Order Submit Handler
+  // Helper to dynamically load Razorpay Checkout JS SDK
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') return resolve(false);
+      if ((window as any).Razorpay) return resolve(true);
+
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Final Order Submit Handler (COD + Razorpay Online Payment)
   const handlePlaceOrder = async () => {
     if (!user) return;
     setCheckoutError('');
     setIsSubmitting(true);
 
+    const basePayload = {
+      userId: user.id,
+      phone: phone.trim() || addressForm.phone.trim(),
+      updateUserPhone: updateProfilePhone,
+      saveAddress: selectedAddressId === 'new' && saveAddressToBook,
+      paymentMethod,
+      shippingDetails: {
+        recipientName: addressForm.recipientName.trim(),
+        phone: addressForm.phone.trim() || phone.trim(),
+        addressLine1: addressForm.addressLine1.trim(),
+        addressLine2: addressForm.addressLine2.trim(),
+        city: addressForm.city.trim(),
+        state: addressForm.state.trim(),
+        postalCode: addressForm.postalCode.trim(),
+        country: addressForm.country.trim(),
+      },
+      cartItems: checkoutItems.map((item) => ({
+        id: item.id,
+        product_id: item.product_id || (item.id.includes('-') ? item.id.split('-')[0] : item.id),
+        variant_id: item.variant_id || null,
+        sku: item.sku || null,
+        title: item.title,
+        price: Number(item.price) || 0,
+        quantity: item.quantity,
+        selectedSize: item.selectedSize || item.size || '',
+        color: item.color || item.selectedColor || '',
+        image: item.image || (item as any).colorSpecificImage || '',
+      })),
+      pricing: {
+        subtotal,
+        shippingCharge,
+        tax: 0,
+        discount: 0,
+        totalPrice: grandTotal,
+      },
+    };
+
+    // 1. CASH ON DELIVERY FLOW
+    if (paymentMethod === 'COD') {
+      try {
+        console.log('🚀 [CHECKOUT CLIENT] Placing COD order:', basePayload);
+
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(basePayload),
+        });
+
+        const json = await res.json();
+        setIsSubmitting(false);
+
+        if (!res.ok) {
+          setCheckoutError(json.error || 'Failed to place order. Please try again.');
+          return;
+        }
+
+        setOrderSuccess({ orderNumber: json.orderNumber || 'ATZ-ORDER' });
+        if (buyNowItem) clearBuyNow();
+        else clearCart();
+
+        setTimeout(() => {
+          router.push('/orders');
+        }, 2500);
+
+      } catch {
+        setIsSubmitting(false);
+        setCheckoutError('Network connection error. Please check your connection and try again.');
+      }
+      return;
+    }
+
+    // 2. RAZORPAY ONLINE PAYMENT FLOW
     try {
-      const payload = {
-        userId: user.id,
-        phone: phone.trim() || addressForm.phone.trim(),
-        updateUserPhone: updateProfilePhone,
-        saveAddress: selectedAddressId === 'new' && saveAddressToBook,
-        paymentMethod,
-        shippingDetails: {
-          recipientName: addressForm.recipientName.trim(),
-          phone: addressForm.phone.trim() || phone.trim(),
-          addressLine1: addressForm.addressLine1.trim(),
-          addressLine2: addressForm.addressLine2.trim(),
-          city: addressForm.city.trim(),
-          state: addressForm.state.trim(),
-          postalCode: addressForm.postalCode.trim(),
-          country: addressForm.country.trim(),
-        },
-        cartItems: checkoutItems.map((item) => ({
-          id: item.id,
-          product_id: item.product_id || (item.id.includes('-') ? item.id.split('-')[0] : item.id),
-          variant_id: item.variant_id || null,
-          sku: item.sku || null,
-          title: item.title,
-          price: Number(item.price) || 0,
-          quantity: item.quantity,
-          selectedSize: item.selectedSize || item.size || '',
-          color: item.color || item.selectedColor || '',
-          image: item.image || (item as any).colorSpecificImage || '',
-        })),
-        pricing: {
-          subtotal,
-          shippingCharge,
-          tax: 0,
-          discount: 0,
-          totalPrice: grandTotal,
-        },
-      };
-
-      console.log('🚀 [CHECKOUT CLIENT] Placing order with payload:', payload);
-
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const json = await res.json();
-      setIsSubmitting(false);
-
-      if (!res.ok) {
-        setCheckoutError(json.error || 'Failed to place order. Please try again.');
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setIsSubmitting(false);
+        setCheckoutError('Unable to load Razorpay payment gateway. Please check your internet connection.');
         return;
       }
 
-      // Success
-      setOrderSuccess({ orderNumber: json.orderNumber || 'ATZ-ORDER' });
-      if (buyNowItem) {
-        clearBuyNow();
-      } else {
-        clearCart();
+      // Step A: Create Razorpay Order ID on server
+      const createRzpRes = await fetch('/api/razorpay/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: grandTotal }),
+      });
+
+      const createRzpJson = await createRzpRes.json();
+      if (!createRzpRes.ok || !createRzpJson.razorpayOrderId) {
+        setIsSubmitting(false);
+        setCheckoutError(createRzpJson.error || 'Failed to initiate Razorpay online payment.');
+        return;
       }
 
-      setTimeout(() => {
-        router.push('/orders');
-      }, 2500);
+      // Step B: Open Razorpay Modal
+      const options = {
+        key: createRzpJson.keyId,
+        amount: createRzpJson.amount,
+        currency: createRzpJson.currency || 'INR',
+        name: 'ATTIZ STORE',
+        description: `Order Payment (${checkoutItems.length} ${checkoutItems.length === 1 ? 'item' : 'items'})`,
+        order_id: createRzpJson.razorpayOrderId,
+        prefill: {
+          name: addressForm.recipientName.trim(),
+          email: user.email || '',
+          contact: addressForm.phone.trim() || phone.trim(),
+        },
+        theme: {
+          color: '#000000',
+        },
+        handler: async function (response: any) {
+          // Payment successful on Razorpay modal -> Verify signature on server
+          setIsSubmitting(true);
+          try {
+            const verifyRes = await fetch('/api/razorpay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...basePayload,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            });
 
-    } catch {
+            const verifyJson = await verifyRes.json();
+            setIsSubmitting(false);
+
+            if (!verifyRes.ok) {
+              setCheckoutError(verifyJson.error || 'Payment verification failed. Please contact support.');
+              return;
+            }
+
+            // Success
+            setOrderSuccess({ orderNumber: verifyJson.orderNumber || 'ATZ-ORDER' });
+            if (buyNowItem) clearBuyNow();
+            else clearCart();
+
+            setTimeout(() => {
+              router.push('/orders');
+            }, 2500);
+          } catch {
+            setIsSubmitting(false);
+            setCheckoutError('Error verifying online payment. Please contact customer support.');
+          }
+        },
+        modal: {
+          ondismiss: function () {
+            setIsSubmitting(false);
+            console.log('ℹ️ [RAZORPAY] Payment window closed by user.');
+          },
+        },
+      };
+
+      const razorpayWindow = new (window as any).Razorpay(options);
+      razorpayWindow.on('payment.failed', function (failureData: any) {
+        setIsSubmitting(false);
+        setCheckoutError(failureData.error?.description || 'Online payment failed or cancelled. You can try again or choose COD.');
+      });
+
+      razorpayWindow.open();
+
+    } catch (err: any) {
       setIsSubmitting(false);
-      setCheckoutError('Network connection error. Please check your connection and try again.');
+      setCheckoutError(err.message || 'An error occurred while launching Razorpay payment window.');
     }
   };
 
@@ -857,7 +967,7 @@ export default function CheckoutPage() {
                     <FileText className="w-4 h-4 text-black/85" />
                     <span>Step 2: Review Order Summary</span>
                   </h2>
-                  
+
                 </div>
 
                 <button
@@ -929,7 +1039,7 @@ export default function CheckoutPage() {
                       <span className="attiz-mono text-xs font-black text-[#E63B2E] block">
                         ₹{((Number(item.price) || 0) * item.quantity).toLocaleString('en-IN')}
                       </span>
-                      
+
                     </div>
                   </div>
                 ))}
@@ -1064,7 +1174,7 @@ export default function CheckoutPage() {
                   </div>
                 </label>
 
-                {/* Online Payment */}
+                {/* Online Payment (Razorpay) */}
                 <label
                   onClick={() => setPaymentMethod('Online')}
                   className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${paymentMethod === 'Online'
@@ -1079,13 +1189,32 @@ export default function CheckoutPage() {
                     onChange={() => setPaymentMethod('Online')}
                     className="mt-0.5 w-4 h-4 border-black text-black cursor-pointer"
                   />
-                  <div>
-                    <span className="attiz-mono text-xs font-bold text-black uppercase block">
-                      Online Payment / UPI / Cards
-                    </span>
-                    <span className="attiz-mono text-[10px] text-black/70 uppercase tracking-wide block mt-0.5">
-                      Instant online payment via Google Pay, PhonePe, Cards, or NetBanking.
-                    </span>
+                  <div className="space-y-1 grow">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="attiz-mono text-xs font-bold text-black uppercase block">
+                        Online Payment (UPI, Cards, NetBanking, Wallets)
+                      </span>
+                      <span className="attiz-mono text-[9px] bg-black text-[#FFCB05] px-2 py-0.5 font-bold uppercase tracking-wider">
+                        Razorpay Secure
+                      </span>
+                    </div>
+                    <p className="attiz-mono text-[10px] text-black/75 uppercase tracking-wide block">
+                      Pay instantly & securely via Google Pay, PhonePe, Paytm, Credit/Debit Cards, NetBanking, or EMI.
+                    </p>
+                    <div className="flex items-center space-x-1.5 pt-1 flex-wrap gap-1">
+                      <span className="text-[8.5px] attiz-mono bg-white border border-black/20 px-1.5 py-0.2 font-bold uppercase text-black">
+                        UPI
+                      </span>
+                      <span className="text-[8.5px] attiz-mono bg-white border border-black/20 px-1.5 py-0.2 font-bold uppercase text-black">
+                        Cards
+                      </span>
+                      <span className="text-[8.5px] attiz-mono bg-white border border-black/20 px-1.5 py-0.2 font-bold uppercase text-black">
+                        NetBanking
+                      </span>
+                      <span className="text-[8.5px] attiz-mono bg-white border border-black/20 px-1.5 py-0.2 font-bold uppercase text-black">
+                        Wallets
+                      </span>
+                    </div>
                   </div>
                 </label>
               </div>
@@ -1114,11 +1243,11 @@ export default function CheckoutPage() {
                   {isSubmitting ? (
                     <span className="flex items-center space-x-2">
                       <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      <span>Processing Order...</span>
+                      <span>{paymentMethod === 'Online' ? 'Initiating Razorpay...' : 'Processing Order...'}</span>
                     </span>
                   ) : (
                     <>
-                      <span>Place Order (₹{grandTotal.toLocaleString('en-IN')})</span>
+                      <span>{paymentMethod === 'Online' ? `Pay Now (₹${grandTotal.toLocaleString('en-IN')})` : `Place COD Order (₹${grandTotal.toLocaleString('en-IN')})`}</span>
                       <Check className="w-4 h-4" />
                     </>
                   )}

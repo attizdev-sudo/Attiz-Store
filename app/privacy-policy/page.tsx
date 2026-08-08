@@ -99,7 +99,7 @@ const sections = [
           'Opt out of marketing communications at any time.',
           'Withdraw consent where processing is based on consent.',
         ]} />
-        <p className="attiz-body text-sm text-black/90 font-light mt-3">To exercise any of these rights, contact us at <a href="mailto:support@attiz.com" className="text-[#E63B2E] hover:text-black underline underline-offset-2 transition-colors">support@attiz.com</a>.</p>
+        <p className="attiz-body text-sm text-black/90 font-light mt-3">To exercise any of these rights, contact us at <a href="mailto:teamattiz.in@gmail.com" className="text-[#E63B2E] hover:text-black underline underline-offset-2 transition-colors">teamattiz.in@gmail.com</a>.</p>
       </>
     ),
   },
@@ -130,7 +130,7 @@ const sections = [
         <p className="attiz-body text-sm text-black/90 font-light">If you have any questions or concerns regarding our Privacy Policy or the way your personal information is handled, our team is always happy to assist you.</p>
         <div className="flex items-center gap-3 pt-2">
           <Diamond />
-          <a href="mailto:support@attiz.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">support@attiz.com</a>
+          <a href="mailto:teamattiz.in@gmail.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">teamattiz.in@gmail.com</a>
         </div>
       </div>
     ),

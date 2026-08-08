@@ -190,20 +190,6 @@ export async function getShiprocketToken(): Promise<string | null> {
  * Create a Custom Order in Shiprocket
  */
 export async function createShiprocketOrder(params: CreateOrderParams) {
-  if (process.env.ENABLE_SHIPROCKET === 'false') {
-    console.log('ℹ️ [SHIPROCKET] Order creation skipped (ENABLE_SHIPROCKET=false).');
-    return {
-      success: false,
-      disabled: true,
-      error: 'Shiprocket order creation is currently disabled in development mode.',
-    };
-  }
-
-  const token = await getShiprocketToken();
-  if (!token) {
-    return { success: false, error: 'Shiprocket authentication failed or credentials missing in .env.' };
-  }
-
   const pickupLocation = process.env.SHIPROCKET_PICKUP_LOCATION?.trim() || 'Primary';
 
   // Format order date to YYYY-MM-DD HH:mm
@@ -242,12 +228,23 @@ export async function createShiprocketOrder(params: CreateOrderParams) {
 
   const orderItems: ShiprocketOrderItem[] = params.items.map((item) => {
     const itemTax = item.gst_rate ?? item.tax ?? (item.price > 2500 ? 18 : 5);
+    const netPayablePrice = item.price || 0;
+    const preGstDiscount = item.discount || 0;
+
+    // Convert pre-GST discount to GST-inclusive discount for Shiprocket's GST-inclusive invoice model:
+    // e.g., ₹188 * 1.05 = ₹197.40 -> rounded ₹198
+    const shiprocketDiscount = preGstDiscount > 0 ? Math.ceil(preGstDiscount * (1 + itemTax / 100)) : 0;
+
+    // Gross selling price = Net payable price + GST-inclusive discount
+    // e.g., ₹592 + ₹198 = ₹790
+    const shiprocketSellingPrice = netPayablePrice + shiprocketDiscount;
+
     return {
       name: item.title,
       sku: item.sku || `SKU-${(item.title || 'ITEM').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase()}`,
       units: item.quantity || 1,
-      selling_price: item.price || 0,
-      discount: item.discount || 0,
+      selling_price: shiprocketSellingPrice,
+      discount: shiprocketDiscount,
       tax: itemTax,
       hsn: 6109,
     };
@@ -286,6 +283,21 @@ export async function createShiprocketOrder(params: CreateOrderParams) {
   };
 
   console.log('🚀 [SHIPROCKET ORDER CREATION PAYLOAD]:\n', JSON.stringify(payload, null, 2));
+
+  if (process.env.ENABLE_SHIPROCKET === 'false') {
+    console.log('ℹ️ [SHIPROCKET] API dispatch skipped because ENABLE_SHIPROCKET is set to false.');
+    return {
+      success: false,
+      disabled: true,
+      error: 'Shiprocket order creation is currently disabled in development mode.',
+      payload,
+    };
+  }
+
+  const token = await getShiprocketToken();
+  if (!token) {
+    return { success: false, error: 'Shiprocket authentication failed or credentials missing in .env.' };
+  }
 
   try {
     const res = await fetch(`${SHIPROCKET_API_BASE}/orders/create/adhoc`, {

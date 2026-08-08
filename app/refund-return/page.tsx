@@ -159,7 +159,7 @@ const sections = [
         ]} />
         <div className="flex items-center gap-3 mt-4 pt-4 border-t border-black/10">
           <Diamond />
-          <a href="mailto:support@attiz.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">support@attiz.com</a>
+          <a href="mailto:teamattiz.in@gmail.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">teamattiz.in@gmail.com</a>
         </div>
       </>
     ),
@@ -184,7 +184,7 @@ const sections = [
         <p className="attiz-body text-sm text-black/70 font-light">If you have any questions about our Cancellation &amp; Return Policy, we&apos;re here to help.</p>
         <div className="flex items-center gap-3 pt-1">
           <Diamond />
-          <a href="mailto:support@attiz.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">support@attiz.com</a>
+          <a href="mailto:teamattiz.in@gmail.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">teamattiz.in@gmail.com</a>
         </div>
         <div className="flex items-center gap-3">
           <Diamond />

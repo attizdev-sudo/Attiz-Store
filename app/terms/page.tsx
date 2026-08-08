@@ -248,11 +248,7 @@ const sections = [
         <p className="attiz-body text-sm text-black/90 font-light">For questions regarding these Terms & Conditions, reach out to us:</p>
         <div className="flex items-center gap-3 pt-1">
           <span className="w-2 h-2 border-2 border-black bg-[#FFCB05] rotate-45 shrink-0" />
-          <a href="mailto:support@attiz.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">support@attiz.com</a>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="w-2 h-2 border-2 border-black bg-[#FFCB05] rotate-45 shrink-0" />
-          <a href="mailto:business@attiz.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">business@attiz.com</a>
+          <a href="mailto:teamattiz.in@gmail.com" className="attiz-mono text-[11px] font-bold text-[#E63B2E] hover:text-black tracking-widest uppercase transition-colors">teamattiz.in@gmail.com</a>
         </div>
       </div>
     ),

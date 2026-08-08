@@ -2,14 +2,17 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabase } from '@/lib/db';
 import { validateSession } from '@/lib/auth/session';
+import { verifyRazorpaySignature } from '@/lib/razorpay';
 import { createShiprocketOrder } from '@/lib/shiprocket';
 
-interface CheckoutBody {
+interface VerifyBody {
+  razorpayOrderId: string;
+  razorpayPaymentId: string;
+  razorpaySignature: string;
   userId: string;
   phone?: string;
   updateUserPhone?: boolean;
   saveAddress?: boolean;
-  paymentMethod?: string;
   shippingDetails: {
     recipientName: string;
     phone: string;
@@ -45,16 +48,11 @@ interface CheckoutBody {
   };
 }
 
-/**
- * POST /api/checkout
- * Processes order placement, updates user phone in `users` table,
- * saves shipping address in `addresses` table, and creates order, order items, and payment records.
- */
 export async function POST(request: Request) {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('attiz_session')?.value;
   if (!sessionCookie) {
-    return NextResponse.json({ error: 'Unauthorized. Please sign in to place an order.' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized. Please sign in.' }, { status: 401 });
   }
 
   const sessionData = await validateSession(sessionCookie);
@@ -63,22 +61,44 @@ export async function POST(request: Request) {
   }
   const { user } = sessionData;
 
-  let body: CheckoutBody;
+  let body: VerifyBody;
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request payload.' }, { status: 400 });
   }
 
-  const { userId, phone: contactPhone, updateUserPhone = true, saveAddress = false, paymentMethod = 'COD', shippingDetails, cartItems, pricing } = body;
+  const {
+    razorpayOrderId,
+    razorpayPaymentId,
+    razorpaySignature,
+    userId,
+    phone: contactPhone,
+    updateUserPhone = true,
+    saveAddress = false,
+    shippingDetails,
+    cartItems,
+    pricing,
+  } = body;
+
+  if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    return NextResponse.json({ error: 'Razorpay payment verification parameters missing.' }, { status: 400 });
+  }
 
   if (!userId || !cartItems?.length || !shippingDetails) {
-    return NextResponse.json({ error: 'User details, shipping details and cart items are required.' }, { status: 400 });
+    return NextResponse.json({ error: 'Shipping details and cart items are required.' }, { status: 400 });
   }
 
   // Security check: user must match session unless admin
   if (user.role !== 'admin' && userId !== user.id) {
     return NextResponse.json({ error: 'Forbidden. Session mismatch.' }, { status: 403 });
+  }
+
+  // 1. VERIFY HMAC SIGNATURE
+  const isValidSignature = verifyRazorpaySignature(razorpayOrderId, razorpayPaymentId, razorpaySignature);
+  if (!isValidSignature) {
+    console.error('❌ [RAZORPAY VERIFY FAILED] Invalid payment signature:', { razorpayOrderId, razorpayPaymentId });
+    return NextResponse.json({ error: 'Payment verification failed. Invalid signature.' }, { status: 400 });
   }
 
   const recipientName = shippingDetails.recipientName?.trim();
@@ -90,28 +110,7 @@ export async function POST(request: Request) {
   const postalCode = shippingDetails.postalCode?.trim();
   const country = (shippingDetails.country || 'India').trim();
 
-  if (!recipientName || !shippingPhone || !address1 || !city || !state || !postalCode || !country) {
-    return NextResponse.json({ error: 'Please provide all required shipping fields.' }, { status: 400 });
-  }
-
-  if (recipientName.length < 3) {
-    return NextResponse.json({ error: 'Recipient name must be at least 3 characters long.' }, { status: 400 });
-  }
-
-  const cleanPhoneNum = shippingPhone.replace(/\D/g, '').slice(-10);
-  if (cleanPhoneNum.length < 10 || !/^[6-9]\d{9}$/.test(cleanPhoneNum)) {
-    return NextResponse.json({ error: 'Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.' }, { status: 400 });
-  }
-
-  if (!/^\d{6}$/.test(postalCode.replace(/\D/g, ''))) {
-    return NextResponse.json({ error: 'PIN code must be a valid 6-digit number.' }, { status: 400 });
-  }
-
-  if (address1.length < 10) {
-    return NextResponse.json({ error: 'Street address line 1 must be at least 10 characters long (include house/flat no., street, and area) for courier shipping.' }, { status: 400 });
-  }
-
-  // 1. UPDATE USER'S PHONE IN `users` TABLE IF PROVIDED & CHANGED
+  // 2. UPDATE USER'S PHONE IN `users` TABLE IF PROVIDED & CHANGED
   const finalPhone = contactPhone?.trim() || shippingPhone;
   if (finalPhone && updateUserPhone) {
     try {
@@ -123,11 +122,11 @@ export async function POST(request: Request) {
         })
         .eq('id', userId);
     } catch (err) {
-      console.warn('Failed to update phone in users table during checkout:', err);
+      console.warn('Failed to update phone in users table during online checkout:', err);
     }
   }
 
-  // 2. SAVE OR UPDATE ADDRESS IN `addresses` TABLE
+  // 3. SAVE OR UPDATE ADDRESS IN `addresses` TABLE
   try {
     const { count } = await supabase
       .from('addresses')
@@ -224,7 +223,7 @@ export async function POST(request: Request) {
     const cleanProdId = item.product_id || (item.id.includes('-') ? item.id.split('-')[0] : item.id);
 
     return {
-      order_id: '', // set after order creation
+      order_id: '',
       product_id: cleanProdId,
       variant_id: item.variant_id || null,
       sku: (item as any).sku || vInfo?.sku || null,
@@ -245,14 +244,14 @@ export async function POST(request: Request) {
   });
 
   const finalSubtotal = pricing?.subtotal ?? calculatedSubtotal;
-  const shippingCharge = pricing?.shippingCharge ?? (finalSubtotal >= 999 ? 0 : 99);
+  const shippingCharge = pricing?.shippingCharge ?? 0;
   const finalDiscount = (pricing?.discount && pricing.discount > 0) ? pricing.discount : calculatedTotalDiscount;
   const finalTax = (pricing?.tax && pricing.tax > 0) ? pricing.tax : calculatedTotalTax;
   const totalPrice = pricing?.totalPrice ?? (finalSubtotal + shippingCharge + finalTax - finalDiscount);
 
   const orderNumber = `ATZ-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  // 4. CREATE ORDER IN `orders` TABLE
+  // 4. CREATE ORDER IN `orders` TABLE (Marked as Paid)
   const orderPayload = {
     user_id: userId,
     order_number: orderNumber,
@@ -262,7 +261,7 @@ export async function POST(request: Request) {
     tax: finalTax,
     total_price: totalPrice,
     status: 'Waiting for confirmation',
-    payment_status: paymentMethod === 'COD' ? 'Pending' : 'Paid',
+    payment_status: 'Paid',
     shipping_name: recipientName,
     shipping_phone: shippingPhone,
     shipping_address1: address1,
@@ -273,7 +272,7 @@ export async function POST(request: Request) {
     shipping_postal_code: postalCode,
   };
 
-  console.log('📦 [ORDERS TABLE INSERT PAYLOAD]:\n', JSON.stringify(orderPayload, null, 2));
+  console.log('📦 [RAZORPAY ORDERS TABLE INSERT PAYLOAD]:\n', JSON.stringify(orderPayload, null, 2));
 
   const { data: orderData, error: orderError } = await supabase
     .from('orders')
@@ -291,30 +290,29 @@ export async function POST(request: Request) {
   // Set order_id on order items and insert into `order_items` TABLE
   const finalOrderItems = orderItemsData.map((oi) => ({ ...oi, order_id: orderId }));
 
-  console.log('🛍️ [ORDER_ITEMS TABLE INSERT PAYLOAD]:\n', JSON.stringify(finalOrderItems, null, 2));
+  console.log('🛍️ [RAZORPAY ORDER_ITEMS TABLE INSERT PAYLOAD]:\n', JSON.stringify(finalOrderItems, null, 2));
 
   const { error: itemsError } = await supabase.from('order_items').insert(finalOrderItems);
   if (itemsError) {
     console.error('Order items insertion error:', itemsError);
-    // Non-fatal if order created, but log error
   }
 
-  // 5. CREATE PAYMENT RECORD IN `payments` TABLE
+  // 6. CREATE PAYMENT RECORD IN `payments` TABLE
   try {
     await supabase.from('payments').insert({
       order_id: orderId,
-      provider: paymentMethod,
-      payment_id: `PAY-${Date.now().toString().slice(-8)}`,
-      status: paymentMethod === 'COD' ? 'Pending' : 'Completed',
+      provider: 'Razorpay',
+      payment_id: razorpayPaymentId,
+      status: 'Completed',
       amount: totalPrice,
       currency: 'INR',
-      paid_at: paymentMethod === 'COD' ? null : new Date().toISOString(),
+      paid_at: new Date().toISOString(),
     });
   } catch (err) {
-    console.warn('Payment record insert warning:', err);
+    console.warn('Razorpay payment record insert warning:', err);
   }
 
-  // 6. AUTOMATIC SHIPROCKET ORDER CREATION (Builds & logs payload; skips HTTP dispatch if ENABLE_SHIPROCKET=false)
+  // 7. AUTOMATIC SHIPROCKET ORDER CREATION (Builds & logs payload; skips HTTP dispatch if ENABLE_SHIPROCKET=false)
   let shiprocketResult: any = null;
 
   try {
@@ -331,7 +329,7 @@ export async function POST(request: Request) {
       state,
       postalCode,
       country,
-      paymentMethod,
+      paymentMethod: 'Prepaid',
       subtotal: finalSubtotal,
       totalPrice,
       items: finalOrderItems.map((oi) => ({
@@ -363,7 +361,7 @@ export async function POST(request: Request) {
   return NextResponse.json(
     {
       success: true,
-      message: 'Order placed successfully!',
+      message: 'Razorpay payment verified and order placed successfully!',
       orderNumber: orderData.order_number,
       orderId,
       shiprocket: shiprocketResult,

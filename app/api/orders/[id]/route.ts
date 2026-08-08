@@ -96,6 +96,8 @@ export async function PUT(request: Request, { params }: { params: Params }) {
   orderUpdates.updated_at = new Date().toISOString();
 
   if (Object.keys(orderUpdates).length > 0) {
+    console.log(`📝 [ORDERS TABLE UPDATE PAYLOAD (Order ID: ${id})]:\n`, JSON.stringify(orderUpdates, null, 2));
+
     const { error: orderErr } = await supabase
       .from('orders')
       .update(orderUpdates)
@@ -109,21 +111,63 @@ export async function PUT(request: Request, { params }: { params: Params }) {
   // Update order_items if items array is sent
   if (Array.isArray(body.items)) {
     try {
+      const variantIds = body.items.map((i: any) => i.variant_id).filter(Boolean);
+      let variantMap: Record<string, { sku?: string; gst_rate?: number; discount?: number; price?: number }> = {};
+
+      if (variantIds.length > 0) {
+        const { data: vData } = await supabase
+          .from('product_variants')
+          .select('id, sku, gst_rate, discount, price')
+          .in('id', variantIds);
+        if (vData) {
+          vData.forEach((v: any) => {
+            variantMap[v.id] = {
+              sku: v.sku || undefined,
+              gst_rate: v.gst_rate !== null && v.gst_rate !== undefined ? Number(v.gst_rate) : undefined,
+              discount: v.discount !== null && v.discount !== undefined ? Number(v.discount) : undefined,
+              price: v.price !== null && v.price !== undefined ? Number(v.price) : undefined,
+            };
+          });
+        }
+      }
+
       await supabase.from('order_items').delete().eq('order_id', id);
 
-      const itemsToInsert = body.items.map((item: any) => ({
-        order_id: id,
-        product_id: item.product_id || item.id || null,
-        variant_id: item.variant_id || null,
-        product_title: item.title || item.product_title || 'Ordered Product',
-        color: item.color || item.selectedColor || null,
-        size: item.size || item.selectedSize || null,
-        quantity: Number(item.quantity) || 1,
-        unit_price: Number(item.price || item.unit_price) || 0,
-        discount: Number(item.discount) || 0,
-        subtotal: (Number(item.price || item.unit_price) || 0) * (Number(item.quantity) || 1),
-        image_url: item.image || item.image_url || null,
-      }));
+      const itemsToInsert = body.items.map((item: any) => {
+        const vInfo = item.variant_id ? variantMap[item.variant_id] : {};
+        const finalSellingPrice = Number(item.price ?? item.unit_price ?? 0);
+        const qty = Number(item.quantity) || 1;
+        const gstRate = Number(item.gst_rate ?? vInfo?.gst_rate ?? 5);
+        const discountPct = Number(item.discount_percentage ?? vInfo?.discount ?? 0);
+
+        const taxablePrice = gstRate > 0 ? Math.round(finalSellingPrice / (1 + gstRate / 100)) : finalSellingPrice;
+        const originalMRP = Number(item.original_price ?? vInfo?.price ?? (discountPct > 0 ? Math.round(taxablePrice / (1 - discountPct / 100)) : finalSellingPrice));
+        const itemDiscountPerUnit = Math.max(0, originalMRP - taxablePrice);
+        const itemTaxPerUnit = Math.max(0, finalSellingPrice - taxablePrice);
+        const skuVal = item.sku || vInfo?.sku || null;
+
+        return {
+          order_id: id,
+          product_id: item.product_id || item.id || null,
+          variant_id: item.variant_id || null,
+          sku: skuVal,
+          product_title: item.title || item.product_title || 'Ordered Product',
+          color: item.color || item.selectedColor || null,
+          size: item.size || item.selectedSize || null,
+          quantity: qty,
+          original_price: originalMRP,
+          discount_percentage: discountPct,
+          discount: itemDiscountPerUnit,
+          taxable_amount: taxablePrice,
+          gst_rate: gstRate,
+          gst_amount: itemTaxPerUnit,
+          unit_price: finalSellingPrice,
+          subtotal: finalSellingPrice * qty,
+          image_url: item.image || item.image_url || null,
+        };
+      });
+
+      console.log(`🛍️ [ORDER_ITEMS TABLE UPDATE PAYLOAD (Order ID: ${id})]:\n`, JSON.stringify(itemsToInsert, null, 2));
 
       if (itemsToInsert.length > 0) {
         await supabase.from('order_items').insert(itemsToInsert);
