@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, Star, CheckCircle, ShoppingBag, ArrowRight, X, Ruler, Loader2, Truck } from 'lucide-react';
+import { Heart, Plus, Minus, ChevronDown, ChevronLeft, ChevronRight, Share2, ShoppingBag, ArrowRight, X, Ruler, Loader2, Truck, AlertTriangle } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -93,10 +93,11 @@ function ProductDetailsInner() {
     return scoredProducts.slice(0, 4).map((sp) => sp.product);
   }, [product, products]);
 
-  const [selectedSize, setSelectedSize] = useState('M');
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [isAddedToast, setIsAddedToast] = useState(false);
   const [isNavigatingBuyNow, setIsNavigatingBuyNow] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string>('');
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeThumbIdx, setActiveThumbIdx] = useState(0);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
@@ -151,40 +152,31 @@ function ProductDetailsInner() {
 
   useEffect(() => {
     setIsNavigatingBuyNow(false);
+    setSelectionError(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setActiveThumbIdx(0);
     setQuantity(1);
     const variants = product?.product_variants || [];
     if (variants.length > 0) {
       const colors = Array.from(new Set(variants.map(v => v.color))).filter(Boolean);
-      const sizes = sortSizes(Array.from(new Set(variants.map(v => v.size))).filter(Boolean));
 
       const matchedColor = initialColorParam && colors.some(c => c.toLowerCase() === initialColorParam.toLowerCase())
         ? colors.find(c => c.toLowerCase() === initialColorParam.toLowerCase()) || ''
         : '';
 
-      if (matchedColor) {
-        setSelectedColor(matchedColor);
-      } else if (colors.length > 0) {
-        setSelectedColor(colors[0]);
-      }
-      if (sizes.length > 0) setSelectedSize(sizes[0]);
+      setSelectedColor(matchedColor || colors[0] || '');
+      setSelectedSize('');
     } else {
-      if (product?.sizes) {
-        const sizes = sortSizes(product.sizes.split(',').map(s => s.trim()));
-        if (sizes.length > 0) setSelectedSize(sizes[0]);
-      }
       if (product?.colors) {
         const cols = product.colors.split(',').map(c => c.trim());
         const matchedColor = initialColorParam && cols.some(c => c.toLowerCase() === initialColorParam.toLowerCase())
           ? cols.find(c => c.toLowerCase() === initialColorParam.toLowerCase()) || ''
           : '';
-        if (matchedColor) {
-          setSelectedColor(matchedColor);
-        } else if (cols.length > 0) {
-          setSelectedColor(cols[0]);
-        }
+        setSelectedColor(matchedColor || cols[0] || '');
+      } else {
+        setSelectedColor('');
       }
+      setSelectedSize('');
     }
   }, [id, product, initialColorParam]);
 
@@ -204,13 +196,28 @@ function ProductDetailsInner() {
     }
   };
 
+  const validateSelection = (): boolean => {
+    const hasSizes = sizesArray.length > 0;
+
+    if (hasSizes && !selectedSize) {
+      setSelectionError('Please select a size to proceed');
+      return false;
+    }
+
+    setSelectionError(null);
+    return true;
+  };
+
   const handleAddToCart = () => {
-    if (product && activeVariant) {
-      const activeGst = activeVariant.gst_rate || (product as any).gst_rate || 0;
+    if (!validateSelection()) return;
+
+    const targetVariant = exactVariant || activeVariant;
+    if (product && targetVariant) {
+      const activeGst = targetVariant.gst_rate || (product as any).gst_rate || 0;
       const taxablePrice = Math.max(0, displayPrice * (1 - displayDiscount / 100));
       const finalPrice = Math.round(taxablePrice * (1 + activeGst / 100));
 
-      const variantImage = activeVariant.product_variant_images?.[0]?.image_url
+      const variantImage = targetVariant.product_variant_images?.[0]?.image_url
         || thumbnails.find((t) => t.color && selectedColor && t.color.toLowerCase() === selectedColor.toLowerCase())?.url
         || thumbnails[activeThumbIdx]?.url
         || product.image
@@ -219,8 +226,8 @@ function ProductDetailsInner() {
       addToCart({
         ...product,
         product_id: product.id,
-        variant_id: activeVariant.id,
-        sku: activeVariant.sku,
+        variant_id: targetVariant.id,
+        sku: targetVariant.sku,
         image: variantImage,
         price: finalPrice,
         discount: displayDiscount,
@@ -238,13 +245,16 @@ function ProductDetailsInner() {
   };
 
   const handleBuyNow = () => {
-    if (product && activeVariant) {
+    if (!validateSelection()) return;
+
+    const targetVariant = exactVariant || activeVariant;
+    if (product && targetVariant) {
       setIsNavigatingBuyNow(true);
-      const activeGst = activeVariant.gst_rate || (product as any).gst_rate || 0;
+      const activeGst = targetVariant.gst_rate || (product as any).gst_rate || 0;
       const taxablePrice = Math.max(0, displayPrice * (1 - displayDiscount / 100));
       const finalPrice = Math.round(taxablePrice * (1 + activeGst / 100));
 
-      const variantImage = activeVariant.product_variant_images?.[0]?.image_url
+      const variantImage = targetVariant.product_variant_images?.[0]?.image_url
         || thumbnails.find((t) => t.color && selectedColor && t.color.toLowerCase() === selectedColor.toLowerCase())?.url
         || thumbnails[activeThumbIdx]?.url
         || product.image
@@ -253,8 +263,8 @@ function ProductDetailsInner() {
       startBuyNow({
         ...product,
         product_id: product.id,
-        variant_id: activeVariant.id,
-        sku: activeVariant.sku,
+        variant_id: targetVariant.id,
+        sku: targetVariant.sku,
         image: variantImage,
         price: finalPrice,
         discount: displayDiscount,
@@ -373,16 +383,25 @@ function ProductDetailsInner() {
       : ['S', 'M', 'L', 'XL', 'XXL']
   );
 
-  // Identify the active variant matching BOTH selectedColor and selectedSize
-  const activeVariant = product.product_variants?.find(
+  // Identify the exact variant matching BOTH selectedColor and selectedSize (if selected)
+  const exactVariant = product.product_variants?.find(
     (v) =>
-      v.color.toLowerCase() === (selectedColor || '').toLowerCase() &&
-      v.size.toLowerCase() === (selectedSize || '').toLowerCase()
-  ) || product.product_variants?.[0];
+      (!selectedColor || v.color.toLowerCase() === selectedColor.toLowerCase()) &&
+      (!selectedSize || v.size.toLowerCase() === selectedSize.toLowerCase())
+  );
 
-  const isOutOfStock = !activeVariant || activeVariant.stock <= 0;
-  const displayPrice = activeVariant ? activeVariant.price : 0;
-  const displayDiscount = activeVariant ? activeVariant.discount || 0 : 0;
+  const activeVariant = exactVariant || product.product_variants?.[0];
+
+  const isSelectionComplete =
+    (colorsArray.length === 0 || Boolean(selectedColor)) &&
+    (sizesArray.length === 0 || Boolean(selectedSize));
+
+  const isOutOfStock = isSelectionComplete
+    ? (!exactVariant || exactVariant.stock <= 0)
+    : (product.product_variants ? product.product_variants.every((v) => v.stock <= 0) : false);
+
+  const displayPrice = (exactVariant ? exactVariant.price : undefined) ?? product.price ?? product.product_variants?.[0]?.price ?? 0;
+  const displayDiscount = (exactVariant ? exactVariant.discount : undefined) ?? product.discount ?? product.product_variants?.[0]?.discount ?? 0;
 
   const handleThumbnailClick = (idx: number) => {
     setActiveThumbIdx(idx);
@@ -391,19 +410,18 @@ function ProductDetailsInner() {
     const thumbColor = thumbnails[idx]?.color;
     if (thumbColor && thumbColor.toLowerCase() !== selectedColor.toLowerCase()) {
       setSelectedColor(thumbColor);
-      const colVariants = product.product_variants?.filter(
-        (v) => v.color.toLowerCase() === thumbColor.toLowerCase() && v.stock > 0
-      ) || [];
-      const sortedColSizes = sortSizes(colVariants.map(v => v.size));
-      if (sortedColSizes.length > 0) setSelectedSize(sortedColSizes[0]);
+      setSelectionError(null);
     }
   };
 
   const selectColorAndScroll = (col: string) => {
     setSelectedColor(col);
+    setSelectionError(null);
     const targetIdx = thumbnails.findIndex((t) => t.color.toLowerCase() === col.toLowerCase());
     if (targetIdx !== -1) {
-      handleThumbnailClick(targetIdx);
+      setActiveThumbIdx(targetIdx);
+      setIsZoomed(false);
+      setPanOffset({ x: 0, y: 0 });
     }
   };
 
@@ -415,12 +433,12 @@ function ProductDetailsInner() {
 
   // Helper selectors
   const isSizeDisabled = (sz: string) => {
-    const variant = product.product_variants?.find(
+    const matchingVariants = product.product_variants?.filter(
       (v) =>
-        v.color.toLowerCase() === (selectedColor || '').toLowerCase() &&
+        (!selectedColor || v.color.toLowerCase() === selectedColor.toLowerCase()) &&
         v.size.toLowerCase() === sz.toLowerCase()
-    );
-    return !variant || variant.stock <= 0;
+    ) || [];
+    return matchingVariants.length === 0 || matchingVariants.every((v) => v.stock <= 0);
   };
 
   const getColorImage = (col: string) => {
@@ -429,10 +447,12 @@ function ProductDetailsInner() {
   };
 
   const isColorDisabled = (col: string) => {
-    const colVariants = product.product_variants?.filter(
-      (v) => v.color.toLowerCase() === col.toLowerCase()
+    const matchingVariants = product.product_variants?.filter(
+      (v) =>
+        v.color.toLowerCase() === col.toLowerCase() &&
+        (!selectedSize || v.size.toLowerCase() === selectedSize.toLowerCase())
     ) || [];
-    return colVariants.length === 0 || colVariants.every((v) => v.stock <= 0);
+    return matchingVariants.length === 0 || matchingVariants.every((v) => v.stock <= 0);
   };
 
   const ZOOM_SCALE = 1.7;
@@ -823,23 +843,42 @@ function ProductDetailsInner() {
                 </span>
               )}
 
+              {/* Selection Notification Banner */}
+              {selectionError && (
+                <div className="mb-4 p-3 bg-[#E63B2E] text-white border-2 border-black shadow-[3px_3px_0_0_#111111] attiz-mono text-xs font-bold tracking-wider uppercase flex items-center justify-between animate-fade-in">
+                  <div className="flex items-center space-x-2">
+                    <AlertTriangle className="w-4 h-4 text-[#FFCB05] shrink-0" />
+                    <span>{selectionError}</span>
+                  </div>
+                  <button onClick={() => setSelectionError(null)} className="text-white hover:text-[#FFCB05] cursor-pointer">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
               {/* Sizes */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-1.5">
-                  <span className="attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase">Size Options</span>
+                  <span className={`attiz-mono text-[9px] font-bold tracking-widest uppercase ${selectionError && !selectedSize ? 'text-[#E63B2E] font-black' : 'text-black/85'}`}>
+                    Size Options {selectionError && !selectedSize && '(REQUIRED)'}
+                  </span>
                   <button onClick={() => setIsSizeChartOpen(true)} className="attiz-mono text-[9px] font-bold text-[#E63B2E] hover:text-black tracking-wider underline uppercase cursor-pointer">Size Chart</button>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {sizesArray.map((sz) => {
                     const isDisabled = isSizeDisabled(sz);
+                    const isSelected = selectedSize === sz;
                     return (
                       <button
                         key={sz}
-                        onClick={() => setSelectedSize(sz)}
+                        onClick={() => {
+                          setSelectedSize(sz);
+                          setSelectionError(null);
+                        }}
                         disabled={isDisabled}
                         className={`w-10 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all ${isDisabled
                           ? 'border-black/15 text-black/25 bg-black/[0.02] cursor-not-allowed line-through'
-                          : selectedSize === sz
+                          : isSelected
                             ? 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
                             : 'border-black/70 text-black hover:border-black bg-white cursor-pointer'
                           }`}
@@ -854,29 +893,25 @@ function ProductDetailsInner() {
               {/* Colors */}
               {colorsArray.length > 0 && (
                 <div className="mb-4">
-                  <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase mb-1.5">
+                  <span className="block attiz-mono text-[9px] font-bold tracking-widest uppercase mb-1.5 text-black/85">
                     Color: <span className="text-black font-extrabold">{selectedColor}</span>
                   </span>
                   <div className="flex flex-wrap gap-4">
                     {colorsArray.map((col) => {
                       const isDisabled = isColorDisabled(col);
                       const colorImageUrl = getColorImage(col);
+                      const isSelected = selectedColor.toLowerCase() === col.toLowerCase();
                       return (
                         <button
                           key={col}
                           onClick={() => {
                             selectColorAndScroll(col);
-                            const colVariants = product.product_variants?.filter(
-                              (v) => v.color.toLowerCase() === col.toLowerCase() && v.stock > 0
-                            ) || [];
-                            const sortedColSizes = sortSizes(colVariants.map(v => v.size));
-                            if (sortedColSizes.length > 0) setSelectedSize(sortedColSizes[0]);
                           }}
                           disabled={isDisabled}
                           title={col}
                           className={`group/color relative w-20 h-25 border-2 overflow-hidden transition-[border-color,box-shadow,background-color] duration-200 cursor-pointer ${isDisabled
                             ? 'border-black/15 opacity-40 cursor-not-allowed'
-                            : selectedColor === col
+                            : isSelected
                               ? 'border-black bg-white shadow-[3px_3px_0_0_#E63B2E]'
                               : 'border-black/70 hover:border-black bg-white'
                             }`}
@@ -1003,49 +1038,7 @@ function ProductDetailsInner() {
           </div>
         </div>
 
-        {/* Reviews */}
-        <section className="py-16 border-t-[3px] border-black">
-          <h3 className="attiz-display text-2xl text-black text-center uppercase mb-10 tracking-wide">Customer Reviews</h3>
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center bg-white border-[3px] border-black shadow-[8px_8px_0_0_#111111] p-8 sm:p-12 mb-14">
-            <div className="md:col-span-4 text-center border-r-0 md:border-r-2 md:border-black/10 py-4 flex flex-col justify-center">
-              <div className="flex items-center justify-center space-x-1 mb-2 text-[#FFCB05]">{[...Array(5)].map((_, i) => <Star key={i} className="w-5 h-5 fill-current stroke-black" />)}</div>
-              <span className="block attiz-display text-2xl text-black">5.00 out of 5</span>
-              <span className="block attiz-mono text-[10px] text-black/85 font-bold tracking-widest uppercase mt-1.5">Based on 3 reviews</span>
-            </div>
-            <div className="md:col-span-5 px-0 md:px-8 space-y-2.5">
-              {[5, 4, 3, 2, 1].map((stars) => (
-                <div key={stars} className="flex items-center attiz-mono text-xs text-black/90 font-bold">
-                  <span className="w-3 select-none">{stars}</span>
-                  <Star className="w-3.5 h-3.5 text-[#FFCB05] fill-current stroke-black ml-0.5 mr-2 shrink-0" />
-                  <div className="grow h-2.5 bg-black/[0.06] border border-black/10 overflow-hidden">
-                    <div className="h-full bg-[#E63B2E] transition-all duration-500" style={{ width: `${stars === 5 ? 100 : 0}%` }} />
-                  </div>
-                  <span className="w-8 text-right text-[10px] text-black/85 font-bold ml-3">{stars === 5 ? 3 : 0}</span>
-                </div>
-              ))}
-            </div>
-            <div className="md:col-span-3 flex justify-center py-4">
-              <button className="px-8 py-3.5 bg-black hover:bg-[#E63B2E] text-white attiz-display text-xs tracking-widest uppercase border-2 border-black shadow-[3px_3px_0_0_#FFCB05] hover:shadow-[1px_1px_0_0_#FFCB05] hover:translate-x-[2px] hover:translate-y-[2px] transition-all cursor-pointer">
-                Write a Review
-              </button>
-            </div>
-          </div>
-          <div className="bg-white border-2 border-black shadow-[4px_4px_0_0_#111111] p-6">
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <div className="flex items-center space-x-1 text-[#FFCB05] mb-1">{[...Array(5)].map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-current stroke-black" />)}</div>
-                <span className="block attiz-body text-xs font-bold text-black">Musthafa p. p</span>
-                <span className="inline-flex items-center space-x-1 attiz-mono text-[9px] font-bold text-black uppercase tracking-wider mt-1 bg-[#FFCB05] px-1.5 py-0.5 border border-black">
-                  <CheckCircle className="w-3 h-3" />
-                  <span>Verified Buyer</span>
-                </span>
-              </div>
-              <span className="attiz-mono text-[10px] text-black/85 font-bold">05/20/2026</span>
-            </div>
-            <h4 className="attiz-display text-sm text-black mb-1.5 tracking-wide">Super</h4>
-            <p className="attiz-body text-[13px] text-black/90 tracking-wide leading-relaxed">Super product. Worth for money. The fit is absolute elegance, and the fabric is incredibly soft.</p>
-          </div>
-        </section>
+
 
         {/* Related products */}
         {relatedProducts.length > 0 && (

@@ -39,12 +39,12 @@ export default function CategoryNav() {
               onClick={() => handleCategoryClick(cat.name)}
               className="flex flex-col items-center group cursor-pointer active:scale-95 transition-transform duration-150"
             >
-              {/* Icon Container - Prominently enlarged for mobile */}
-              <div className="w-18 h-18 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center transition-all duration-300 group-hover:scale-105">
+              {/* Icon Container */}
+              <div className="w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center transition-all duration-300">
                 <img
                   src={cat.src}
                   alt={cat.name}
-                  className="w-full h-full object-contain scale-110 sm:scale-100"
+                  className="w-full h-full object-contain scale-125 sm:scale-110 transition-transform duration-300 group-hover:scale-125 filter drop-shadow-[2px_2px_0_rgba(0,0,0,3)]"
                 />
               </div>
 
