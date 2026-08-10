@@ -9,6 +9,7 @@ import {
   Edit3,
   Trash2,
   X,
+  Filter,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useStore } from '@/context/StoreContext';
@@ -28,11 +29,34 @@ export default function ProductsTable({
   const { products, categories, dbLoading, deleteProduct } = useStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedSubcategory, setSelectedSubcategory] = useState('');
   const [sortField, setSortField] = useState<'created_at' | 'title' | 'price' | 'stock'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Track product id being deleted for inline loading spinner
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const parentCategories = categories.filter((c) => !c.parent_id);
+
+  const availableSubcategories = selectedCategory && selectedCategory !== 'uncategorized'
+    ? categories.filter((c) => c.parent_id === selectedCategory)
+    : categories.filter((c) => Boolean(c.parent_id));
+
+  const handleCategoryChange = (catId: string) => {
+    setSelectedCategory(catId);
+    setSelectedSubcategory('');
+  };
+
+  const handleSubcategoryChange = (subId: string) => {
+    setSelectedSubcategory(subId);
+    if (subId && !selectedCategory) {
+      const subCat = categories.find((c) => c.id === subId);
+      if (subCat?.parent_id) {
+        setSelectedCategory(subCat.parent_id);
+      }
+    }
+  };
 
   const toggleSort = (field: 'created_at' | 'title' | 'price' | 'stock') => {
     if (sortField === field) {
@@ -63,19 +87,46 @@ export default function ProductsTable({
   // Filter & Sort products list
   const filteredAndSortedProducts = products
     .filter((prod) => {
+      // 1. Text Search Filter
       const q = searchQuery.toLowerCase().trim();
-      if (!q) return true;
-      const prodCats = categories.filter((c) => prod.category_ids?.includes(c.id) || c.id === prod.category_id);
-      const catNamesJoined = prodCats.map((c) => c.name.toLowerCase()).join(' ');
-      const parentCatNamesJoined = prodCats
-        .map((cat) => (cat.parent_id ? categories.find((c) => c.id === cat.parent_id)?.name.toLowerCase() || '' : ''))
-        .filter(Boolean)
-        .join(' ');
-      return (
-        prod.title.toLowerCase().includes(q) ||
-        catNamesJoined.includes(q) ||
-        parentCatNamesJoined.includes(q)
-      );
+      if (q) {
+        const prodCats = categories.filter((c) => prod.category_ids?.includes(c.id) || c.id === prod.category_id);
+        const catNamesJoined = prodCats.map((c) => c.name.toLowerCase()).join(' ');
+        const parentCatNamesJoined = prodCats
+          .map((cat) => (cat.parent_id ? categories.find((c) => c.id === cat.parent_id)?.name.toLowerCase() || '' : ''))
+          .filter(Boolean)
+          .join(' ');
+        const matchesQuery =
+          prod.title.toLowerCase().includes(q) ||
+          catNamesJoined.includes(q) ||
+          parentCatNamesJoined.includes(q);
+        if (!matchesQuery) return false;
+      }
+
+      // 2. Uncategorized Filter
+      if (selectedCategory === 'uncategorized') {
+        const prodCats = categories.filter((c) => prod.category_ids?.includes(c.id) || c.id === prod.category_id);
+        return prodCats.length === 0;
+      }
+
+      // 3. Subcategory & Category Filter
+      if (selectedSubcategory) {
+        const matchesSub =
+          prod.category_id === selectedSubcategory ||
+          prod.category_ids?.includes(selectedSubcategory);
+        if (!matchesSub) return false;
+      } else if (selectedCategory) {
+        const subCatIds = categories
+          .filter((c) => c.parent_id === selectedCategory)
+          .map((c) => c.id);
+        const allowedCatIds = new Set([selectedCategory, ...subCatIds]);
+        const matchesCat =
+          (prod.category_id && allowedCatIds.has(prod.category_id)) ||
+          prod.category_ids?.some((id) => allowedCatIds.has(id));
+        if (!matchesCat) return false;
+      }
+
+      return true;
     })
     .sort((a, b) => {
       let valA: string | number = '';
@@ -105,51 +156,135 @@ export default function ProductsTable({
 
   return (
     <div className="bg-white border border-brand-cream-dark rounded-xl shadow-xs overflow-hidden">
-      {/* Search & Sort Panel */}
-      <div className="p-5 border-b border-brand-cream-dark flex flex-col sm:flex-row items-center justify-between gap-4 bg-brand-cream/5">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="w-4 h-4 text-brand-dark/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search products by title or category..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={inputCls + ' pl-10'}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-dark/30 hover:text-brand-dark cursor-pointer"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-        <div className="flex items-center space-x-2 shrink-0">
-          <span className="text-[10px] font-bold text-brand-dark/45 uppercase tracking-wider">
-            Sort by:
-          </span>
-          {(['created_at', 'title', 'price', 'stock'] as const).map((field) => (
-            <button
-              key={field}
-              onClick={() => toggleSort(field)}
-              className={`px-3 py-1.5 border rounded text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
-                sortField === field
-                  ? 'bg-brand-brown border-brand-brown text-white shadow-xs'
-                  : 'bg-white border-brand-cream-dark text-brand-dark/65 hover:border-brand-brown/50'
-              }`}
-            >
-              <span className="flex items-center gap-1">
-                {field === 'created_at' ? 'Date Added' : field}
-                {sortField === field &&
-                  (sortOrder === 'asc' ? (
-                    <ChevronUp className="w-3 h-3" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3" />
-                  ))}
+      {/* Search, Filter & Sort Panel */}
+      <div className="p-5 border-b border-brand-cream-dark flex flex-col gap-4 bg-brand-cream/5">
+        {/* Top Row: Search & Category Filters */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          {/* Search Box */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="w-4 h-4 text-brand-dark/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search products by title or category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={inputCls + ' pl-10'}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-brand-dark/30 hover:text-brand-dark cursor-pointer"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Category & Subcategory Selectors */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Category Filter */}
+            <div className="flex items-center space-x-2 bg-white border border-brand-cream-dark rounded-md px-3 py-1.5 shadow-2xs">
+              <Filter className="w-3.5 h-3.5 text-brand-brown shrink-0" />
+              <span className="text-[10px] font-bold text-brand-dark/50 uppercase tracking-wider shrink-0">
+                Category:
               </span>
-            </button>
-          ))}
+              <select
+                value={selectedCategory}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-brand-dark outline-none cursor-pointer pr-1"
+              >
+                <option value="">All Categories</option>
+                {parentCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+                <option value="uncategorized">Uncategorized</option>
+              </select>
+            </div>
+
+            {/* Subcategory Filter */}
+            <div
+              className={`flex items-center space-x-2 bg-white border border-brand-cream-dark rounded-md px-3 py-1.5 shadow-2xs ${selectedCategory === 'uncategorized' ? 'opacity-50 pointer-events-none' : ''
+                }`}
+            >
+              <span className="text-[10px] font-bold text-brand-dark/50 uppercase tracking-wider shrink-0">
+                Subcategory:
+              </span>
+              <select
+                value={selectedSubcategory}
+                onChange={(e) => handleSubcategoryChange(e.target.value)}
+                disabled={selectedCategory === 'uncategorized'}
+                className="bg-transparent text-xs font-semibold text-brand-dark outline-none cursor-pointer pr-1"
+              >
+                <option value="">
+                  {selectedCategory ? 'All Subcategories' : 'All Subcategories'}
+                </option>
+                {availableSubcategories.map((sub) => {
+                  const parent = categories.find((c) => c.id === sub.parent_id);
+                  const label = !selectedCategory && parent ? `${parent.name} > ${sub.name}` : sub.name;
+                  return (
+                    <option key={sub.id} value={sub.id}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* Reset Filters Button */}
+            {(selectedCategory || selectedSubcategory || searchQuery) && (
+              <button
+                onClick={() => {
+                  setSelectedCategory('');
+                  setSelectedSubcategory('');
+                  setSearchQuery('');
+                }}
+                className="flex items-center space-x-1 px-3 py-1.5 border border-brand-cream-dark hover:border-red-300 bg-white text-red-600 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer shadow-2xs"
+                title="Reset all filters"
+              >
+                <X className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Bottom Row: Product Stats & Sort Controls */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-brand-cream-dark/50">
+          <div className="text-[10px] font-semibold text-brand-dark/60">
+            Showing <span className="font-bold text-brand-dark">{filteredAndSortedProducts.length}</span> of{' '}
+            <span className="font-bold text-brand-dark">{products.length}</span> products
+            {(selectedCategory || selectedSubcategory || searchQuery) && (
+              <span className="ml-1 text-brand-brown font-medium">(Filtered)</span>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2 shrink-0">
+            <span className="text-[10px] font-bold text-brand-dark/45 uppercase tracking-wider">
+              Sort by:
+            </span>
+            {(['created_at', 'title', 'price', 'stock'] as const).map((field) => (
+              <button
+                key={field}
+                onClick={() => toggleSort(field)}
+                className={`px-3 py-1.5 border rounded text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${sortField === field
+                    ? 'bg-brand-brown border-brand-brown text-white shadow-xs'
+                    : 'bg-white border-brand-cream-dark text-brand-dark/65 hover:border-brand-brown/50'
+                  }`}
+              >
+                <span className="flex items-center gap-1">
+                  {field === 'created_at' ? 'Date Added' : field}
+                  {sortField === field &&
+                    (sortOrder === 'asc' ? (
+                      <ChevronUp className="w-3 h-3" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3" />
+                    ))}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -278,9 +413,12 @@ export default function ProductsTable({
                       {(() => {
                         const mrp = parseFloat(String(prod.price || 0));
                         const disc = prod.discount && prod.discount > 0 ? prod.discount : 0;
-                        const gst = (prod as any).gst_rate || prod.product_variants?.[0]?.gst_rate || 0;
+                        const rawGst = (prod as any).gst_rate ?? prod.product_variants?.[0]?.gst_rate;
                         const taxable = Math.max(0, mrp * (1 - disc / 100));
-                        const finalP = Math.round(taxable * (1 + gst / 100));
+                        const autoGst = taxable > 2500 ? 18 : 5;
+                        const gst = rawGst !== undefined && rawGst !== null && rawGst !== '' ? parseFloat(String(rawGst)) : autoGst;
+                        const gstRateUsed = isNaN(gst) ? autoGst : gst;
+                        const finalP = Math.round(taxable * (1 + gstRateUsed / 100));
 
                         if (disc > 0) {
                           return (
@@ -296,32 +434,39 @@ export default function ProductsTable({
                               <span className="font-bold text-brand-dark text-xs">
                                 ₹{finalP.toLocaleString('en-IN')}
                               </span>
+                              <span className="text-[9.5px] font-semibold text-brand-dark/50 tracking-tight">
+                                Tax: {gstRateUsed}%
+                              </span>
                             </div>
                           );
                         }
 
                         return (
-                          <span className="font-bold text-brand-brown">
-                            ₹{finalP.toLocaleString('en-IN')}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-brand-brown text-xs">
+                              ₹{finalP.toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[9.5px] font-semibold text-brand-dark/50 tracking-tight">
+                              Tax: {gstRateUsed}% GST
+                            </span>
+                          </div>
                         );
                       })()}
                     </td>
                     <td className="px-5 py-4.5">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
-                          isOutOfStock
+                        className={`px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${isOutOfStock
                             ? 'bg-red-50 border-red-200 text-red-600'
                             : isLowStock
-                            ? 'bg-amber-50 border-amber-200 text-amber-700'
-                            : 'bg-green-50 border-green-200 text-green-700'
-                        }`}
+                              ? 'bg-amber-50 border-amber-200 text-amber-700'
+                              : 'bg-green-50 border-green-200 text-green-700'
+                          }`}
                       >
                         {isOutOfStock
                           ? 'Out of stock'
                           : isLowStock
-                          ? `${stockCount} Low`
-                          : `${stockCount} In Stock`}
+                            ? `${stockCount} Low`
+                            : `${stockCount} In Stock`}
                       </span>
                     </td>
                     <td className="px-5 py-4.5 text-center">
@@ -357,8 +502,8 @@ export default function ProductsTable({
                   colSpan={6}
                   className="text-center py-16 text-brand-dark/35 text-xs font-bold tracking-widest uppercase"
                 >
-                  {searchQuery
-                    ? 'No items match your search query.'
+                  {searchQuery || selectedCategory || selectedSubcategory
+                    ? 'No items match your selected filters.'
                     : 'No products yet. Add your first product above.'}
                 </td>
               </tr>
