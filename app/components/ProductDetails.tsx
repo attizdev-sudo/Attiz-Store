@@ -110,6 +110,7 @@ function ProductDetailsInner() {
   const swipeStartX = useRef<number | null>(null);
   const mainImageRef = useRef<HTMLImageElement>(null);
   const thumbnailScrollRef = useRef<HTMLDivElement>(null);
+  const sizeSectionRef = useRef<HTMLDivElement>(null);
 
   const scrollThumbnails = (direction: 'left' | 'right') => {
     if (thumbnailScrollRef.current) {
@@ -197,10 +198,18 @@ function ProductDetailsInner() {
   };
 
   const validateSelection = (): boolean => {
-    const hasSizes = sizesArray.length > 0;
+    const availableSizes = sortSizes(
+      product?.product_variants
+        ? Array.from(new Set(product.product_variants.map((v) => v.size))).filter(Boolean)
+        : ['S', 'M', 'L', 'XL', 'XXL']
+    );
+    const hasSizes = availableSizes.length > 0;
 
     if (hasSizes && !selectedSize) {
       setSelectionError('Please select a size to proceed');
+      if (sizeSectionRef.current) {
+        sizeSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return false;
     }
 
@@ -843,50 +852,55 @@ function ProductDetailsInner() {
                 </span>
               )}
 
-              {/* Selection Notification Banner */}
-              {selectionError && (
-                <div className="mb-4 p-3 bg-[#E63B2E] text-white border-2 border-black shadow-[3px_3px_0_0_#111111] attiz-mono text-xs font-bold tracking-wider uppercase flex items-center justify-between animate-fade-in">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="w-4 h-4 text-[#FFCB05] shrink-0" />
-                    <span>{selectionError}</span>
+              {/* Size Section with Scroll Ref & Highlight Indicator */}
+              <div ref={sizeSectionRef} className={`mb-4 transition-all duration-300 rounded-sm ${selectionError && !selectedSize ? 'p-2.5 border-2 border-[#E63B2E] bg-[#E63B2E]/5 shadow-[3px_3px_0_0_#E63B2E]' : ''}`}>
+                {/* Selection Notification Banner */}
+                {selectionError && (
+                  <div className="mb-3 p-3 bg-[#E63B2E] text-white border-2 border-black shadow-[3px_3px_0_0_#111111] attiz-mono text-xs font-bold tracking-wider uppercase flex items-center justify-between animate-fade-in">
+                    <div className="flex items-center space-x-2">
+                      <AlertTriangle className="w-4 h-4 text-[#FFCB05] shrink-0" />
+                      <span>{selectionError}</span>
+                    </div>
+                    <button onClick={() => setSelectionError(null)} className="text-white hover:text-[#FFCB05] cursor-pointer" aria-label="Close error warning">
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button onClick={() => setSelectionError(null)} className="text-white hover:text-[#FFCB05] cursor-pointer">
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
+                )}
 
-              {/* Sizes */}
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-1.5">
-                  <span className={`attiz-mono text-[9px] font-bold tracking-widest uppercase ${selectionError && !selectedSize ? 'text-[#E63B2E] font-black' : 'text-black/85'}`}>
-                    Size Options {selectionError && !selectedSize && '(REQUIRED)'}
-                  </span>
-                  <button onClick={() => setIsSizeChartOpen(true)} className="attiz-mono text-[9px] font-bold text-[#E63B2E] hover:text-black tracking-wider underline uppercase cursor-pointer">Size Chart</button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {sizesArray.map((sz) => {
-                    const isDisabled = isSizeDisabled(sz);
-                    const isSelected = selectedSize === sz;
-                    return (
-                      <button
-                        key={sz}
-                        onClick={() => {
-                          setSelectedSize(sz);
-                          setSelectionError(null);
-                        }}
-                        disabled={isDisabled}
-                        className={`w-10 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all ${isDisabled
-                          ? 'border-black/15 text-black/25 bg-black/[0.02] cursor-not-allowed line-through'
-                          : isSelected
-                            ? 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
-                            : 'border-black/70 text-black hover:border-black bg-white cursor-pointer'
-                          }`}
-                      >
-                        {sz}
-                      </button>
-                    );
-                  })}
+                {/* Sizes */}
+                <div>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className={`attiz-mono text-[9.5px] font-bold tracking-widest uppercase ${selectionError && !selectedSize ? 'text-[#E63B2E] font-black' : 'text-black/85'}`}>
+                      Size Options {selectionError && !selectedSize && '(REQUIRED - PLEASE SELECT A SIZE)'}
+                    </span>
+                    <button onClick={() => setIsSizeChartOpen(true)} className="attiz-mono text-[9px] font-bold text-[#E63B2E] hover:text-black tracking-wider underline uppercase cursor-pointer">Size Chart</button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {sizesArray.map((sz) => {
+                      const isDisabled = isSizeDisabled(sz);
+                      const isSelected = selectedSize === sz;
+                      return (
+                        <button
+                          key={sz}
+                          onClick={() => {
+                            setSelectedSize(sz);
+                            setSelectionError(null);
+                          }}
+                          disabled={isDisabled}
+                          className={`w-10 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all ${isDisabled
+                            ? 'border-black/15 text-black/25 bg-black/[0.02] cursor-not-allowed line-through'
+                            : isSelected
+                              ? 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
+                              : selectionError && !selectedSize
+                                ? 'border-[#E63B2E] text-black bg-white hover:border-black cursor-pointer animate-pulse'
+                                : 'border-black/70 text-black hover:border-black bg-white cursor-pointer'
+                            }`}
+                        >
+                          {sz}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -941,9 +955,9 @@ function ProductDetailsInner() {
                 <div>
                   <span className="block attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase mb-1.5">Quantity Selector</span>
                   <div className={`flex items-center border-2 bg-white w-28 ${isOutOfStock ? 'border-black/15 opacity-50' : 'border-black'}`}>
-                    <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => Math.max(1, prev - 1))} className={`p-2 text-black hover:bg-[#FFCB05] transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Minus className="w-3.5 h-3.5" /></button>
+                    <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => Math.max(1, prev - 1))} aria-label="Decrease quantity" className={`p-2 text-black hover:bg-[#FFCB05] transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Minus className="w-3.5 h-3.5" /></button>
                     <span className="attiz-mono text-xs font-bold px-2 text-black select-none grow text-center">{isOutOfStock ? 0 : quantity}</span>
-                    <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => prev < (activeVariant?.stock || 0) ? prev + 1 : prev)} className={`p-2 text-black hover:bg-[#FFCB05] transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Plus className="w-3.5 h-3.5" /></button>
+                    <button disabled={isOutOfStock} onClick={() => setQuantity((prev) => prev < (activeVariant?.stock || 0) ? prev + 1 : prev)} aria-label="Increase quantity" className={`p-2 text-black hover:bg-[#FFCB05] transition-colors ${isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'}`}><Plus className="w-3.5 h-3.5" /></button>
                   </div>
                   {!isOutOfStock && quantity >= (activeVariant?.stock || 0) && (
                     <span className="attiz-mono text-[9px] text-[#E63B2E] font-bold tracking-wider mt-1 block">Maximum available stock reached.</span>

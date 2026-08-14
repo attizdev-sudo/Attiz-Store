@@ -245,7 +245,7 @@ export default function Navbar() {
                   <ChevronDown className="w-3 h-3" />
                 </div>
 
-                <button onClick={() => setIsSearchOpen(true)} className="text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer" title="Search Catalog">
+                <button onClick={() => setIsSearchOpen(true)} className="text-black/75 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer" title="Search Catalog" aria-label="Search Catalog">
                   <Search className="w-4.5 h-4.5" />
                 </button>
 
@@ -255,6 +255,7 @@ export default function Navbar() {
                     <div>
                       <button
                         onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                        aria-label="User account menu"
                         className="flex items-center space-x-1 attiz-mono text-xs font-bold tracking-widest text-[#E63B2E] hover:text-[#E63B2E]/80 transition-colors cursor-pointer uppercase border-b-2 border-dashed border-[#E63B2E]/30"
                       >
                         <span>{user.first_name}</span>
@@ -327,6 +328,7 @@ export default function Navbar() {
                       onClick={() => router.push('/login')}
                       className="text-black/95 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
                       title="Sign In"
+                      aria-label="Sign In"
                     >
                       <User className="w-4.5 h-4.5" />
                     </button>
@@ -338,6 +340,7 @@ export default function Navbar() {
                   onClick={() => setIsCartOpen(true)}
                   className="relative text-black/95 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
                   title="Shopping Cart"
+                  aria-label="Shopping Cart"
                 >
                   <ShoppingBag className="w-4.5 h-4.5" />
                   {cartCount > 0 && (

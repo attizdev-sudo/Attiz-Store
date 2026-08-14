@@ -38,12 +38,13 @@ export default function Newsletter() {
               <input
                 type="email"
                 placeholder="YOUR EMAIL ADDRESS"
+                aria-label="Email address for newsletter"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 text-xs text-black placeholder-black/35 bg-transparent border-none outline-none tracking-widest font-mono uppercase"
               />
-              <button type="submit" className="px-5 bg-black hover:bg-[#E63B2E] text-[#FFCB05] hover:text-white transition-colors duration-200 flex items-center justify-center cursor-pointer h-12 border-l-2 border-black">
+              <button type="submit" aria-label="Subscribe to newsletter" className="px-5 bg-black hover:bg-[#E63B2E] text-[#FFCB05] hover:text-white transition-colors duration-200 flex items-center justify-center cursor-pointer h-12 border-l-2 border-black">
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>

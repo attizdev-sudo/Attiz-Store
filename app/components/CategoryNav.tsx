@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 const categories = [
@@ -28,22 +29,27 @@ export default function CategoryNav() {
   };
 
   return (
-    <section className="py-4 sm:py-16 bg-[#FAF8F5]">
+    <nav aria-label="Category Navigation" className="py-4 sm:py-16 bg-[#FAF8F5]">
       <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8">
 
         {/* 5-Column Fixed Non-scrollable Grid */}
         <div className="grid grid-cols-5 gap-0.5 sm:gap-4 items-start">
           {categories.map((cat) => (
-            <div
+            <button
               key={cat.name}
+              type="button"
               onClick={() => handleCategoryClick(cat.name)}
-              className="flex flex-col items-center group cursor-pointer active:scale-95 transition-transform duration-150"
+              aria-label={`View ${cat.name}`}
+              className="flex flex-col items-center group cursor-pointer active:scale-95 transition-transform duration-150 bg-transparent border-0 p-0 text-left w-full"
             >
               {/* Icon Container */}
-              <div className="w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center transition-all duration-300">
-                <img
+              <div className="w-16 h-16 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center transition-all duration-300 relative">
+                <Image
                   src={cat.src}
                   alt={cat.name}
+                  width={112}
+                  height={112}
+                  priority
                   className="w-full h-full object-contain scale-125 sm:scale-110 transition-transform duration-300 group-hover:scale-125 filter drop-shadow-[2px_2px_0_rgba(0,0,0,3)]"
                 />
               </div>
@@ -55,10 +61,10 @@ export default function CategoryNav() {
 
               {/* Underline indicator */}
               <span className="mt-1 block w-0 group-hover:w-full h-[1.5px] bg-black transition-all duration-300 ease-out" />
-            </div>
+            </button>
           ))}
         </div>
       </div>
-    </section>
+    </nav>
   );
 }

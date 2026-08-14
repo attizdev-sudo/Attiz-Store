@@ -328,6 +328,7 @@ function ProductGridInner() {
               <select
                 value={selectedSort}
                 onChange={(e) => setSelectedSort(e.target.value)}
+                aria-label="Sort products by"
                 className="bg-transparent attiz-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider outline-none cursor-pointer pr-1 sm:pr-2"
               >
                 <option value="latest">Latest Arrivals</option>
