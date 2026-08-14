@@ -156,6 +156,7 @@ export default function WishlistPage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
+                aria-label="Sort wishlist items"
                 className="bg-[#FAF8F5] border-2 border-black px-3 py-1.5 attiz-mono text-xs font-bold tracking-wider text-black outline-none cursor-pointer focus:border-[#E63B2E]"
               >
                 <option value="newest">Recently Added</option>
@@ -225,6 +226,7 @@ export default function WishlistPage() {
                 <select
                   value={sortBy}
                   onChange={(e: any) => setSortBy(e.target.value)}
+                  aria-label="Sort wishlist items"
                   className="bg-[#FAF8F5] border-2 border-black px-3 py-1 attiz-mono text-xs font-bold uppercase text-black focus:outline-none cursor-pointer"
                 >
                   <option value="newest">Recently Added</option>
