@@ -21,7 +21,7 @@ export async function GET(_: Request, { params }: { params: Params }) {
   const { id } = await params;
   const { data: order, error } = await supabase
     .from('orders')
-    .select('*, order_items(*)')
+    .select('*, order_items(*), payments(*)')
     .eq('id', id)
     .single();
 
@@ -31,7 +31,15 @@ export async function GET(_: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: 'Forbidden. Access denied.' }, { status: 403 });
   }
 
-  return NextResponse.json(order);
+  const paidAmount = Array.isArray(order.payments) && order.payments.length > 0
+    ? Number(order.payments[0].amount || 0)
+    : Number(order.total_price || 0);
+
+  return NextResponse.json({
+    ...order,
+    paid_amount: paidAmount,
+    amount_paid: paidAmount,
+  });
 }
 
 /** PUT /api/orders/:id — update order details & items (Admin Only) */
