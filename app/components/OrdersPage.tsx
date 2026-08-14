@@ -128,6 +128,191 @@ export default function OrdersPage() {
 
   const userOrders = localOrders;
 
+  // Generate printable invoice HTML for an order and open print dialog
+  const generateInvoiceHtml = (order: any) => {
+    const createdAt = order.created_at ? new Date(order.created_at) : new Date();
+    const orderNo = order.order_number || (order.id || '').slice(0, 8).toUpperCase();
+    const items = Array.isArray(order.items) ? order.items : [];
+
+    const itemDiscountTotal = items.reduce((s: number, it: any) => {
+      const qty = Number(it.quantity || 1);
+      const originalUnit = Number(it.original_price ?? it.mrp ?? it.price ?? it.unit_price ?? 0);
+      const finalUnit = Number(it.unit_price ?? it.price ?? 0);
+      const itemDiscount = Math.max(0, originalUnit - finalUnit);
+      return s + (itemDiscount * qty);
+    }, 0);
+
+    const displaySubtotal = items.reduce((s: number, it: any) => {
+      const qty = Number(it.quantity || 1);
+      const originalUnit = Number(it.original_price ?? it.mrp ?? it.unit_price ?? it.price ?? 0);
+      const unitPrice = originalUnit > 0 ? originalUnit : Number(it.unit_price ?? it.price ?? 0);
+      return s + (unitPrice * qty);
+    }, 0);
+
+    const discount = Number(itemDiscountTotal || order.discount || 0);
+    const shipping = Number(order.shipping_charge || 0);
+    const total = Number(order.total_price ?? order.total ?? (displaySubtotal - discount + shipping));
+    const subtotal = displaySubtotal > 0 ? displaySubtotal : Math.max(0, total + discount - shipping);
+
+    const rows = items.map((it: any) => {
+      const title = it.title || it.product_title || 'Product';
+      const qty = Number(it.quantity || 1);
+      const originalUnit = Number(it.original_price ?? it.mrp ?? it.unit_price ?? it.price ?? 0);
+      const finalUnit = Number(it.unit_price ?? it.price ?? 0);
+      const displayUnitPrice = originalUnit > 0 ? originalUnit : finalUnit;
+      const itemDiscount = Math.max(0, originalUnit - finalUnit);
+
+      if (displayUnitPrice > 0 && itemDiscount > 0 && finalUnit === 0) {
+        return `
+          <tr>
+            <td style="padding:8px;border:1px solid #222;">${title}</td>
+            <td style="padding:8px;border:1px solid #222;text-align:center;">${qty}</td>
+            <td style="padding:8px;border:1px solid #222;text-align:right;">₹${displayUnitPrice.toLocaleString('en-IN')}</td>
+          </tr>
+        `;
+      }
+
+      return `
+        <tr>
+          <td style="padding:8px;border:1px solid #222;">${title}</td>
+          <td style="padding:8px;border:1px solid #222;text-align:center;">${qty}</td>
+          <td style="padding:8px;border:1px solid #222;text-align:right;">₹${displayUnitPrice.toLocaleString('en-IN')}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const paidAmount = (() => {
+      // If payment status is not Paid, customer hasn't paid anything yet
+      if (order.payment_status !== 'Paid') {
+        return 0;
+      }
+      
+      // If payment status is Paid, get actual amount from payment records
+      if (Array.isArray(order.payments) && order.payments.length > 0) {
+        return Number(order.payments[0].amount || order.total_price || total);
+      }
+      
+      // Fallback: use total if marked as Paid but no payment record
+      return Number(order.total_price || total);
+    })();
+
+    return `
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Invoice - ${orderNo}</title>
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <style>
+          body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:20px}
+          .sheet{max-width:800px;margin:0 auto;border:1px solid #222;padding:20px}
+          h1{font-size:20px;margin:0 0 8px}
+          .muted{color:#555;font-size:13px}
+          table{width:100%;border-collapse:collapse;margin-top:12px}
+        </style>
+      </head>
+      <body>
+        <div class="sheet">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <h1>ATTIZ — Tax Invoice</h1>
+              <div class="muted">Order No: <strong>${orderNo}</strong></div>
+              <div class="muted">Placed: ${createdAt.toLocaleString('en-IN')}</div>
+            </div>
+            <div style="text-align:right">
+              <div class="muted">${order.shipping_name || ''}</div>
+              <div class="muted">${order.shipping_phone || ''}</div>
+              <div class="muted">${order.shipping_address || ''}</div>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="padding:8px;border:1px solid #222;text-align:left;background:#f3f3f3">Item</th>
+                <th style="padding:8px;border:1px solid #222;text-align:center;background:#f3f3f3">Qty</th>
+                <th style="padding:8px;border:1px solid #222;text-align:right;background:#f3f3f3">Unit Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+
+          <div style="margin-top:12px;display:flex;justify-content:flex-end;">
+            <table style="width:320px;border-collapse:collapse">
+              <tr>
+                <td style="padding:6px;border:1px solid #222">Subtotal</td>
+                <td style="padding:6px;border:1px solid #222;text-align:right">₹${subtotal.toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px;border:1px solid #222">Discount</td>
+                <td style="padding:6px;border:1px solid #222;text-align:right">₹${Math.max(0, discount).toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px;border:1px solid #222">Shipping</td>
+                <td style="padding:6px;border:1px solid #222;text-align:right">₹${shipping.toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px;border:1px solid #222;font-weight:700;background:#fafafa">Grand Total</td>
+                <td style="padding:6px;border:1px solid #222;text-align:right;font-weight:700;background:#fafafa">₹${total.toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px;border:1px solid #222">Amount Paid</td>
+                <td style="padding:6px;border:1px solid #222;text-align:right">₹${(paidAmount || 0).toLocaleString('en-IN')}</td>
+              </tr>
+            </table>
+          </div>
+
+          <p style="margin-top:18px;font-size:12px;color:#555">Payment Status: <strong>${order.payment_status || 'Pending'}</strong></p>
+          <p style="margin-top:6px;font-size:12px;color:#555">Thank you for shopping with ATTIZ.</p>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
+  const handlePrintInvoice = (order: any) => {
+    if (!order) return;
+
+    const html = generateInvoiceHtml(order);
+    const popup = window.open('', '_blank', 'width=900,height=1100');
+
+    if (!popup) {
+      alert('Please allow popups to print the invoice.');
+      return;
+    }
+
+    try {
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      popup.location.href = blobUrl;
+
+      setTimeout(() => {
+        try {
+          popup.focus();
+          popup.print();
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        } catch (err) {
+          console.error('Print error', err);
+          URL.revokeObjectURL(blobUrl);
+        }
+      }, 600);
+    } catch (err) {
+      console.error('Invoice popup error', err);
+      popup.document.open();
+      popup.document.write(html);
+      popup.document.close();
+      setTimeout(() => {
+        try {
+          popup.focus();
+          popup.print();
+        } catch (printErr) {
+          console.error('Print error', printErr);
+        }
+      }, 600);
+    }
+  };
   return (
     <div className="min-h-screen bg-[#FAF8F5] py-8 sm:py-12 pb-24">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
@@ -170,9 +355,17 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="text-right">
-                  <span className="attiz-mono text-[10px] font-bold bg-[#FFCB05] border border-black px-2.5 py-1 text-black uppercase inline-block">
-                    {selectedDetail.order.status || 'Confirmed'}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="attiz-mono text-[10px] font-bold bg-[#FFCB05] border border-black px-2.5 py-1 text-black uppercase inline-block">
+                      {selectedDetail.order.status || 'Confirmed'}
+                    </span>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handlePrintInvoice(selectedDetail.order); }}
+                      className="attiz-mono text-xs font-bold uppercase tracking-wider px-3 py-1 border border-black bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors"
+                    >
+                      Print Bill
+                    </button>
+                  </div>
                 </div>
               </div>
 

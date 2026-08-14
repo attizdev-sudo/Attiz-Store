@@ -22,7 +22,7 @@ export async function GET() {
   }
   const { user } = sessionData;
 
-  let query = supabase.from('orders').select('*, order_items(*)');
+  let query = supabase.from('orders').select('*, order_items(*), payments(*)');
   if (user.role !== 'admin') {
     query = query.eq('user_id', user.id);
   }
@@ -123,12 +123,20 @@ export async function GET() {
         const colorVal = oi.color || matchingVariant?.color || '';
         const realImg = resolvePrimaryImage(oi.product_id, oi.variant_id, colorVal, oi.image_url);
 
+        const finalUnitPrice = Number(oi.unit_price ?? oi.price ?? 0);
+        const originalUnitPrice = Number(oi.original_price ?? oi.mrp ?? finalUnitPrice ?? 0);
+        const itemDiscount = Number(oi.discount ?? Math.max(0, originalUnitPrice - finalUnitPrice) ?? 0);
+
         return {
           id: oi.id,
           product_id: oi.product_id,
           variant_id: oi.variant_id || matchingVariant?.id || null,
           title: oi.product_title || matchingProd?.title || 'Ordered Product',
-          price: Number(oi.unit_price) || 0,
+          price: finalUnitPrice,
+          unit_price: finalUnitPrice,
+          original_price: originalUnitPrice,
+          mrp: originalUnitPrice,
+          discount: itemDiscount,
           quantity: oi.quantity || 1,
           selectedSize: oi.size,
           color: colorVal,
@@ -141,10 +149,18 @@ export async function GET() {
         const pId = item.product_id || item.id;
         const vId = item.variant_id;
         const colorVal = item.color || item.selectedColor || '';
+        const finalUnitPrice = Number(item.unit_price ?? item.price ?? 0);
+        const originalUnitPrice = Number(item.original_price ?? item.mrp ?? finalUnitPrice ?? 0);
+        const itemDiscount = Number(item.discount ?? Math.max(0, originalUnitPrice - finalUnitPrice) ?? 0);
 
         item.image = resolvePrimaryImage(pId, vId, colorVal, item.image);
         if (!item.color) item.color = colorVal;
         if (!item.variant_id && vId) item.variant_id = vId;
+        item.unit_price = finalUnitPrice;
+        item.price = finalUnitPrice;
+        item.original_price = originalUnitPrice;
+        item.mrp = originalUnitPrice;
+        item.discount = itemDiscount;
         return item;
       });
     }
@@ -153,10 +169,16 @@ export async function GET() {
       ? `${order.shipping_address1}${order.shipping_address2 ? `, ${order.shipping_address2}` : ''}, ${order.shipping_city}, ${order.shipping_state} ${order.shipping_postal_code}`
       : order.shipping_address || 'Address provided at checkout';
 
+    const paidAmount = Array.isArray(order.payments) && order.payments.length > 0
+      ? Number(order.payments[0].amount || 0)
+      : Number(order.total_price || 0);
+
     return {
       ...order,
       items: items && items.length > 0 ? items : [],
       shipping_address: formattedAddress,
+      paid_amount: paidAmount,
+      amount_paid: paidAmount,
     };
   });
 
