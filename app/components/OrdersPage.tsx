@@ -14,7 +14,10 @@ import {
   ExternalLink,
   Phone,
   User,
-  ChevronRight
+  ChevronRight,
+  RotateCw,
+  Check,
+  ArrowUpRight
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
@@ -22,41 +25,42 @@ import type { CartItem } from '@/lib/types';
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
 
-type StatusKey = 'Waiting for confirmation' | 'Accepted' | 'Dispatched' | 'Shipped' | 'Delivered' | string;
+const TRACKING_STEPS = [
+  { id: 1, key: 'Confirmed', title: 'Confirmed', desc: 'Order Placed', icon: ClipboardList },
+  { id: 2, key: 'Packed', title: 'Packed', desc: 'Ready to Ship', icon: Package },
+  { id: 3, key: 'Dispatched', title: 'Dispatched', desc: 'With Courier', icon: ArrowUpRight },
+  { id: 4, key: 'Shipped', title: 'In Transit', desc: 'On the Way', icon: Truck },
+  { id: 5, key: 'Delivered', title: 'Delivered', desc: 'Package Received', icon: CheckCircle2 },
+];
 
-const STATUS_CONFIG: Record<string, {
-  bg: string;
-  text: string;
-  border: string;
-  icon: React.ReactNode;
-  step: number;
-}> = {
-  'Waiting for confirmation': {
-    bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200',
-    icon: <Clock className="w-3.5 h-3.5 animate-pulse" />, step: 1,
-  },
-  'Accepted': {
-    bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200',
-    icon: <CheckCircle2 className="w-3.5 h-3.5" />, step: 2,
-  },
-  'Dispatched': {
-    bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200',
-    icon: <Package className="w-3.5 h-3.5" />, step: 3,
-  },
-  'Shipped': {
-    bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200',
-    icon: <Truck className="w-3.5 h-3.5" />, step: 4,
-  },
-  'Delivered': {
-    bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200',
-    icon: <CheckCircle2 className="w-3.5 h-3.5" />, step: 5,
-  },
-};
+function getStatusStep(status?: string): { step: number; label: string; isCancelled: boolean } {
+  if (!status) return { step: 1, label: 'Order Confirmed', isCancelled: false };
+  const clean = String(status).trim().toUpperCase();
 
-const STEPS = ['Confirmed', 'Accepted', 'Dispatched', 'Shipped', 'Delivered'];
+  if (clean.includes('DELIVER')) {
+    return { step: 5, label: 'Delivered', isCancelled: false };
+  }
+  if (clean.includes('OUT FOR DELIVERY')) {
+    return { step: 4, label: 'Out for Delivery', isCancelled: false };
+  }
+  if (clean.includes('SHIPPED') || clean.includes('TRANSIT')) {
+    return { step: 4, label: 'In Transit', isCancelled: false };
+  }
+  if (clean.includes('DISPATCH')) {
+    return { step: 3, label: 'Dispatched', isCancelled: false };
+  }
+  if (clean.includes('PACKED') || clean.includes('PICKUP') || clean.includes('MANIFEST')) {
+    return { step: 2, label: 'Item Packed', isCancelled: false };
+  }
+  if (clean.includes('CANCEL')) {
+    return { step: 0, label: 'Order Cancelled', isCancelled: true };
+  }
+  if (clean.includes('RETURN') || clean.includes('RTO')) {
+    return { step: 0, label: 'Order Returned', isCancelled: true };
+  }
 
-function getStatusConfig(status: StatusKey) {
-  return STATUS_CONFIG[status] ?? STATUS_CONFIG['Delivered'];
+  // Default for Confirmed / Waiting for confirmation / Processing -> Step 1!
+  return { step: 1, label: 'Order Confirmed', isCancelled: false };
 }
 
 function getExpectedDeliveryInfo(createdAt: string | number | Date) {
@@ -127,6 +131,56 @@ export default function OrdersPage() {
   }, [user, sessionLoading, allOrders, router]);
 
   const userOrders = localOrders;
+
+  // Live Shiprocket Tracking State
+  const [isTrackingLoading, setIsTrackingLoading] = useState<boolean>(false);
+  const [trackingActivities, setTrackingActivities] = useState<any[]>([]);
+
+  // Function to fetch live Shiprocket tracking status & auto-update order in database
+  const refreshLiveTracking = async (orderId: string) => {
+    if (!orderId) return;
+    setIsTrackingLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/track`, { credentials: 'include' });
+      const data = await res.json();
+
+      if (data.success && data.order) {
+        // Update order in local detail modal
+        setSelectedDetail((prev) => {
+          if (!prev || prev.order.id !== orderId) return prev;
+          return {
+            ...prev,
+            order: data.order,
+          };
+        });
+
+        // Sync with localOrders list
+        setLocalOrders((prevOrders) => {
+          const updated = prevOrders.map((o) => (o.id === orderId ? { ...o, ...data.order } : o));
+          try {
+            sessionStorage.setItem('attiz_user_orders', JSON.stringify(updated));
+          } catch {}
+          return updated;
+        });
+
+        if (Array.isArray(data.tracking?.activities)) {
+          setTrackingActivities(data.tracking.activities);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching live tracking:', err);
+    } finally {
+      setIsTrackingLoading(false);
+    }
+  };
+
+  // Trigger tracking fetch automatically when order modal opens
+  useEffect(() => {
+    if (selectedDetail?.order?.id) {
+      setTrackingActivities([]);
+      refreshLiveTracking(selectedDetail.order.id);
+    }
+  }, [selectedDetail?.order?.id]);
 
   // Generate printable invoice HTML for an order and open print dialog
   const generateInvoiceHtml = (order: any) => {
@@ -446,76 +500,136 @@ export default function OrdersPage() {
               </div>
 
               {/* Shipment Tracking Timeline */}
-              <div className="space-y-3 mb-6">
+              <div className="space-y-4 mb-6">
                 <div className="flex items-center justify-between">
-                  <span className="attiz-display text-sm uppercase text-black">Shipment Progress</span>
-                  <span className="attiz-mono text-[10px] font-bold bg-[#FFCB05] border border-black px-2 py-0.5 text-black uppercase">
+                  <div className="flex items-center space-x-2">
+                    <span className="attiz-display text-sm uppercase text-black">Shipment Progress</span>
+                    <button
+                      onClick={() => refreshLiveTracking(selectedDetail.order.id)}
+                      disabled={isTrackingLoading}
+                      title="Refresh live status from Shiprocket"
+                      className="p-1 text-black/60 hover:text-black transition-colors disabled:opacity-50 flex items-center gap-1 cursor-pointer"
+                    >
+                      <RotateCw className={`w-3.5 h-3.5 ${isTrackingLoading ? 'animate-spin text-[#E63B2E]' : ''}`} />
+                      <span className="attiz-mono text-[9px] uppercase text-black/60 font-bold hidden sm:inline">
+                        {isTrackingLoading ? 'Syncing...' : 'Live Sync'}
+                      </span>
+                    </button>
+                  </div>
+                  <span className="attiz-mono text-[10px] font-bold bg-[#FFCB05] border border-black px-2.5 py-0.5 text-black uppercase">
                     {selectedDetail.order.status || 'Confirmed'}
                   </span>
                 </div>
 
-                {/* Courier & AWB Info Banner if available */}
-                {(selectedDetail.order.awb_code || selectedDetail.order.courier_name) && (
-                  <div className="p-3 bg-[#FAF8F5] border border-black/15 flex flex-wrap items-center justify-between gap-2 attiz-mono text-xs uppercase">
-                    <div className="flex items-center space-x-2">
-                      <Truck className="w-4 h-4 text-[#E63B2E] shrink-0" />
-                      <span>Courier: <strong className="text-black font-extrabold">{selectedDetail.order.courier_name || 'Express Courier'}</strong></span>
-                    </div>
-                    {selectedDetail.order.awb_code && (
-                      <div className="flex items-center space-x-2">
-                        <span>AWB: <strong className="text-black font-extrabold">{selectedDetail.order.awb_code}</strong></span>
-                        {selectedDetail.order.tracking_url && (
+                {/* Main Stepper Card */}
+                {(() => {
+                  const currentStatusInfo = getStatusStep(selectedDetail.order.status);
+                  const currentStep = currentStatusInfo.step;
+                  const isCancelled = currentStatusInfo.isCancelled;
+
+                  const progressPct = isCancelled
+                    ? 0
+                    : Math.min(100, Math.max(0, ((currentStep - 1) / (TRACKING_STEPS.length - 1)) * 100));
+
+                  return (
+                    <div className="p-4 sm:p-5 bg-white border border-black/15 space-y-4 shadow-sm">
+                      {/* Track Package Banner for Customer */}
+                      {(selectedDetail.order.tracking_url || selectedDetail.order.awb_code) ? (
+                        <div className="p-3 bg-[#FAF8F5] border border-black/15 flex items-center justify-between gap-2 attiz-mono text-xs uppercase">
+                          <div className="flex items-center space-x-2">
+                            <Truck className="w-4 h-4 text-[#E63B2E] shrink-0" />
+                            <span className="font-extrabold text-black">Express Delivery Service</span>
+                          </div>
                           <a
-                            href={selectedDetail.order.tracking_url}
+                            href={selectedDetail.order.tracking_url || `https://shiprocket.co/tracking/${selectedDetail.order.awb_code}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-[#E63B2E] hover:underline font-bold flex items-center gap-0.5 text-[11px]"
+                            className="py-1.5 px-3 bg-[#E63B2E] text-white hover:bg-black transition-colors font-bold flex items-center gap-1.5 text-[11px] shadow-sm cursor-pointer"
                           >
                             <span>Track Package</span>
                             <ExternalLink className="w-3.5 h-3.5" />
                           </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Multi-step Tracking Graph */}
-                <div className="p-4 bg-white border border-black/15">
-                  <div className="flex items-center justify-between gap-1 relative">
-                    {STEPS.map((step, i) => {
-                      const cfg = getStatusConfig(selectedDetail.order.status);
-                      const done = i < cfg.step;
-                      const active = i === cfg.step - 1;
-                      return (
-                        <div key={step} className="flex flex-col items-center z-10 flex-1">
-                          <div
-                            className={`w-7 h-7 border-2 flex items-center justify-center text-[10px] font-bold transition-all ${
-                              active
-                                ? 'bg-[#E63B2E] border-[#E63B2E] text-white'
-                                : done
-                                ? 'bg-black border-black text-[#FFCB05]'
-                                : 'bg-white border-black/20 text-black/30'
-                            }`}
-                          >
-                            {done && !active ? (
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                            ) : (
-                              <span className="attiz-mono">{i + 1}</span>
-                            )}
-                          </div>
-                          <span
-                            className={`mt-1.5 attiz-mono text-[8px] sm:text-[9px] font-bold uppercase text-center ${
-                              active ? 'text-[#E63B2E]' : done ? 'text-[#111111]' : 'text-black/30'
-                            }`}
-                          >
-                            {step}
-                          </span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                      ) : (
+                        <div className="p-2.5 bg-[#FAF8F5] border border-black/10 text-black/70 attiz-mono text-[11px] uppercase flex items-center justify-between">
+                          <span>Delivery Status: Dispatch In Progress</span>
+                          {isTrackingLoading && <span className="text-[#E63B2E] font-bold animate-pulse">Syncing...</span>}
+                        </div>
+                      )}
+
+                      {/* Cancelled Alert Banner if applicable */}
+                      {isCancelled ? (
+                        <div className="p-3 bg-red-50 border border-red-200 text-red-700 attiz-mono text-xs uppercase font-bold flex items-center space-x-2">
+                          <X className="w-4 h-4 shrink-0" />
+                          <span>This order has been {selectedDetail.order.status}.</span>
+                        </div>
+                      ) : (
+                        /* Horizontal Connected Stepper Timeline */
+                        <div className="pt-3 pb-2 px-1 sm:px-4">
+                          <div className="relative flex items-center justify-between">
+                            {/* Background track line */}
+                            <div className="absolute top-[18px] left-[20px] right-[20px] h-[3px] bg-black/10 -z-0" />
+                            {/* Colored progress fill line */}
+                            <div
+                              className="absolute top-[18px] left-[20px] h-[3px] bg-[#E63B2E] transition-all duration-500 ease-in-out -z-0"
+                              style={{ width: `calc(${progressPct}% - ${progressPct === 100 ? 0 : 20}px)` }}
+                            />
+
+                            {TRACKING_STEPS.map((stepItem) => {
+                              const stepNum = stepItem.id;
+                              const isCompleted = stepNum < currentStep || currentStep === 5;
+                              const isActive = stepNum === currentStep && currentStep !== 5;
+                              const IconComponent = stepItem.icon;
+
+                              return (
+                                <div key={stepItem.key} className="flex flex-col items-center relative z-10 flex-1">
+                                  {/* Step Circle Node */}
+                                  <div
+                                    className={`w-9 h-9 sm:w-10 sm:h-10 border-2 flex items-center justify-center transition-all duration-300 ${
+                                      isCompleted
+                                        ? 'bg-black border-black text-[#FFCB05]'
+                                        : isActive
+                                        ? 'bg-[#E63B2E] border-[#E63B2E] text-white shadow-md shadow-[#E63B2E]/30 scale-110'
+                                        : 'bg-white border-black/20 text-black/30'
+                                    }`}
+                                  >
+                                    {isCompleted ? (
+                                      <Check className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3]" />
+                                    ) : (
+                                      <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
+                                    )}
+                                  </div>
+
+                                  {/* Step Titles */}
+                                  <div className="mt-2 text-center">
+                                    <span
+                                      className={`block attiz-mono text-[9px] sm:text-[10px] uppercase font-bold tracking-tight ${
+                                        isActive
+                                          ? 'text-[#E63B2E] font-extrabold'
+                                          : isCompleted
+                                          ? 'text-black'
+                                          : 'text-black/30'
+                                      }`}
+                                    >
+                                      {stepItem.title}
+                                    </span>
+                                    <span
+                                      className={`block attiz-mono text-[8px] uppercase hidden sm:block ${
+                                        isActive ? 'text-[#E63B2E]/80' : isCompleted ? 'text-black/60' : 'text-black/20'
+                                      }`}
+                                    >
+                                      {stepItem.desc}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Delivery Address & Contact info */}

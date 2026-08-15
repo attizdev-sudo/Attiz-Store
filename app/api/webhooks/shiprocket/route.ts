@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/db';
+import { mapShiprocketStatusToInternal } from '@/lib/shiprocket';
 
 /**
  * POST /api/webhooks/shiprocket
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
     console.log('📦 [SHIPROCKET WEBHOOK RECEIVED]', JSON.stringify(payload));
 
     const orderIdentifier = payload.order_id || payload.order_number;
-    const currentStatus = payload.current_status || payload.status;
+    const rawStatus = payload.current_status_id ?? payload.shipment_status_id ?? payload.status_id ?? payload.current_status ?? payload.status;
     const awb = payload.awb || payload.awb_code;
     const courierName = payload.courier_name || payload.courier;
 
@@ -20,23 +21,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Order identifier missing in webhook payload.' }, { status: 400 });
     }
 
-    // Map Shiprocket status to ATTIZ internal status
-    let internalStatus: string | null = null;
-    const statusUpper = (currentStatus || '').toUpperCase().trim();
-
-    if (statusUpper.includes('DELIVERED')) {
-      internalStatus = 'Delivered';
-    } else if (statusUpper.includes('OUT FOR DELIVERY')) {
-      internalStatus = 'Out for Delivery';
-    } else if (statusUpper.includes('TRANSIT') || statusUpper.includes('SHIPPED') || statusUpper.includes('DISPATCHED')) {
-      internalStatus = 'Shipped';
-    } else if (statusUpper.includes('PICKUP') || statusUpper.includes('PACKED') || statusUpper.includes('ASSIGNED')) {
-      internalStatus = 'Packed';
-    } else if (statusUpper.includes('CANCEL')) {
-      internalStatus = 'Cancelled';
-    } else if (statusUpper.includes('RTO') || statusUpper.includes('RETURN')) {
-      internalStatus = 'Returned';
-    }
+    // Map Shiprocket status to ATTIZ internal status using numeric IDs & string fallback
+    const internalStatus = rawStatus !== undefined && rawStatus !== null ? mapShiprocketStatusToInternal(rawStatus) : null;
 
     const updates: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -69,7 +55,7 @@ export async function POST(request: Request) {
       }
     }
 
-    console.log(`✅ [SHIPROCKET WEBHOOK UPDATED ORDER ${orderIdentifier}] Status: ${internalStatus || currentStatus}`);
+    console.log(`✅ [SHIPROCKET WEBHOOK UPDATED ORDER ${orderIdentifier}] Status: ${internalStatus || rawStatus}`);
     return NextResponse.json({ success: true, message: 'Status updated successfully' });
   } catch (err: any) {
     console.error('❌ [SHIPROCKET WEBHOOK ERROR]', err);
