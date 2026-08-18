@@ -1150,7 +1150,8 @@ export default function CheckoutPage() {
                 </label>
 
                 {/* COD */}
-                <label
+                
+                {/*<label
                   onClick={() => setPaymentMethod('COD')}
                   className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${paymentMethod === 'COD'
                     ? 'border-black bg-[#FFCB05]/15'
@@ -1172,7 +1173,7 @@ export default function CheckoutPage() {
                       Pay with cash upon doorstep delivery.
                     </span>
                   </div>
-                </label>
+                </label> */}
 
                 {/* Online Payment (Razorpay) */}
                 <label
