@@ -618,8 +618,11 @@ export default function CheckoutPage() {
               <p className="attiz-mono text-xs text-black/85 uppercase tracking-wider mb-4">
                 Order Number: <strong className="text-black font-extrabold">{orderSuccess.orderNumber}</strong>
               </p>
-              <p className="attiz-mono text-[11px] text-black/70 uppercase mb-6">
-                Your order is confirmed and is being processed. Redirecting to your orders dashboard...
+              <p className="attiz-mono text-[11px] text-black/70 uppercase mb-2">
+                Your order is confirmed and is being processed.
+              </p>
+              <p className="attiz-mono text-[10px] text-emerald-750 font-bold uppercase tracking-wider mb-6 bg-emerald-50 border border-emerald-200 py-1.5 px-3">
+                &check; A confirmation notification email has been sent to your email address.
               </p>
               <div className="w-full bg-black/10 h-1.5 overflow-hidden">
                 <div className="bg-black h-full animate-pulse w-full" />

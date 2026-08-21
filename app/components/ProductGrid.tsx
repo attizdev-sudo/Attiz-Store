@@ -34,6 +34,25 @@ const getProductImages = (product: Product) => {
   return urls;
 };
 
+const getPageNumbers = (totalPages: number, currentPage: number): (number | string)[] => {
+  if (totalPages <= 5) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+
+  // Near the beginning: 1, 2, 3, 4, '...', totalPages
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, '...', totalPages];
+  }
+
+  // Near the end: 1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages
+  if (currentPage >= totalPages - 2) {
+    return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  // In the middle: 1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages
+  return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+};
+
 function ProductGridInner() {
   const { addToCart } = useCart();
   const { products: allProducts, categories: allCategories, dbLoading } = useStore();
@@ -630,18 +649,31 @@ function ProductGridInner() {
 
                   {/* Page number pills */}
                   <div className="flex items-center gap-2">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => goToPage(page)}
-                        className={`w-9 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all duration-200 cursor-pointer ${currentPage === page
-                          ? 'bg-black text-[#FFCB05] border-black shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
-                          : 'bg-white text-black border-black/30 hover:border-black hover:shadow-[2px_2px_0_0_#111111] hover:-translate-x-[1px] hover:-translate-y-[1px]'
-                          }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
+                    {getPageNumbers(totalPages, currentPage).map((page, idx) => {
+                      if (page === '...') {
+                        return (
+                          <span
+                            key={`ellipsis-${idx}`}
+                            className="w-9 h-9 flex items-center justify-center attiz-mono text-xs font-bold text-black/40 select-none tracking-widest"
+                          >
+                            ...
+                          </span>
+                        );
+                      }
+                      const pageNum = page as number;
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => goToPage(pageNum)}
+                          className={`w-9 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all duration-200 cursor-pointer ${currentPage === pageNum
+                            ? 'bg-black text-[#FFCB05] border-black shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
+                            : 'bg-white text-black border-black/30 hover:border-black hover:shadow-[2px_2px_0_0_#111111] hover:-translate-x-[1px] hover:-translate-y-[1px]'
+                            }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <div className="flex items-center gap-3">

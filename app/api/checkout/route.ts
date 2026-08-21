@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { supabase } from '@/lib/db';
 import { validateSession } from '@/lib/auth/session';
 import { createShiprocketOrder } from '@/lib/shiprocket';
+import { sendOrderConfirmationEmail } from '@/lib/order-emails';
 
 interface CheckoutBody {
   userId: string;
@@ -358,6 +359,50 @@ export async function POST(request: Request) {
     }
   } catch (srErr) {
     console.error('Shiprocket auto-order creation error (non-fatal):', srErr);
+  }
+
+  // 7. SEND ORDER CONFIRMATION EMAIL NOTIFICATION TO CUSTOMER
+  const customerEmail = user.email || (user as any).user_metadata?.email;
+  if (customerEmail) {
+    sendOrderConfirmationEmail({
+      toEmail: customerEmail,
+      customerName: user.first_name || recipientName,
+      orderNumber: orderData.order_number,
+      orderId,
+      orderDate: new Date().toISOString(),
+      paymentMethod,
+      paymentStatus: paymentMethod === 'COD' ? 'Pending' : 'Paid',
+      status: 'Waiting for confirmation',
+      shippingDetails: {
+        recipientName,
+        phone: shippingPhone,
+        addressLine1: address1,
+        addressLine2: address2 || null,
+        city,
+        state,
+        postalCode,
+        country,
+      },
+      items: finalOrderItems.map((oi) => ({
+        title: oi.product_title,
+        size: oi.size,
+        color: oi.color,
+        quantity: oi.quantity,
+        price: oi.unit_price,
+        originalPrice: oi.original_price,
+        discount: oi.discount,
+        image: oi.image_url,
+      })),
+      pricing: {
+        subtotal: finalSubtotal,
+        shippingCharge,
+        discount: finalDiscount,
+        tax: finalTax,
+        totalPrice,
+      },
+    }).catch((emailErr) => {
+      console.error('Non-fatal error sending order confirmation email:', emailErr);
+    });
   }
 
   return NextResponse.json(

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabase } from '@/lib/db';
 import { verifySession } from '@/lib/session';
+import { sendOrderConfirmationEmail } from '@/lib/order-emails';
 
 type Params = Promise<{ id: string }>;
 
@@ -187,9 +188,59 @@ export async function PUT(request: Request, { params }: { params: Params }) {
 
   const { data: updatedOrder } = await supabase
     .from('orders')
-    .select('*, order_items(*)')
+    .select('*, order_items(*), users(id, email, first_name, last_name, phone)')
     .eq('id', id)
     .single();
+
+  // If status is updated to 'Confirmed', notify customer via email
+  if (orderUpdates.status === 'Confirmed' && updatedOrder) {
+    const customerEmail = updatedOrder.users?.email;
+    if (customerEmail) {
+      const itemsList = Array.isArray(updatedOrder.order_items)
+        ? updatedOrder.order_items.map((oi: any) => ({
+            title: oi.product_title || 'Ordered Product',
+            size: oi.size,
+            color: oi.color,
+            quantity: oi.quantity || 1,
+            price: Number(oi.unit_price || oi.price || 0),
+            originalPrice: Number(oi.original_price || oi.price || 0),
+            discount: Number(oi.discount || 0),
+            image: oi.image_url,
+          }))
+        : [];
+
+      sendOrderConfirmationEmail({
+        toEmail: customerEmail,
+        customerName: updatedOrder.users?.first_name || updatedOrder.shipping_name || 'Customer',
+        orderNumber: updatedOrder.order_number || `ATZ-${id.slice(-6)}`,
+        orderId: updatedOrder.id,
+        orderDate: updatedOrder.created_at,
+        paymentMethod: updatedOrder.payment_status === 'Paid' ? 'Prepaid (Online)' : 'Cash on Delivery',
+        paymentStatus: updatedOrder.payment_status || 'Pending',
+        status: 'Confirmed',
+        shippingDetails: {
+          recipientName: updatedOrder.shipping_name || updatedOrder.users?.first_name || 'Customer',
+          phone: updatedOrder.shipping_phone || updatedOrder.users?.phone || '',
+          addressLine1: updatedOrder.shipping_address1 || updatedOrder.shipping_address || '',
+          addressLine2: updatedOrder.shipping_address2 || null,
+          city: updatedOrder.shipping_city || '',
+          state: updatedOrder.shipping_state || '',
+          postalCode: updatedOrder.shipping_postal_code || '',
+          country: updatedOrder.shipping_country || 'India',
+        },
+        items: itemsList,
+        pricing: {
+          subtotal: Number(updatedOrder.subtotal || updatedOrder.total_price || 0),
+          shippingCharge: Number(updatedOrder.shipping_charge || 0),
+          discount: Number(updatedOrder.discount || 0),
+          tax: Number(updatedOrder.tax || 0),
+          totalPrice: Number(updatedOrder.total_price || 0),
+        },
+      }).catch((emailErr) => {
+        console.error('Non-fatal error sending status confirmed email:', emailErr);
+      });
+    }
+  }
 
   return NextResponse.json(updatedOrder || { success: true });
 }
