@@ -50,6 +50,9 @@ export interface CreateOrderParams {
     gst_rate?: number;
     tax?: number;
     hsn?: string | number;
+    selectedSize?: string;
+    mens_size?: string;
+    womens_size?: string;
   }>;
   length?: number;
   breadth?: number;
@@ -239,9 +242,20 @@ export async function createShiprocketOrder(params: CreateOrderParams) {
     // e.g., ₹592 + ₹198 = ₹790
     const shiprocketSellingPrice = netPayablePrice + shiprocketDiscount;
 
+    const hasDualSize = (item.mens_size && item.womens_size) || (item.selectedSize && item.selectedSize.includes('Women:'));
+    const sizeDetails = hasDualSize
+      ? (item.mens_size && item.womens_size ? `(His: ${item.mens_size} | Hers: ${item.womens_size})` : `(${item.selectedSize})`)
+      : (item.selectedSize ? `(Size: ${item.selectedSize})` : '');
+    
+    const formattedName = sizeDetails ? `${item.title} ${sizeDetails}` : item.title;
+    const cleanSku = item.sku || `SKU-${(item.title || 'ITEM').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase()}`;
+    const formattedSku = hasDualSize && item.mens_size && item.womens_size
+      ? `${cleanSku}-M${item.mens_size}-W${item.womens_size}`
+      : cleanSku;
+
     return {
-      name: item.title,
-      sku: item.sku || `SKU-${(item.title || 'ITEM').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10).toUpperCase()}`,
+      name: formattedName.slice(0, 100),
+      sku: formattedSku.slice(0, 50),
       units: item.quantity || 1,
       selling_price: shiprocketSellingPrice,
       discount: shiprocketDiscount,

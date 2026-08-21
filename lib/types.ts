@@ -16,6 +16,9 @@ export interface CartItem {
   image: string;
   quantity: number;
   selectedSize?: string;
+  mens_size?: string;
+  womens_size?: string;
+  is_couple_product?: boolean;
   color?: string;
   stock?: number;
   discount?: number;
@@ -36,6 +39,8 @@ export interface ProductVariant {
   product_id: string;
   color: string;
   size: string;
+  mens_size?: string;
+  womens_size?: string;
   stock: number;
   price: number;
   discount?: number;
@@ -55,6 +60,9 @@ export interface Product {
   category_ids?: string[];
   created_at?: string;
   product_variants?: ProductVariant[];
+  is_couple_product?: boolean;
+  mens_size?: string;
+  womens_size?: string;
   // Legacy / convenience fields (can be computed at runtime):
   price?: number;
   discount?: number;

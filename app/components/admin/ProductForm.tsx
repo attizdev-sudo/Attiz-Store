@@ -86,6 +86,7 @@ export default function ProductForm({
     wash_care: '',
     size_chart: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800',
     split_variants: false,
+    is_couple_product: false,
   });
 
   // 2. Active sizes & colors list
@@ -129,6 +130,7 @@ export default function ProductForm({
         wash_care: editingProduct.wash_care || '',
         size_chart: editingProduct.size_chart || 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800',
         split_variants: editingProduct.split_variants || false,
+        is_couple_product: editingProduct.is_couple_product || false,
       });
 
       const variants = editingProduct.product_variants || [];
@@ -194,6 +196,7 @@ export default function ProductForm({
         wash_care: '',
         size_chart: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800',
         split_variants: false,
+        is_couple_product: false,
       });
       setDefaultPrice('799');
       setDefaultDiscount('0');
@@ -688,6 +691,21 @@ export default function ProductForm({
                 className={inputCls}
                 placeholder="e.g. Premium Cotton Polo"
               />
+
+              <label className="flex items-center space-x-2 pt-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  disabled={isSubmitting}
+                  checked={Boolean(productData.is_couple_product)}
+                  onChange={(e) =>
+                    setProductData((p) => ({ ...p, is_couple_product: e.target.checked }))
+                  }
+                  className="w-4 h-4 text-brand-brown rounded border-brand-cream-dark focus:ring-brand-brown cursor-pointer"
+                />
+                <span className="text-xs font-bold uppercase tracking-wider text-brand-dark">
+                  Is Couple Product? (Dual Sizes for Men & Women)
+                </span>
+              </label>
             </div>
 
             <div className="flex flex-col space-y-4">

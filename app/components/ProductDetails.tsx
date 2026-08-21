@@ -95,6 +95,8 @@ function ProductDetailsInner() {
   }, [product, products]);
 
   const [selectedSize, setSelectedSize] = useState<string>('');
+  const [mensSize, setMensSize] = useState<string>('');
+  const [womensSize, setWomensSize] = useState<string>('');
   const [isAddedToast, setIsAddedToast] = useState(false);
   const [isNavigatingBuyNow, setIsNavigatingBuyNow] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string>('');
@@ -198,20 +200,35 @@ function ProductDetailsInner() {
     }
   };
 
-  const validateSelection = (): boolean => {
-    const availableSizes = sortSizes(
-      product?.product_variants
-        ? Array.from(new Set(product.product_variants.map((v) => v.size))).filter(Boolean)
-        : ['S', 'M', 'L', 'XL', 'XXL']
-    );
-    const hasSizes = availableSizes.length > 0;
+  const isCoupleProduct = Boolean(
+    product?.is_couple_product ||
+    (product?.title && product.title.toUpperCase().includes('COUPLE'))
+  );
 
-    if (hasSizes && !selectedSize) {
-      setSelectionError('Please select a size to proceed');
-      if (sizeSectionRef.current) {
-        sizeSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const validateSelection = (): boolean => {
+    if (isCoupleProduct) {
+      if (!mensSize || !womensSize) {
+        setSelectionError("Please select both Men's (His) and Women's (Hers) sizes to proceed");
+        if (sizeSectionRef.current) {
+          sizeSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return false;
       }
-      return false;
+    } else {
+      const availableSizes = sortSizes(
+        product?.product_variants
+          ? Array.from(new Set(product.product_variants.map((v) => v.size))).filter(Boolean)
+          : ['S', 'M', 'L', 'XL', 'XXL']
+      );
+      const hasSizes = availableSizes.length > 0;
+
+      if (hasSizes && !selectedSize) {
+        setSelectionError('Please select a size to proceed');
+        if (sizeSectionRef.current) {
+          sizeSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return false;
+      }
     }
 
     setSelectionError(null);
@@ -233,6 +250,10 @@ function ProductDetailsInner() {
         || product.image
         || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
 
+      const effectiveSize = isCoupleProduct
+        ? `Men: ${mensSize} / Women: ${womensSize}`
+        : selectedSize;
+
       addToCart({
         ...product,
         product_id: product.id,
@@ -243,7 +264,10 @@ function ProductDetailsInner() {
         discount: displayDiscount,
         original_mrp: displayPrice,
         gst_rate: activeGst,
-        selectedSize,
+        selectedSize: effectiveSize,
+        mens_size: isCoupleProduct ? mensSize : undefined,
+        womens_size: isCoupleProduct ? womensSize : undefined,
+        is_couple_product: isCoupleProduct,
         selectedColor,
         color: selectedColor,
         quantity,
@@ -270,6 +294,10 @@ function ProductDetailsInner() {
         || product.image
         || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
 
+      const effectiveSize = isCoupleProduct
+        ? `Men: ${mensSize} / Women: ${womensSize}`
+        : selectedSize;
+
       startBuyNow({
         ...product,
         product_id: product.id,
@@ -280,7 +308,10 @@ function ProductDetailsInner() {
         discount: displayDiscount,
         original_mrp: displayPrice,
         gst_rate: activeGst,
-        selectedSize,
+        selectedSize: effectiveSize,
+        mens_size: isCoupleProduct ? mensSize : undefined,
+        womens_size: isCoupleProduct ? womensSize : undefined,
+        is_couple_product: isCoupleProduct,
         selectedColor,
         color: selectedColor,
         quantity,
@@ -869,40 +900,109 @@ function ProductDetailsInner() {
                 )}
 
                 {/* Sizes */}
-                <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className={`attiz-mono text-[9.5px] font-bold tracking-widest uppercase ${selectionError && !selectedSize ? 'text-[#E63B2E] font-black' : 'text-black/85'}`}>
-                      Size Options {selectionError && !selectedSize && '(REQUIRED - PLEASE SELECT A SIZE)'}
-                    </span>
-                    <button onClick={() => setIsSizeChartOpen(true)} className="attiz-mono text-[9px] font-bold text-[#E63B2E] hover:text-black tracking-wider underline uppercase cursor-pointer">Size Chart</button>
+                {isCoupleProduct ? (
+                  <div className="space-y-4">
+                    {/* Men's Size Selection (His) */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className={`attiz-mono text-[9.5px] font-bold tracking-widest uppercase ${selectionError && !mensSize ? 'text-[#E63B2E] font-black' : 'text-black/85'}`}>
+                          Men's Size (His) {selectionError && !mensSize && '(REQUIRED)'}
+                        </span>
+                        <button onClick={() => setIsSizeChartOpen(true)} className="attiz-mono text-[9px] font-bold text-[#E63B2E] hover:text-black tracking-wider underline uppercase cursor-pointer">Size Chart</button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {['S', 'M', 'L', 'XL', 'XXL'].map((sz) => {
+                          const isSelected = mensSize === sz;
+                          return (
+                            <button
+                              key={`men-${sz}`}
+                              onClick={() => {
+                                setMensSize(sz);
+                                setSelectionError(null);
+                              }}
+                              className={`w-10 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all ${
+                                isSelected
+                                  ? 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
+                                  : selectionError && !mensSize
+                                    ? 'border-[#E63B2E] text-black bg-white hover:border-black cursor-pointer animate-pulse'
+                                    : 'border-black/70 text-black hover:border-black bg-white cursor-pointer'
+                              }`}
+                            >
+                              {sz}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Women's Size Selection (Hers) */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className={`attiz-mono text-[9.5px] font-bold tracking-widest uppercase ${selectionError && !womensSize ? 'text-[#E63B2E] font-black' : 'text-black/85'}`}>
+                          Women's Size (Hers) {selectionError && !womensSize && '(REQUIRED)'}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {['S', 'M', 'L', 'XL', 'XXL'].map((sz) => {
+                          const isSelected = womensSize === sz;
+                          return (
+                            <button
+                              key={`women-${sz}`}
+                              onClick={() => {
+                                setWomensSize(sz);
+                                setSelectionError(null);
+                              }}
+                              className={`w-10 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all ${
+                                isSelected
+                                  ? 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
+                                  : selectionError && !womensSize
+                                    ? 'border-[#E63B2E] text-black bg-white hover:border-black cursor-pointer animate-pulse'
+                                    : 'border-black/70 text-black hover:border-black bg-white cursor-pointer'
+                              }`}
+                            >
+                              {sz}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    {sizesArray.map((sz) => {
-                      const isDisabled = isSizeDisabled(sz);
-                      const isSelected = selectedSize === sz;
-                      return (
-                        <button
-                          key={sz}
-                          onClick={() => {
-                            setSelectedSize(sz);
-                            setSelectionError(null);
-                          }}
-                          disabled={isDisabled}
-                          className={`w-10 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all ${isDisabled
-                            ? 'border-black/15 text-black/25 bg-black/[0.02] cursor-not-allowed line-through'
-                            : isSelected
-                              ? 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
-                              : selectionError && !selectedSize
-                                ? 'border-[#E63B2E] text-black bg-white hover:border-black cursor-pointer animate-pulse'
-                                : 'border-black/70 text-black hover:border-black bg-white cursor-pointer'
-                            }`}
-                        >
-                          {sz}
-                        </button>
-                      );
-                    })}
+                ) : (
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className={`attiz-mono text-[9.5px] font-bold tracking-widest uppercase ${selectionError && !selectedSize ? 'text-[#E63B2E] font-black' : 'text-black/85'}`}>
+                        Size Options {selectionError && !selectedSize && '(REQUIRED - PLEASE SELECT A SIZE)'}
+                      </span>
+                      <button onClick={() => setIsSizeChartOpen(true)} className="attiz-mono text-[9px] font-bold text-[#E63B2E] hover:text-black tracking-wider underline uppercase cursor-pointer">Size Chart</button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {sizesArray.map((sz) => {
+                        const isDisabled = isSizeDisabled(sz);
+                        const isSelected = selectedSize === sz;
+                        return (
+                          <button
+                            key={sz}
+                            onClick={() => {
+                              setSelectedSize(sz);
+                              setSelectionError(null);
+                            }}
+                            disabled={isDisabled}
+                            className={`w-10 h-9 border-2 attiz-mono text-[10px] font-bold tracking-wider transition-all ${isDisabled
+                              ? 'border-black/15 text-black/25 bg-black/[0.02] cursor-not-allowed line-through'
+                              : isSelected
+                                ? 'border-black bg-black text-[#FFCB05] shadow-[3px_3px_0_0_#E63B2E] -translate-x-[1px] -translate-y-[1px]'
+                                : selectionError && !selectedSize
+                                  ? 'border-[#E63B2E] text-black bg-white hover:border-black cursor-pointer animate-pulse'
+                                  : 'border-black/70 text-black hover:border-black bg-white cursor-pointer'
+                              }`}
+                          >
+                            {sz}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Colors */}
