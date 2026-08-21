@@ -9,6 +9,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { SafeImage } from '@/app/components/SafeImage';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -726,8 +727,8 @@ export default function Navbar() {
                         {/* Media container */}
                         <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden transition-all duration-500 ease-out group-hover:shadow-xl group-hover:shadow-black/5">
                           {/* Product Image */}
-                          <Image
-                            src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                          <SafeImage
+                            src={product.image}
                             alt={product.title}
                             fill
                             className="object-cover object-center transition-all duration-700 ease-out scale-100 group-hover:scale-105"

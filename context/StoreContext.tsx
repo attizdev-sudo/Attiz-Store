@@ -86,14 +86,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           const discount = firstVariant ? parseFloat(String(firstVariant.discount || 0)) : 0;
 
           const imageUrls: string[] = [];
+          if (p.image && typeof p.image === 'string' && p.image.trim()) {
+            imageUrls.push(p.image.trim());
+          }
           variants.forEach((v: any) => {
             v.product_variant_images?.forEach((img: any) => {
-              if (img.image_url && !imageUrls.includes(img.image_url)) {
-                imageUrls.push(img.image_url);
+              if (img.image_url && typeof img.image_url === 'string' && img.image_url.trim()) {
+                const url = img.image_url.trim();
+                if (!imageUrls.includes(url)) {
+                  imageUrls.push(url);
+                }
               }
             });
           });
-          const image = imageUrls[0] || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
+          if (p.images && typeof p.images === 'string') {
+            p.images.split(',').map((s: string) => s.trim()).filter(Boolean).forEach((url: string) => {
+              if (!imageUrls.includes(url)) {
+                imageUrls.push(url);
+              }
+            });
+          }
+          const image = imageUrls[0] || p.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600';
           const images = imageUrls.join(',');
 
           return {

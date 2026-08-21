@@ -17,6 +17,7 @@ import {
 import { useWishlist } from '@/context/WishlistContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { SafeImage } from '@/app/components/SafeImage';
 
 export default function WishlistPage() {
   const { wishlistItems, loading, removeFromWishlist, clearWishlist } = useWishlist();
@@ -254,8 +255,8 @@ export default function WishlistPage() {
                     <div>
                       {/* Media Container */}
                       <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden border-b-2 border-black">
-                        <Image
-                          src={item.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                        <SafeImage
+                          src={item.image}
                           alt={item.title}
                           fill
                           className="object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"

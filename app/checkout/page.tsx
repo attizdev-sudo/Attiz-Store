@@ -19,8 +19,10 @@ import {
   Lock,
   AlertCircle,
   FileText,
-  Edit2
+  Edit2,
+  Percent
 } from 'lucide-react';
+import { SafeImage } from '@/app/components/SafeImage';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/lib/types';
@@ -1005,8 +1007,8 @@ export default function CheckoutPage() {
                   <div key={`${item.id}-${item.selectedSize}-${idx}`} className="py-3 flex items-center justify-between gap-3">
                     <div className="flex items-center space-x-3 min-w-0">
                       <div className="relative w-12 h-14 bg-[#F5F1E6] border border-black/10 overflow-hidden shrink-0">
-                        <Image
-                          src={item.image || '/placeholder.png'}
+                        <SafeImage
+                          src={item.image}
                           alt={item.title}
                           fill
                           className="object-cover"
