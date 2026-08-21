@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { SafeImage } from '@/app/components/SafeImage';
 
 export default function CartDrawer() {
   const { cartItems, isCartOpen, setIsCartOpen, updateQuantity, removeFromCart } = useCart();
@@ -109,8 +110,8 @@ export default function CartDrawer() {
                 <div key={`${item.id}-${item.selectedSize}-${idx}`} className="flex items-start gap-4 py-4">
                   {/* Product Image */}
                   <div className="relative w-20 h-24 bg-[#F5F1E6] border border-black overflow-hidden shrink-0">
-                    <Image
-                      src={item.image || '/placeholder.png'}
+                    <SafeImage
+                      src={item.image}
                       alt={item.title}
                       fill
                       className="object-cover"

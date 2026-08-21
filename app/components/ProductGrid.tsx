@@ -8,6 +8,7 @@ import { Heart, ShoppingBag, SlidersHorizontal, ArrowRight, Check } from 'lucide
 import { useCart } from '@/context/CartContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { SafeImage } from '@/app/components/SafeImage';
 import type { Product } from '@/lib/types';
 
 const getProductImages = (product: Product) => {
@@ -486,25 +487,15 @@ function ProductGridInner() {
                       {/* Media container */}
                       <div className="relative aspect-[3/4] bg-[#F0EDE6] overflow-hidden transition-all duration-500 ease-out group-hover:shadow-xl group-hover:shadow-black/5">
 
-                        {/* Product Base Image */}
-                        <Image
-                          src={product.image || 'https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=600'}
+                        {/* Product Base & Alternate Hover Images */}
+                        <SafeImage
+                          src={product.image}
+                          hoverSrc={nextImage}
                           alt={product.title}
                           fill
-                          className={`object-cover object-center transition-all duration-700 ease-out scale-100 group-hover:scale-105 ${nextImage ? 'group-hover:opacity-0' : ''}`}
+                          className="object-cover object-center scale-100 group-hover:scale-105"
                           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         />
-
-                        {/* Product Alternative Hover Image */}
-                        {nextImage && (
-                          <Image
-                            src={nextImage}
-                            alt={`${product.title} Alternate`}
-                            fill
-                            className="object-cover object-center absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-700 ease-out scale-102 group-hover:scale-105"
-                            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                          />
-                        )}
 
                         {/* Floating Discount Badge */}
                         {product.discount && product.discount > 0 && (

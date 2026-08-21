@@ -16,18 +16,29 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    const sessionData = await validateSession(sessionToken);
-    if (!sessionData) {
+    try {
+      // Add 4-second timeout to prevent middleware from hanging if DB connection slows down
+      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
+      const sessionData = await Promise.race([validateSession(sessionToken), timeoutPromise]);
+
+      if (!sessionData) {
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('redirect', pathname);
+        const redirectResponse = NextResponse.redirect(loginUrl);
+        redirectResponse.cookies.delete('attiz_session');
+        return redirectResponse;
+      }
+
+      // Restrict /admin access to admin roles only
+      if (pathname.startsWith('/admin') && sessionData.user?.role !== 'admin') {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+    } catch (err) {
+      console.error('Middleware session validation error:', err);
+      // Safe fallback if session validation fails or times out
       const loginUrl = new URL('/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
-      const redirectResponse = NextResponse.redirect(loginUrl);
-      redirectResponse.cookies.delete('attiz_session');
-      return redirectResponse;
-    }
-
-    // Restrict /admin access to admin roles only
-    if (pathname.startsWith('/admin') && sessionData.user.role !== 'admin') {
-      return NextResponse.redirect(new URL('/', request.url));
+      return NextResponse.redirect(loginUrl);
     }
   }
 
