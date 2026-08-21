@@ -9,6 +9,7 @@ export interface SafeImageProps extends Omit<ImageProps, 'src'> {
   src?: string | null;
   hoverSrc?: string | null;
   fallbackSrc?: string;
+  fallbackElement?: React.ReactNode;
   hoverClassName?: string;
   showHoverEffect?: boolean;
 }
@@ -17,6 +18,7 @@ export const SafeImage: React.FC<SafeImageProps> = ({
   src,
   hoverSrc,
   fallbackSrc = DEFAULT_FALLBACK_IMAGE,
+  fallbackElement,
   alt = 'Product Image',
   className = '',
   hoverClassName = '',
@@ -64,7 +66,12 @@ export const SafeImage: React.FC<SafeImageProps> = ({
 
   const baseOpacityClass = hasWorkingHover ? 'group-hover:opacity-0 transition-opacity duration-700 ease-out' : '';
 
+  if (baseError && fallbackElement) {
+    return <>{fallbackElement}</>;
+  }
+
   if (fallbackError) {
+    if (fallbackElement) return <>{fallbackElement}</>;
     return (
       <div className={`relative w-full h-full flex flex-col items-center justify-center bg-[#F0EDE6] border border-black/10 p-4 text-center select-none ${className}`}>
         <svg className="w-10 h-10 text-black/30 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">

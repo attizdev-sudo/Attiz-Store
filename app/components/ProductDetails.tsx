@@ -932,15 +932,21 @@ function ProductDetailsInner() {
                             }`}
                         >
                           {colorImageUrl ? (
-                            <Image
+                            <SafeImage
                               src={colorImageUrl}
                               alt={col}
                               fill
+                              showHoverEffect={false}
                               className="object-cover object-center"
                               sizes="128px"
+                              fallbackElement={
+                                <span className="w-full h-full flex items-center justify-center text-[10px] font-extrabold uppercase p-1 text-center leading-none text-black bg-[#F0EDE6]">
+                                  {col}
+                                </span>
+                              }
                             />
                           ) : (
-                            <span className="w-full h-full flex items-center justify-center text-[9px] font-bold uppercase p-0.5 text-center leading-none text-black">
+                            <span className="w-full h-full flex items-center justify-center text-[10px] font-extrabold uppercase p-1 text-center leading-none text-black bg-[#F0EDE6]">
                               {col}
                             </span>
                           )}
