@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useStore } from '@/context/StoreContext';
+import { SafeImage } from '@/app/components/SafeImage';
 import { uploadImage, deleteImage, deleteImages } from '@/lib/db';
 import type { Product } from '@/lib/types';
 import ProductPreviewCard from './ProductPreviewCard';
@@ -828,7 +829,7 @@ export default function ProductForm({
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mt-4 border-t border-brand-cream-dark/40 pt-4">
                   {mediaPool.map((url, i) => (
                     <div key={i} className="relative aspect-3/4 bg-brand-cream border border-brand-cream-dark rounded-md overflow-hidden group shadow-3xs">
-                      <Image src={url} alt={`pool-media-${i}`} fill className="object-cover" sizes="120px" />
+                      <SafeImage src={url} alt={`pool-media-${i}`} fill showHoverEffect={false} className="object-cover" sizes="120px" />
                       <div className="absolute inset-0 bg-brand-dark/65 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <button type="button" disabled={isSubmitting} onClick={() => deleteFromPool(i)} className="p-1 rounded bg-white text-red-600 hover:bg-red-50 cursor-pointer">
                           <Trash2 className="w-3.5 h-3.5" />
@@ -856,7 +857,7 @@ export default function ProductForm({
                 
                 {productData.size_chart && (
                   <div className="relative w-20 h-14 bg-brand-cream border border-brand-cream-dark rounded overflow-hidden">
-                    <Image src={productData.size_chart} alt="size-chart" fill className="object-cover" sizes="80px" />
+                    <SafeImage src={productData.size_chart} alt="size-chart" fill showHoverEffect={false} className="object-cover" sizes="80px" />
                   </div>
                 )}
               </div>
@@ -1155,7 +1156,7 @@ export default function ProductForm({
                       <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
                         {imagesForColor.map((url, i) => (
                           <div key={i} className="relative aspect-3/4 rounded border border-brand-cream-dark overflow-hidden bg-white">
-                            <Image src={url} alt={`${color}-thumbnail-${i}`} fill className="object-cover" sizes="50px" />
+                            <SafeImage src={url} alt={`${color}-thumbnail-${i}`} fill showHoverEffect={false} className="object-cover" sizes="50px" />
                           </div>
                         ))}
                       </div>
@@ -1417,7 +1418,7 @@ export default function ProductForm({
                           isSelected ? 'border-brand-brown border-2 scale-[0.98] shadow-sm' : 'border-brand-cream-dark hover:border-brand-brown/40'
                         }`}
                       >
-                        <Image src={url} alt={`pool-img-${index}`} fill className="object-cover" sizes="120px" />
+                        <SafeImage src={url} alt={`pool-img-${index}`} fill showHoverEffect={false} className="object-cover" sizes="120px" />
                         {isSelected && (
                           <div className="absolute top-2 right-2 bg-brand-brown text-white p-0.5 rounded-full z-10 border border-white">
                             <Check className="w-2.5 h-2.5 stroke-[3]" />

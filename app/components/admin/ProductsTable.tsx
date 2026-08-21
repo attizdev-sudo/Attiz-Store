@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { useStore } from '@/context/StoreContext';
+import { SafeImage } from '@/app/components/SafeImage';
 import type { Product } from '@/lib/types';
 
 interface ProductsTableProps {
@@ -384,10 +385,11 @@ export default function ProductsTable({
                     <td className="px-5 py-4.5">
                       <div className="relative w-11 h-14 bg-brand-cream rounded-md border border-brand-cream-dark overflow-hidden">
                         {prod.image ? (
-                          <Image
+                          <SafeImage
                             src={prod.image}
                             alt={prod.title}
                             fill
+                            showHoverEffect={false}
                             className="object-cover"
                             sizes="44px"
                           />
