@@ -156,7 +156,7 @@ export default function CheckoutPage() {
   };
 
   // Payment Method State
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'Online'>('COD');
+  const [paymentMethod, setPaymentMethod] = useState<'Partial_COD' | 'Online'>('Partial_COD');
 
   // Submit State
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -167,6 +167,8 @@ export default function CheckoutPage() {
   const subtotal = checkoutItems.reduce((sum, item) => sum + (Number(item.price) || 0) * item.quantity, 0);
   const shippingCharge = 0;
   const grandTotal = subtotal;
+  const partialAdvanceAmount = Math.round(grandTotal * 0.30);
+  const remainingCodAmount = grandTotal - partialAdvanceAmount;
 
   // Dynamic Delivery Date Range Calculation (Current Date + 4 days to Current Date + 8 days)
   const deliveryRange = React.useMemo(() => {
@@ -410,42 +412,11 @@ export default function CheckoutPage() {
       },
     };
 
-    // 1. CASH ON DELIVERY FLOW
-    if (paymentMethod === 'COD') {
-      try {
-        console.log('🚀 [CHECKOUT CLIENT] Placing COD order:', basePayload);
-
-        const res = await fetch('/api/checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(basePayload),
-        });
-
-        const json = await res.json();
-        setIsSubmitting(false);
-
-        if (!res.ok) {
-          setCheckoutError(json.error || 'Failed to place order. Please try again.');
-          return;
-        }
-
-        setOrderSuccess({ orderNumber: json.orderNumber || 'ATZ-ORDER' });
-        if (buyNowItem) clearBuyNow();
-        else clearCart();
-
-        setTimeout(() => {
-          router.push('/orders');
-        }, 2500);
-
-      } catch {
-        setIsSubmitting(false);
-        setCheckoutError('Network connection error. Please check your connection and try again.');
-      }
-      return;
-    }
-
-    // 2. RAZORPAY ONLINE PAYMENT FLOW
+    // RAZORPAY PAYMENT FLOW (PARTIAL COD 30% ADVANCE OR FULL 100% ONLINE)
     try {
+      const isPartial = paymentMethod === 'Partial_COD';
+      const chargeAmount = isPartial ? partialAdvanceAmount : grandTotal;
+
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
         setIsSubmitting(false);
@@ -457,13 +428,22 @@ export default function CheckoutPage() {
       const createRzpRes = await fetch('/api/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: grandTotal }),
+        body: JSON.stringify({
+          amount: chargeAmount,
+          isPartialCod: isPartial,
+          notes: {
+            isPartialCod: isPartial ? 'true' : 'false',
+            partialAdvanceAmount: isPartial ? String(partialAdvanceAmount) : '0',
+            remainingCodAmount: isPartial ? String(remainingCodAmount) : '0',
+            totalOrderAmount: String(grandTotal),
+          },
+        }),
       });
 
       const createRzpJson = await createRzpRes.json();
       if (!createRzpRes.ok || !createRzpJson.razorpayOrderId) {
         setIsSubmitting(false);
-        setCheckoutError(createRzpJson.error || 'Failed to initiate Razorpay online payment.');
+        setCheckoutError(createRzpJson.error || 'Failed to initiate Razorpay payment.');
         return;
       }
 
@@ -473,7 +453,9 @@ export default function CheckoutPage() {
         amount: createRzpJson.amount,
         currency: createRzpJson.currency || 'INR',
         name: 'ATTIZ STORE',
-        description: `Order Payment (${checkoutItems.length} ${checkoutItems.length === 1 ? 'item' : 'items'})`,
+        description: isPartial
+          ? `30% Advance (₹${partialAdvanceAmount}) for COD Order • Balance ₹${remainingCodAmount} on delivery`
+          : `Full Order Payment (${checkoutItems.length} ${checkoutItems.length === 1 ? 'item' : 'items'})`,
         order_id: createRzpJson.razorpayOrderId,
         prefill: {
           name: addressForm.recipientName.trim(),
@@ -492,6 +474,10 @@ export default function CheckoutPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 ...basePayload,
+                paymentMethod: isPartial ? 'COD' : 'Prepaid',
+                isPartialCod: isPartial,
+                partial_cod_collected: isPartial ? partialAdvanceAmount : undefined,
+                partial_cod_payment_mode: isPartial ? 'online' : undefined,
                 razorpayOrderId: response.razorpay_order_id,
                 razorpayPaymentId: response.razorpay_payment_id,
                 razorpaySignature: response.razorpay_signature,
@@ -530,7 +516,7 @@ export default function CheckoutPage() {
       const razorpayWindow = new (window as any).Razorpay(options);
       razorpayWindow.on('payment.failed', function (failureData: any) {
         setIsSubmitting(false);
-        setCheckoutError(failureData.error?.description || 'Online payment failed or cancelled. You can try again or choose COD.');
+        setCheckoutError(failureData.error?.description || 'Online payment failed or cancelled. You can try again or choose another method.');
       });
 
       razorpayWindow.open();
@@ -1146,44 +1132,60 @@ export default function CheckoutPage() {
               </div>
 
               {/* Payment Methods Options */}
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 <label className="block attiz-mono text-xs font-bold text-black uppercase tracking-wider">
-                  Payment Mode
+                  Select Payment Option
                 </label>
 
-                {/* COD */}
-                
-                {/*<label
-                  onClick={() => setPaymentMethod('COD')}
-                  className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${paymentMethod === 'COD'
-                    ? 'border-black bg-[#FFCB05]/15'
-                    : 'border-black/15 hover:border-black/40 bg-white'
-                    }`}
+                {/* 1. PARTIAL COD (30% ADVANCE + 70% ON DELIVERY) */}
+                <label
+                  onClick={() => setPaymentMethod('Partial_COD')}
+                  className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${
+                    paymentMethod === 'Partial_COD'
+                      ? 'border-black bg-[#FFCB05]/20 ring-1 ring-black'
+                      : 'border-black/15 hover:border-black/40 bg-white'
+                  }`}
                 >
                   <input
                     type="radio"
                     name="paymentMethod"
-                    checked={paymentMethod === 'COD'}
-                    onChange={() => setPaymentMethod('COD')}
+                    checked={paymentMethod === 'Partial_COD'}
+                    onChange={() => setPaymentMethod('Partial_COD')}
                     className="mt-0.5 w-4 h-4 border-black text-black cursor-pointer"
                   />
-                  <div>
-                    <span className="attiz-mono text-xs font-bold text-black uppercase block">
-                      Cash on Delivery (COD)
-                    </span>
-                    <span className="attiz-mono text-[10px] text-black/70 uppercase tracking-wide block mt-0.5">
-                      Pay with cash upon doorstep delivery.
-                    </span>
-                  </div>
-                </label> */}
+                  <div className="space-y-1.5 grow">
+                    <div className="flex items-center justify-between flex-wrap gap-1.5">
+                      <span className="attiz-mono text-xs font-black text-black uppercase block">
+                        Partial COD (30% Advance + 70% on Delivery)
+                      </span>
+                      <span className="attiz-mono text-[9px] bg-[#E63B2E] text-white px-2 py-0.5 font-black uppercase tracking-wider">
+                        Recommended for COD
+                      </span>
+                    </div>
 
-                {/* Online Payment (Razorpay) */}
+                    <p className="attiz-mono text-[10.5px] text-black/80 uppercase tracking-wide leading-relaxed">
+                      Pay <strong className="text-[#E63B2E] font-black">₹{partialAdvanceAmount.toLocaleString('en-IN')} (30%)</strong> online via Razorpay now to confirm order dispatch. Pay remaining <strong className="text-black font-black">₹{remainingCodAmount.toLocaleString('en-IN')} (70%)</strong> in cash upon doorstep delivery.
+                    </p>
+
+                    <div className="flex items-center space-x-2 pt-0.5 flex-wrap gap-1">
+                      <span className="text-[9px] attiz-mono bg-black text-[#FFCB05] px-2 py-0.5 font-bold uppercase">
+                        Pay Now: ₹{partialAdvanceAmount.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-[9px] attiz-mono bg-white border border-black/20 text-black px-2 py-0.5 font-bold uppercase">
+                        Pay on Delivery: ₹{remainingCodAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  </div>
+                </label>
+
+                {/* 2. ONLINE PAYMENT (100% RAZORPAY) */}
                 <label
                   onClick={() => setPaymentMethod('Online')}
-                  className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${paymentMethod === 'Online'
-                    ? 'border-black bg-[#FFCB05]/15'
-                    : 'border-black/15 hover:border-black/40 bg-white'
-                    }`}
+                  className={`flex items-start space-x-3 p-3.5 border cursor-pointer transition-colors ${
+                    paymentMethod === 'Online'
+                      ? 'border-black bg-[#FFCB05]/20 ring-1 ring-black'
+                      : 'border-black/15 hover:border-black/40 bg-white'
+                  }`}
                 >
                   <input
                     type="radio"
@@ -1192,19 +1194,19 @@ export default function CheckoutPage() {
                     onChange={() => setPaymentMethod('Online')}
                     className="mt-0.5 w-4 h-4 border-black text-black cursor-pointer"
                   />
-                  <div className="space-y-1 grow">
-                    <div className="flex items-center justify-between flex-wrap gap-1">
+                  <div className="space-y-1.5 grow">
+                    <div className="flex items-center justify-between flex-wrap gap-1.5">
                       <span className="attiz-mono text-xs font-bold text-black uppercase block">
-                        Online Payment (UPI, Cards, NetBanking, Wallets)
+                        Full Online Payment (100% Prepaid)
                       </span>
                       <span className="attiz-mono text-[9px] bg-black text-[#FFCB05] px-2 py-0.5 font-bold uppercase tracking-wider">
                         Razorpay Secure
                       </span>
                     </div>
                     <p className="attiz-mono text-[10px] text-black/75 uppercase tracking-wide block">
-                      Pay instantly & securely via Google Pay, PhonePe, Paytm, Credit/Debit Cards, NetBanking, or EMI.
+                      Pay complete order amount <strong className="text-black font-bold">₹{grandTotal.toLocaleString('en-IN')}</strong> instantly via Google Pay, PhonePe, Paytm, Cards, NetBanking, or Wallets.
                     </p>
-                    <div className="flex items-center space-x-1.5 pt-1 flex-wrap gap-1">
+                    <div className="flex items-center space-x-1.5 pt-0.5 flex-wrap gap-1">
                       <span className="text-[8.5px] attiz-mono bg-white border border-black/20 px-1.5 py-0.2 font-bold uppercase text-black">
                         UPI
                       </span>
@@ -1221,6 +1223,20 @@ export default function CheckoutPage() {
                   </div>
                 </label>
               </div>
+
+              {/* Partial COD Breakdown Summary Note */}
+              {paymentMethod === 'Partial_COD' && (
+                <div className="p-3.5 bg-[#FAF8F5] border border-black/15 space-y-1.5 attiz-mono text-xs uppercase">
+                  <div className="flex justify-between font-bold text-black">
+                    <span>Advance Payable Now (30% Online):</span>
+                    <span className="text-[#E63B2E] font-black">₹{partialAdvanceAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-black/80">
+                    <span>Balance COD on Doorstep Delivery (70%):</span>
+                    <span className="font-black">₹{remainingCodAmount.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              )}
 
               {checkoutError && (
                 <div className="p-3 bg-red-50 border border-[#E63B2E] text-[#E63B2E] attiz-mono text-xs font-bold uppercase tracking-wider">
@@ -1246,11 +1262,15 @@ export default function CheckoutPage() {
                   {isSubmitting ? (
                     <span className="flex items-center space-x-2">
                       <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      <span>{paymentMethod === 'Online' ? 'Initiating Razorpay...' : 'Processing Order...'}</span>
+                      <span>Initiating Razorpay...</span>
                     </span>
                   ) : (
                     <>
-                      <span>{paymentMethod === 'Online' ? `Pay Now (₹${grandTotal.toLocaleString('en-IN')})` : `Place COD Order (₹${grandTotal.toLocaleString('en-IN')})`}</span>
+                      <span>
+                        {paymentMethod === 'Partial_COD'
+                          ? `Pay ₹${partialAdvanceAmount.toLocaleString('en-IN')} Advance & Place Order`
+                          : `Pay Full ₹${grandTotal.toLocaleString('en-IN')} Now`}
+                      </span>
                       <Check className="w-4 h-4" />
                     </>
                   )}

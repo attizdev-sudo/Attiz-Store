@@ -22,14 +22,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized. Invalid session.' }, { status: 401 });
   }
 
-  let body: { amount: number; notes?: Record<string, string> };
+  let body: { amount: number; isPartialCod?: boolean; notes?: Record<string, string> };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
   }
 
-  const { amount, notes } = body;
+  const { amount, isPartialCod, notes } = body;
   if (!amount || typeof amount !== 'number' || amount <= 0) {
     return NextResponse.json({ error: 'Invalid order amount.' }, { status: 400 });
   }
@@ -41,10 +41,11 @@ export async function POST(request: Request) {
     const razorpayOrder = await razorpay.orders.create({
       amount: amountInPaise,
       currency: 'INR',
-      receipt: `ATZ-RZP-${Date.now().toString().slice(-8)}`,
+      receipt: `ATZ-${isPartialCod ? 'PCOD' : 'RZP'}-${Date.now().toString().slice(-8)}`,
       notes: {
         userId: sessionData.user.id,
         userEmail: sessionData.user.email || '',
+        isPartialCod: isPartialCod ? 'true' : 'false',
         ...notes,
       },
     });

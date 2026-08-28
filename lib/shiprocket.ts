@@ -38,9 +38,11 @@ export interface CreateOrderParams {
   state: string;
   postalCode: string;
   country?: string;
-  paymentMethod: 'COD' | 'Prepaid' | string;
+  paymentMethod: 'COD' | 'Prepaid' | 'Partial COD' | 'Partial_COD' | string;
   subtotal: number;
   totalPrice: number;
+  partial_cod_collected?: number | string;
+  partial_cod_payment_mode?: string;
   items: Array<{
     title: string;
     sku?: string;
@@ -288,12 +290,18 @@ export async function createShiprocketOrder(params: CreateOrderParams) {
     billing_phone: cleanPhone,
     shipping_is_billing: true,
     order_items: orderItems,
-    payment_method: params.paymentMethod === 'COD' ? 'COD' : 'Prepaid',
+    payment_method: params.paymentMethod === 'Prepaid' ? 'Prepaid' : 'COD',
     sub_total: params.totalPrice,
     length: dimensions.length,
     breadth: dimensions.breadth,
     height: dimensions.height,
     weight: dimensions.weight,
+    ...(params.partial_cod_collected !== undefined && params.partial_cod_collected !== null && String(params.partial_cod_collected).trim() !== ''
+      ? {
+          partial_cod_collected: String(params.partial_cod_collected),
+          partial_cod_payment_mode: params.partial_cod_payment_mode || 'online',
+        }
+      : {}),
   };
 
   console.log('🚀 [SHIPROCKET ORDER CREATION PAYLOAD]:\n', JSON.stringify(payload, null, 2));

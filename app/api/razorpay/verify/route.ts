@@ -39,6 +39,10 @@ interface VerifyBody {
     gst_rate?: number;
     tax?: number;
   }>;
+  isPartialCod?: boolean;
+  partial_cod_collected?: number | string;
+  partial_cod_payment_mode?: string;
+  paymentMethod?: string;
   pricing?: {
     subtotal?: number;
     shippingCharge?: number;
@@ -79,6 +83,10 @@ export async function POST(request: Request) {
     shippingDetails,
     cartItems,
     pricing,
+    isPartialCod = false,
+    partial_cod_collected,
+    partial_cod_payment_mode = 'online',
+    paymentMethod = 'Prepaid',
   } = body;
 
   if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
@@ -250,8 +258,9 @@ export async function POST(request: Request) {
   const totalPrice = pricing?.totalPrice ?? (finalSubtotal + shippingCharge + finalTax - finalDiscount);
 
   const orderNumber = `ATZ-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const paidAmount = isPartialCod ? (Number(partial_cod_collected) || Math.round(totalPrice * 0.3)) : totalPrice;
 
-  // 4. CREATE ORDER IN `orders` TABLE (Marked as Paid)
+  // 4. CREATE ORDER IN `orders` TABLE (Marked as Paid or Partially Paid)
   const orderPayload = {
     user_id: userId,
     order_number: orderNumber,
@@ -261,7 +270,7 @@ export async function POST(request: Request) {
     tax: finalTax,
     total_price: totalPrice,
     status: 'Waiting for confirmation',
-    payment_status: 'Paid',
+    payment_status: isPartialCod ? 'Pending' : 'Paid',
     shipping_name: recipientName,
     shipping_phone: shippingPhone,
     shipping_address1: address1,
@@ -301,10 +310,10 @@ export async function POST(request: Request) {
   try {
     await supabase.from('payments').insert({
       order_id: orderId,
-      provider: 'Razorpay',
+      provider: isPartialCod ? 'Razorpay (Partial COD)' : 'Razorpay',
       payment_id: razorpayPaymentId,
       status: 'Completed',
-      amount: totalPrice,
+      amount: paidAmount,
       currency: 'INR',
       paid_at: new Date().toISOString(),
     });
@@ -329,7 +338,9 @@ export async function POST(request: Request) {
       state,
       postalCode,
       country,
-      paymentMethod: 'Prepaid',
+      paymentMethod: isPartialCod ? 'COD' : 'Prepaid',
+      partial_cod_collected: isPartialCod ? String(paidAmount) : undefined,
+      partial_cod_payment_mode: isPartialCod ? (partial_cod_payment_mode || 'online') : undefined,
       subtotal: finalSubtotal,
       totalPrice,
       items: finalOrderItems.map((oi) => ({
