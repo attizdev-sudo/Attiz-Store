@@ -1,9 +1,9 @@
 'use client';
 
 import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
-import type { Product, Category, Order, Banner, EditorialBanner, LookbookStyle } from '@/lib/types';
+import type { Product, Category, Order, Banner, EditorialBanner, LookbookStyle, LookbookSettings } from '@/lib/types';
 
-export type { Product, Category, Order, Banner, EditorialBanner, LookbookStyle };
+export type { Product, Category, Order, Banner, EditorialBanner, LookbookStyle, LookbookSettings };
 
 interface StoreContextValue {
   products: Product[];
@@ -12,6 +12,7 @@ interface StoreContextValue {
   banners: Banner[];
   editorialBanners: EditorialBanner[];
   lookbookStyles: LookbookStyle[];
+  lookbookSettings: LookbookSettings;
   dbLoading: boolean;
   refreshData: () => Promise<void>;
   addProduct: (data: Partial<Product>) => Promise<{ data: unknown; error: unknown }>;
@@ -27,6 +28,7 @@ interface StoreContextValue {
   deleteEditorialBanner: (id: string) => Promise<{ data: unknown; error: unknown }>;
   addLookbookStyle: (data: Partial<LookbookStyle>) => Promise<{ data: unknown; error: unknown }>;
   deleteLookbookStyle: (id: string) => Promise<{ data: unknown; error: unknown }>;
+  updateLookbookSettings: (settings: Partial<LookbookSettings>) => Promise<{ data: unknown; error: unknown }>;
   updateOrderStatus: (orderId: string, nextStatus: string) => Promise<{ data: unknown; error: unknown }>;
   updateOrderDetails: (orderId: string, updates: Record<string, any>) => Promise<{ data: unknown; error: unknown }>;
   deleteOrder: (orderId: string) => Promise<{ data: unknown; error: unknown }>;
@@ -58,6 +60,17 @@ async function apiFetch(url: string, options?: RequestInit) {
   }
 }
 
+const DEFAULT_LOOKBOOK_SETTINGS: LookbookSettings = {
+  category_id: 'all',
+  category_name: 'All Collections',
+  title: 'TRENDING COLLECTION',
+  subtitle: 'Handpicked bestsellers & top-rated garments loved by our community.',
+  tag: 'MOST POPULAR',
+  is_enabled: true,
+  accent_color: '#FFCB05',
+  limit_count: 10,
+};
+
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -65,6 +78,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [editorialBanners, setEditorialBanners] = useState<EditorialBanner[]>([]);
   const [lookbookStyles, setLookbookStyles] = useState<LookbookStyle[]>([]);
+  const [lookbookSettings, setLookbookSettings] = useState<LookbookSettings>(DEFAULT_LOOKBOOK_SETTINGS);
   const [dbLoading, setDbLoading] = useState(true);
 
   const isFetchingRef = useRef(false);
@@ -165,6 +179,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
+      const fetchLookbookSettings = async () => {
+        try {
+          const res = await fetch('/api/lookbook-settings', { credentials: 'include', headers });
+          const data = await res.json();
+          if (data && !data.error) {
+            setLookbookSettings(data);
+          }
+        } catch (e) {
+          console.error('Error fetching lookbook settings:', e);
+        }
+      };
+
       const fetchCategories = async () => {
         try {
           const res = await fetch('/api/categories', { credentials: 'include', headers });
@@ -189,6 +215,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         fetchBanners(),
         fetchEditorialBanners(),
         fetchLookbookStyles(),
+        fetchLookbookSettings(),
         fetchCategories(),
         fetchOrders(),
         fetchProductsOnly(),
@@ -281,6 +308,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     return result;
   };
 
+  const updateLookbookSettings = async (settings: Partial<LookbookSettings>) => {
+    const result = await apiFetch('/api/lookbook-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    if (!result.error && result.data) {
+      setLookbookSettings(result.data as LookbookSettings);
+    }
+    return result;
+  };
+
   const updateOrderStatus = async (orderId: string, nextStatus: string) => {
     const result = await apiFetch(`/api/orders/${orderId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: nextStatus }) });
     if (!result.error) await refreshData();
@@ -301,12 +340,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <StoreContext.Provider value={{
-      products, categories, orders, banners, editorialBanners, lookbookStyles, dbLoading, refreshData,
+      products, categories, orders, banners, editorialBanners, lookbookStyles, lookbookSettings, dbLoading, refreshData,
       addProduct, editProduct, deleteProduct,
       addCategory, updateCategory, deleteCategory,
       addBanner, updateBanner, deleteBanner,
       addEditorialBanner, deleteEditorialBanner,
       addLookbookStyle, deleteLookbookStyle,
+      updateLookbookSettings,
       updateOrderStatus,
       updateOrderDetails,
       deleteOrder,
@@ -321,3 +361,4 @@ export function useStore(): StoreContextValue {
   if (!ctx) throw new Error('useStore must be used within a StoreProvider');
   return ctx;
 }
+

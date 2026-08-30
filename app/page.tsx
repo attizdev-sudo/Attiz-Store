@@ -6,6 +6,7 @@ import CategoryNav from '@/app/components/CategoryNav';
 import HeroCarousel from '@/app/components/HeroCarousel';
 import EditorialHero from '@/app/components/EditorialHero';
 import QuoteSection from '@/app/components/QuoteSection';
+import LookbookProductSlider from '@/app/components/LookbookProductSlider';
 import PickStyles from '@/app/components/PickStyles';
 import ProductGrid from '@/app/components/ProductGrid';
 import Newsletter from '@/app/components/Newsletter';
@@ -29,6 +30,7 @@ function HomeContent() {
       <HeroCarousel />
       <QuoteSection />
       <EditorialHero />
+      <LookbookProductSlider />
       <PickStyles />
       <ProductGrid />
       <Newsletter />
