@@ -178,3 +178,17 @@ export interface WishlistItem {
   created_at?: string;
 }
 
+export interface LookbookSettings {
+  id?: string;
+  category_id: string;
+  category_name?: string;
+  title: string;
+  subtitle: string;
+  tag: string;
+  is_enabled: boolean;
+  accent_color?: string;
+  limit_count?: number;
+  updated_at?: string;
+}
+
+

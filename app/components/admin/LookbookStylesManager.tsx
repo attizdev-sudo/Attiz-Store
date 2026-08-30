@@ -33,10 +33,37 @@ export default function LookbookStylesManager({
   setErrorMsg,
   setSuccessMsg,
 }: LookbookStylesManagerProps) {
-  const { lookbookStyles, addLookbookStyle, deleteLookbookStyle, categories } = useStore();
+  const { lookbookStyles, addLookbookStyle, deleteLookbookStyle, lookbookSettings, updateLookbookSettings, categories, products } = useStore();
 
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [newStyle, setNewStyle] = useState({ ...BLANK_LOOKBOOK_STYLE });
+
+  // Lookbook Slider Settings Form State
+  const [sliderForm, setSliderForm] = useState({
+    category_id: lookbookSettings?.category_id || 'all',
+    title: lookbookSettings?.title || 'TRENDING COLLECTION',
+    subtitle: lookbookSettings?.subtitle || 'Handpicked bestsellers & top-rated garments loved by our community.',
+    tag: lookbookSettings?.tag || 'MOST POPULAR',
+    is_enabled: lookbookSettings?.is_enabled !== undefined ? lookbookSettings.is_enabled : true,
+    accent_color: lookbookSettings?.accent_color || '#FFCB05',
+    limit_count: lookbookSettings?.limit_count || 10,
+  });
+
+  const [savingSlider, setSavingSlider] = useState(false);
+
+  useEffect(() => {
+    if (lookbookSettings) {
+      setSliderForm({
+        category_id: lookbookSettings.category_id || 'all',
+        title: lookbookSettings.title || 'TRENDING COLLECTION',
+        subtitle: lookbookSettings.subtitle || 'Handpicked bestsellers & top-rated garments loved by our community.',
+        tag: lookbookSettings.tag || 'MOST POPULAR',
+        is_enabled: lookbookSettings.is_enabled !== undefined ? lookbookSettings.is_enabled : true,
+        accent_color: lookbookSettings.accent_color || '#FFCB05',
+        limit_count: lookbookSettings.limit_count || 10,
+      });
+    }
+  }, [lookbookSettings]);
 
   // Redirection helpers
   const [redirectType, setRedirectType] = useState<'category' | 'custom'>('category');
@@ -47,6 +74,30 @@ export default function LookbookStylesManager({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sessionUploadedUrls, setSessionUploadedUrls] = useState<string[]>([]);
+
+  // Handle Save Slider Settings
+  const handleSaveSliderSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      setSavingSlider(true);
+      const selectedCatObj = categories.find((c) => c.id === sliderForm.category_id);
+      const category_name = sliderForm.category_id === 'all' ? 'All Collections' : (selectedCatObj?.name || 'All Collections');
+
+      const { error } = await updateLookbookSettings({
+        ...sliderForm,
+        category_name,
+      });
+
+      if (error) throw error;
+      setSuccessMsg('Lookbook horizontal slider settings saved successfully!');
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Failed to save lookbook slider settings.');
+    } finally {
+      setSavingSlider(false);
+    }
+  };
 
   // Cleanup newly uploaded images that weren't saved when the form is closed/cancelled
   useEffect(() => {
@@ -184,15 +235,141 @@ export default function LookbookStylesManager({
   const labelCls =
     'text-[9px] font-bold text-brand-dark/50 uppercase tracking-wider block mb-1';
 
+  // Count matching products for selected slider category
+  const selectedCatObj = categories.find((c) => c.id === sliderForm.category_id);
+  const selectedCategoryLabel = sliderForm.category_id === 'all' ? 'All Collections' : (selectedCatObj?.name || 'Selected Category');
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8">
+      {/* 1. TRENDING COLLECTION PRODUCT SLIDER SETTINGS */}
+      <form
+        onSubmit={handleSaveSliderSettings}
+        className="bg-white border border-brand-cream-dark rounded-xl p-6 shadow-sm space-y-6"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-brand-cream-dark">
+          <div>
+            <h3 className="font-serif text-lg text-brand-dark uppercase">
+              Trending Collection Slider Settings
+            </h3>
+            <p className="text-[10px] text-brand-dark/50 uppercase tracking-widest mt-0.5">
+              Configure category and copy for the home page featured product slider
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={savingSlider}
+            className="px-6 py-2.5 bg-brand-brown hover:bg-brand-brown-dark text-white rounded text-[10px] font-bold tracking-widest uppercase transition-colors cursor-pointer disabled:opacity-50 shadow-xs shrink-0 self-start sm:self-auto"
+          >
+            {savingSlider ? 'Saving Settings...' : 'Save Settings'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Target Category Selector */}
+          <div className="space-y-1 md:col-span-1">
+            <label className={labelCls}>Featured Product Category</label>
+            <select
+              value={sliderForm.category_id}
+              onChange={(e) => setSliderForm((prev) => ({ ...prev, category_id: e.target.value }))}
+              className={inputCls}
+              disabled={savingSlider}
+            >
+              <option value="all">-- All Collections (Show Featured Products) --</option>
+              {categoryOptions.map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                  {opt.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-[8px] text-brand-dark/40 font-bold uppercase tracking-wider pt-1">
+              Active Category: <span className="text-brand-brown font-extrabold">{selectedCategoryLabel}</span>
+            </p>
+          </div>
+
+          {/* Slider Section Title */}
+          <div className="space-y-1 md:col-span-1">
+            <label className={labelCls}>Section Title</label>
+            <input
+              type="text"
+              placeholder="e.g. TRENDING COLLECTION"
+              value={sliderForm.title}
+              onChange={(e) => setSliderForm((prev) => ({ ...prev, title: e.target.value }))}
+              className={inputCls}
+              disabled={savingSlider}
+            />
+          </div>
+
+          {/* Subtitle Description */}
+          <div className="space-y-1 md:col-span-1">
+            <label className={labelCls}>Subtitle Description</label>
+            <input
+              type="text"
+              placeholder="e.g. Handpicked bestsellers & top-rated garments"
+              value={sliderForm.subtitle}
+              onChange={(e) => setSliderForm((prev) => ({ ...prev, subtitle: e.target.value }))}
+              className={inputCls}
+              disabled={savingSlider}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2 border-t border-brand-cream-dark/60">
+          {/* Tag Badge */}
+          <div className="space-y-1">
+            <label className={labelCls}>Badge Tag</label>
+            <input
+              type="text"
+              placeholder="e.g. MOST POPULAR"
+              value={sliderForm.tag}
+              onChange={(e) => setSliderForm((prev) => ({ ...prev, tag: e.target.value }))}
+              className={inputCls}
+              disabled={savingSlider}
+            />
+          </div>
+
+          {/* Product Limit Count */}
+          <div className="space-y-1">
+            <label className={labelCls}>Product Limit Count</label>
+            <input
+              type="number"
+              min="2"
+              max="30"
+              placeholder="10"
+              value={sliderForm.limit_count}
+              onChange={(e) => setSliderForm((prev) => ({ ...prev, limit_count: Number(e.target.value) || 10 }))}
+              className={inputCls}
+              disabled={savingSlider}
+            />
+          </div>
+
+          {/* Enable / Disable Slider Toggle */}
+          <div className="space-y-1 flex flex-col justify-end">
+            <label className={labelCls}>Section Visibility</label>
+            <button
+              type="button"
+              onClick={() => setSliderForm((prev) => ({ ...prev, is_enabled: !prev.is_enabled }))}
+              className={`flex items-center justify-center gap-2 px-4 py-2 border rounded text-[10px] font-bold tracking-wider uppercase transition-colors cursor-pointer ${
+                sliderForm.is_enabled
+                  ? 'border-brand-brown bg-brand-cream/30 text-brand-brown'
+                  : 'border-brand-cream-dark bg-gray-50 text-gray-400'
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full ${sliderForm.is_enabled ? 'bg-green-500' : 'bg-gray-400'}`} />
+              <span>{sliderForm.is_enabled ? 'Section Enabled' : 'Section Disabled'}</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      {/* 2. LOOKBOOK CARDS / ACCORDION STYLES MANAGER */}
+      <div className="flex justify-between items-center border-t border-brand-cream-dark pt-6">
         <div>
           <h3 className="font-serif text-lg text-brand-dark uppercase">
-            Pick Your Style (Lookbook)
+            Pick Your Style Cards (Lookbook Accordion)
           </h3>
           <p className="text-[10px] text-brand-dark/50 uppercase tracking-widest mt-0.5">
-            Configure dynamic style and fit panels for the home page accordion
+            Configure dynamic style and fit panels for the home page style selector
           </p>
         </div>
         <button
@@ -204,6 +381,7 @@ export default function LookbookStylesManager({
           <span>Add Lookbook Style</span>
         </button>
       </div>
+
 
       {isAddFormOpen && (
         <form
