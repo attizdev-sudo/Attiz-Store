@@ -33,6 +33,11 @@ export async function POST(request: Request) {
     if (courierName) updates.courier_name = courierName;
     if (payload.tracking_url) updates.tracking_url = payload.tracking_url;
 
+    const rawEdd = payload.edd || payload.expected_delivery_date || payload.etd;
+    if (rawEdd && String(rawEdd).trim() && String(rawEdd) !== 'null' && String(rawEdd) !== '0000-00-00 00:00:00') {
+      updates.edd = String(rawEdd).trim();
+    }
+
     // Automatically mark payment status as Paid if Delivered via COD
     if (internalStatus === 'Delivered') {
       updates.payment_status = 'Paid';
@@ -43,6 +48,12 @@ export async function POST(request: Request) {
       .from('orders')
       .update(updates)
       .eq('order_number', orderIdentifier);
+
+    if (error && updates.edd && error.message?.includes('edd')) {
+      delete updates.edd;
+      const retry = await supabase.from('orders').update(updates).eq('order_number', orderIdentifier);
+      error = retry.error;
+    }
 
     if (error) {
       const { error: idErr } = await supabase

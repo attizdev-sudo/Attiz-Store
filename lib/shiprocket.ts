@@ -428,6 +428,7 @@ export interface ShiprocketTrackingResult {
   courier_name?: string;
   awb_code?: string;
   tracking_url?: string;
+  edd?: string | null;
   activities?: ShiprocketTrackingActivity[];
   raw?: any;
 }
@@ -444,80 +445,92 @@ export async function trackShiprocketOrder(params: {
   const token = await getShiprocketToken();
   if (!token) return { success: false, error: 'Shiprocket authentication failed or credentials missing.' };
 
-  const endpointsToTry: string[] = [];
-
+  // Select the single most specific endpoint available:
+  // AWB is the primary endpoint for live tracking and EDD.
+  let endpoint = '';
   if (params.orderId) {
-    endpointsToTry.push(`${SHIPROCKET_API_BASE}/courier/track/order/${params.orderId}`);
-  }
-  if (params.awbCode) {
-    endpointsToTry.push(`${SHIPROCKET_API_BASE}/courier/track/awb/${params.awbCode}`);
-  }
-  if (params.shipmentId) {
-    endpointsToTry.push(`${SHIPROCKET_API_BASE}/courier/track/shipment/${params.shipmentId}`);
-  }
-  if (params.orderNumber && String(params.orderNumber) !== String(params.orderId)) {
-    endpointsToTry.push(`${SHIPROCKET_API_BASE}/courier/track/order/${params.orderNumber}`);
+    endpoint = `${SHIPROCKET_API_BASE}/courier/track/order/${params.orderId}`;
+  } else if (params.awbCode) {
+    endpoint = `${SHIPROCKET_API_BASE}/courier/track/awb/${params.awbCode}`;
+  } else if (params.shipmentId) {
+    endpoint = `${SHIPROCKET_API_BASE}/courier/track/shipment/${params.shipmentId}`;
+  } else if (params.orderNumber) {
+    endpoint = `${SHIPROCKET_API_BASE}/courier/track/order/${params.orderNumber}`;
   }
 
-  for (const endpoint of endpointsToTry) {
-    try {
-      const trackRes: Response = await fetch(endpoint, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!trackRes.ok) continue;
+  if (!endpoint) {
+    return { success: false, error: 'No tracking identifier provided (AWB, order ID, or shipment ID required).' };
+  }
 
-      const trackData: any = await trackRes.json();
-      if (!trackData) continue;
-
-      let trackingData = trackData.tracking_data;
-      if (!trackingData && typeof trackData === 'object') {
-        const firstKey = Object.keys(trackData)[0];
-        if (firstKey && trackData[firstKey]?.tracking_data) {
-          trackingData = trackData[firstKey].tracking_data;
-        }
-      }
-
-      if (!trackingData && trackData.track_status !== undefined) {
-        trackingData = trackData;
-      }
-
-      if (trackingData) {
-        const trackObj = Array.isArray(trackingData.shipment_track) ? trackingData.shipment_track[0] : null;
-        const currentStatus = trackObj?.current_status || trackingData.current_status || trackingData.shipment_status || '';
-        const statusInput = trackObj?.current_status_id ?? trackObj?.shipment_status_id ?? trackingData.current_status_id ?? trackingData.shipment_status_id ?? trackingData.track_status ?? currentStatus;
-        const courierName = trackObj?.courier_name || trackingData.courier_name || '';
-        const awbCode = trackObj?.awb_code || trackingData.awb_code || params.awbCode || '';
-        const trackingUrl = trackingData.track_url || trackObj?.track_url || (awbCode ? `https://shiprocket.co/tracking/${awbCode}` : '');
-
-        const rawActivities = trackingData.shipment_track_activities || trackingData.activities || [];
-        const activities: ShiprocketTrackingActivity[] = Array.isArray(rawActivities)
-          ? rawActivities.map((act: any) => ({
-              date: act.date || act['created_at'] || '',
-              status: act.status || act['current_status'] || '',
-              activity: act.activity || act['comment'] || act.status || '',
-              location: act.location || act['city'] || '',
-            }))
-          : [];
-
-        const internalStatus = mapShiprocketStatusToInternal(statusInput);
-
-        return {
-          success: true,
-          current_status: currentStatus,
-          internal_status: internalStatus,
-          courier_name: courierName,
-          awb_code: awbCode,
-          tracking_url: trackingUrl,
-          activities,
-          raw: trackData,
-        };
-      }
-    } catch (err: any) {
-      console.warn(`Shiprocket tracking fetch failed for ${endpoint}:`, err);
+  try {
+    const trackRes: Response = await fetch(endpoint, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!trackRes.ok) {
+      return { success: false, error: `Shiprocket tracking request returned status ${trackRes.status}.` };
     }
-  }
 
-  return { success: false, error: 'Tracking info not found on Shiprocket.' };
+    const trackData: any = await trackRes.json();
+    if (!trackData) {
+      return { success: false, error: 'Empty response from Shiprocket tracking API.' };
+    }
+
+    let trackingData = trackData.tracking_data;
+    if (!trackingData && typeof trackData === 'object') {
+      const firstKey = Object.keys(trackData)[0];
+      if (firstKey && trackData[firstKey]?.tracking_data) {
+        trackingData = trackData[firstKey].tracking_data;
+      }
+    }
+
+    if (!trackingData && trackData.track_status !== undefined) {
+      trackingData = trackData;
+    }
+
+    if (trackingData) {
+      const trackObj = Array.isArray(trackingData.shipment_track) ? trackingData.shipment_track[0] : null;
+      const currentStatus = trackObj?.current_status || trackingData.current_status || trackingData.shipment_status || '';
+      const statusInput = trackObj?.current_status_id ?? trackObj?.shipment_status_id ?? trackingData.current_status_id ?? trackingData.shipment_status_id ?? trackingData.track_status ?? currentStatus;
+      const courierName = trackObj?.courier_name || trackingData.courier_name || '';
+      const awbCode = trackObj?.awb_code || trackingData.awb_code || params.awbCode || '';
+      const trackingUrl = trackingData.track_url || trackObj?.track_url || (awbCode ? `https://shiprocket.co/tracking/${awbCode}` : '');
+
+      // Extract Expected Delivery Date (EDD) from Shiprocket response
+      const rawEdd = trackObj?.edd || trackingData?.edd || trackObj?.expected_date || trackingData?.expected_date || trackData?.edd || null;
+      const edd = rawEdd && String(rawEdd).trim() && String(rawEdd) !== 'null' && String(rawEdd) !== '0000-00-00 00:00:00'
+        ? String(rawEdd).trim()
+        : null;
+
+      const rawActivities = trackingData.shipment_track_activities || trackingData.activities || [];
+      const activities: ShiprocketTrackingActivity[] = Array.isArray(rawActivities)
+        ? rawActivities.map((act: any) => ({
+            date: act.date || act['created_at'] || '',
+            status: act.status || act['current_status'] || '',
+            activity: act.activity || act['comment'] || act.status || '',
+            location: act.location || act['city'] || '',
+          }))
+        : [];
+
+      const internalStatus = mapShiprocketStatusToInternal(statusInput);
+
+      return {
+        success: true,
+        current_status: currentStatus,
+        internal_status: internalStatus,
+        courier_name: courierName,
+        awb_code: awbCode,
+        tracking_url: trackingUrl,
+        edd,
+        activities,
+        raw: trackData,
+      };
+    }
+
+    return { success: false, error: 'Tracking data structure not recognized in Shiprocket response.' };
+  } catch (err: any) {
+    console.warn(`Shiprocket tracking fetch failed for ${endpoint}:`, err);
+    return { success: false, error: err.message || 'Tracking fetch failed.' };
+  }
 }
 
 /**
