@@ -17,11 +17,25 @@ export async function middleware(request: NextRequest) {
     }
 
     try {
-      // Add 4-second timeout to prevent middleware from hanging if DB connection slows down
-      const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
-      const sessionData = await Promise.race([validateSession(sessionToken), timeoutPromise]);
+      let isTimedOut = false;
+      const timeoutPromise = new Promise<'TIMEOUT'>((resolve) =>
+        setTimeout(() => {
+          isTimedOut = true;
+          resolve('TIMEOUT');
+        }, 5000)
+      );
+      const result = await Promise.race([validateSession(sessionToken), timeoutPromise]);
+
+      if (result === 'TIMEOUT') {
+        // Database took longer than 5s; do NOT log out the user or delete their cookie.
+        // Allow the request to proceed so the page can handle session check gracefully.
+        return NextResponse.next();
+      }
+
+      const sessionData = result;
 
       if (!sessionData) {
+        // Session token was verified and is definitely invalid or expired in DB
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('redirect', pathname);
         const redirectResponse = NextResponse.redirect(loginUrl);
@@ -35,10 +49,8 @@ export async function middleware(request: NextRequest) {
       }
     } catch (err) {
       console.error('Middleware session validation error:', err);
-      // Safe fallback if session validation fails or times out
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      // Safe fallback on transient errors: do not log the user out
+      return NextResponse.next();
     }
   }
 

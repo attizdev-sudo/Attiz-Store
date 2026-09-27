@@ -170,8 +170,14 @@ export async function GET() {
       : order.shipping_address || 'Address provided at checkout';
 
     const paidAmount = Array.isArray(order.payments) && order.payments.length > 0
-      ? Number(order.payments[0].amount || 0)
-      : Number(order.total_price || 0);
+      ? order.payments.reduce((sum: number, p: any) => {
+          const st = String(p.status || '').toLowerCase();
+          if (!st || st === 'paid' || st === 'success' || st === 'captured') {
+            return sum + Number(p.amount || 0);
+          }
+          return sum;
+        }, 0)
+      : (String(order.payment_status || '').toLowerCase() === 'paid' ? Number(order.total_price || 0) : 0);
 
     return {
       ...order,

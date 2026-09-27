@@ -99,7 +99,12 @@ export interface Order {
   shipping_state?: string;
   shipping_country?: string;
   shipping_postal_code?: string;
+  payment_method?: string;
   payment_status?: string;
+  paid_amount?: number;
+  amount_paid?: number;
+  payments?: any[];
+  is_partial_cod?: boolean;
   subtotal?: number;
   discount?: number;
   shipping_charge?: number;
@@ -113,6 +118,7 @@ export interface Order {
   tracking_url?: string;
   shiprocket_order_id?: number | string;
   shiprocket_shipment_id?: number | string;
+  edd?: string | null;
 }
 
 export interface Banner {

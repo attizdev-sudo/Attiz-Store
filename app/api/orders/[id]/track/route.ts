@@ -27,10 +27,10 @@ export async function GET(_: Request, { params }: { params: Params }) {
 
     const { id } = await params;
 
-    // 1. Fetch current order details from Supabase
+    // 1. Fetch only tracking identifiers from Supabase (fast, no heavy joins)
     const { data: order, error } = await supabase
       .from('orders')
-      .select('*, order_items(*), payments(*)')
+      .select('id, user_id, status, shiprocket_order_id, shiprocket_shipment_id, awb_code, courier_name, tracking_url, edd, payment_status')
       .eq('id', id)
       .single();
 
@@ -47,12 +47,10 @@ export async function GET(_: Request, { params }: { params: Params }) {
       orderId: order.shiprocket_order_id || undefined,
       shipmentId: order.shiprocket_shipment_id || undefined,
       awbCode: order.awb_code || undefined,
-      orderNumber: order.order_number || undefined,
+      orderNumber: id,
     });
 
-    let currentOrder = order;
-
-    // 3. If Shiprocket returned updated tracking info, sync to Supabase database
+    // 3. If Shiprocket returned updated status, sync only changed columns to Supabase
     if (trackingRes.success && trackingRes.internal_status) {
       const updates: Record<string, any> = {
         updated_at: new Date().toISOString(),
@@ -76,30 +74,37 @@ export async function GET(_: Request, { params }: { params: Params }) {
         updates.tracking_url = trackingRes.tracking_url;
         hasChanges = true;
       }
-
+      if (trackingRes.edd && trackingRes.edd !== order.edd) {
+        updates.edd = trackingRes.edd;
+        hasChanges = true;
+      }
       if (trackingRes.internal_status === 'Delivered' && order.payment_status !== 'Paid') {
         updates.payment_status = 'Paid';
         hasChanges = true;
       }
 
       if (hasChanges) {
-        console.log(`🔄 [AUTO-SYNC SHIPROCKET STATUS] Order ${id} updated:`, updates);
-        const { data: updatedOrder } = await supabase
+        const { error: updateErr } = await supabase
           .from('orders')
           .update(updates)
-          .eq('id', id)
-          .select('*, order_items(*), payments(*)')
-          .single();
+          .eq('id', id);
 
-        if (updatedOrder) {
-          currentOrder = updatedOrder;
+        // Fallback if edd column not present in schema
+        if (updateErr && updates.edd && updateErr.message?.includes('edd')) {
+          const { edd: _omitted, ...safeUpdates } = updates;
+          await supabase.from('orders').update(safeUpdates).eq('id', id);
         }
       }
     }
 
+    // Return only the tracking data
     return NextResponse.json({
       success: true,
-      order: currentOrder,
+      status: trackingRes.internal_status || order.status,
+      edd: trackingRes.edd || order.edd || null,
+      courier_name: trackingRes.courier_name || order.courier_name || null,
+      awb_code: trackingRes.awb_code || order.awb_code || null,
+      tracking_url: trackingRes.tracking_url || order.tracking_url || null,
       tracking: trackingRes,
     });
   } catch (err: any) {

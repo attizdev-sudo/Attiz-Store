@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { useStore } from '@/context/StoreContext';
+import { handlePrintInvoice } from '@/lib/invoice';
 import type { Order } from '@/lib/types';
 import {
   Search,
@@ -17,7 +19,14 @@ import {
   AlertCircle,
   CheckCircle2,
   ExternalLink,
-  Plus
+  Plus,
+  Printer,
+  MapPin,
+  User,
+  Phone,
+  CreditCard,
+  Banknote,
+  RotateCw,
 } from 'lucide-react';
 
 const ORDER_STATUSES = [
@@ -54,6 +63,26 @@ export default function OrdersManager({
   // Inline updating state
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   const [pushingOrderId, setPushingOrderId] = useState<string | null>(null);
+
+  // Quick View Drawer State
+  const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+  const [liveTracking, setLiveTracking] = useState<any>(null);
+  const [isTrackingLoading, setIsTrackingLoading] = useState(false);
+
+  const fetchLiveTrackingForOrder = async (orderId: string) => {
+    setIsTrackingLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${encodeURIComponent(orderId)}/track`, { credentials: 'include' });
+      const data = await res.json();
+      if (data && data.success && data.tracking) {
+        setLiveTracking(data.tracking);
+      }
+    } catch (e) {
+      console.error('Error fetching live tracking:', e);
+    } finally {
+      setIsTrackingLoading(false);
+    }
+  };
 
   const handlePushToShiprocket = async (orderId: string) => {
     setPushingOrderId(orderId);
@@ -427,9 +456,17 @@ export default function OrdersManager({
                 {/* Order Top Bar */}
                 <div className="px-4 py-3 bg-[#FAF8F5] border-b-2 border-black flex flex-wrap items-center justify-between gap-3 attiz-mono text-xs">
                   <div className="flex items-center space-x-3">
-                    <span className="font-extrabold text-black uppercase tracking-wider text-sm">
-                      {orderNum}
-                    </span>
+                    <button
+                      onClick={() => {
+                        setViewingOrder(order);
+                        setLiveTracking(null);
+                      }}
+                      className="font-extrabold text-black hover:text-[#E63B2E] transition-colors uppercase tracking-wider text-sm flex items-center space-x-1 group cursor-pointer text-left"
+                      title="Quick View Order Details"
+                    >
+                      <span>{orderNum}</span>
+                      <ExternalLink className="w-3.5 h-3.5 text-black/40 group-hover:text-[#E63B2E] transition-colors" />
+                    </button>
                     <span className="text-[10px] text-black/50 font-bold uppercase">
                       {new Date(order.created_at).toLocaleDateString('en-IN', {
                         year: 'numeric',
@@ -473,6 +510,19 @@ export default function OrdersManager({
                         ))}
                       </select>
                     </div>
+
+                    {/* View Details Button */}
+                    <button
+                      onClick={() => {
+                        setViewingOrder(order);
+                        setLiveTracking(null);
+                      }}
+                      className="px-2.5 py-1 bg-white text-black hover:bg-black hover:text-[#FFCB05] transition-colors border border-black text-[10px] font-extrabold uppercase flex items-center space-x-1 cursor-pointer"
+                      title="Open Order Quick View Drawer"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>View Details</span>
+                    </button>
 
                     {/* Action Buttons */}
                     <button
@@ -610,6 +660,306 @@ export default function OrdersManager({
         </div>
       )}
 
+      {/* QUICK VIEW ORDER DRAWER */}
+      {viewingOrder && (() => {
+        const orderNo = viewingOrder.order_number || `#${viewingOrder.id.slice(0, 8).toUpperCase()}`;
+        const items = Array.isArray(viewingOrder.items) ? viewingOrder.items : [];
+        const discountAmount = Number(viewingOrder.discount || 0);
+        const shippingCharge = Number(viewingOrder.shipping_charge || 0);
+        const itemsSubtotal = items.reduce(
+          (sum, it) => sum + Number(it.unit_price ?? it.price ?? 0) * Number(it.quantity || 1),
+          0
+        );
+        const grandTotal = Number(viewingOrder.total_price ?? (itemsSubtotal - discountAmount + shippingCharge));
+        const paidAmount = Number(
+          (viewingOrder as any).payments?.[0]?.amount ??
+          (viewingOrder as any).paid_amount ??
+          (viewingOrder as any).amount_paid ??
+          (viewingOrder.payment_status === 'Paid' ? grandTotal : 0)
+        );
+        const isPartialCod = viewingOrder.payment_status === 'Pending' && paidAmount > 0;
+        const balanceAmount = isPartialCod ? Math.max(0, grandTotal - paidAmount) : 0;
+        const activities: any[] = liveTracking?.activities || [];
+
+        return (
+          <div className="fixed inset-0 z-50 overflow-hidden">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+              onClick={() => setViewingOrder(null)}
+            />
+
+            {/* Slide-over Panel from Right */}
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-8 sm:pl-12">
+              <div className="w-screen max-w-xl bg-white border-l-4 border-black shadow-[-8px_0_0_0_#111111] flex flex-col justify-between overflow-hidden">
+                {/* Header */}
+                <div className="p-5 bg-[#FAF8F5] border-b-2 border-black flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="attiz-mono text-[9px] font-black uppercase tracking-widest bg-black text-[#FFCB05] px-2 py-0.5">
+                        Order Quick View
+                      </span>
+                      <Link
+                        href={`/orders/${viewingOrder.id}`}
+                        className="inline-flex items-center space-x-1 attiz-mono text-[10px] font-bold text-black/70 hover:text-[#E63B2E] transition-colors uppercase underline"
+                        title="Open full page"
+                      >
+                        <span>Full Page</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                    </div>
+                    <h3 className="attiz-display text-xl uppercase text-black font-black">
+                      {orderNo}
+                    </h3>
+                    <p className="attiz-mono text-[11px] text-black/60 uppercase">
+                      Placed: {new Date(viewingOrder.created_at).toLocaleDateString('en-IN', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handlePrintInvoice(viewingOrder)}
+                      className="px-3 py-1.5 bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors border-2 border-black text-xs font-bold uppercase attiz-mono flex items-center space-x-1.5 cursor-pointer shadow-[2px_2px_0_0_#111]"
+                      title="Print Invoice"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      <span>Print Bill</span>
+                    </button>
+                    <button
+                      onClick={() => setViewingOrder(null)}
+                      className="p-1.5 border-2 border-black bg-white hover:bg-black hover:text-white transition-colors cursor-pointer"
+                      title="Close Drawer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Scrollable Content Body */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-5 attiz-mono text-xs">
+                  {/* Status Badges Row */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-[#FAF8F5] border border-black/15">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-black/60 font-bold uppercase">Status:</span>
+                      <span className="px-2 py-0.5 bg-[#FFCB05] border border-black text-black font-extrabold uppercase text-[10px]">
+                        {viewingOrder.status || 'Confirmed'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-black/60 font-bold uppercase">Payment:</span>
+                      <span
+                        className={`px-2 py-0.5 border border-black font-extrabold uppercase text-[10px] ${
+                          viewingOrder.payment_status === 'Paid'
+                            ? 'bg-green-100 text-green-800'
+                            : viewingOrder.payment_status === 'Refunded'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {viewingOrder.payment_status || 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Partial COD Outstanding Notice */}
+                  {isPartialCod && balanceAmount > 0 && (
+                    <div className="p-3 bg-[#FFCB05]/20 border-2 border-black flex items-center justify-between gap-3 uppercase">
+                      <div className="flex items-center space-x-2">
+                        <Banknote className="w-5 h-5 text-[#E63B2E] shrink-0" />
+                        <div>
+                          <div className="text-[9px] font-bold text-black/70">Partial COD Balance Due</div>
+                          <div className="text-xs font-black text-black">Collect on Delivery:</div>
+                        </div>
+                      </div>
+                      <span className="text-sm font-black text-[#E63B2E] bg-white border border-black px-2.5 py-0.5 shadow-[1.5px_1.5px_0_0_#111]">
+                        ₹{balanceAmount.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Shipping & Customer Details */}
+                  <div className="p-4 bg-[#FAF8F5] border border-black/15 space-y-2">
+                    <h4 className="attiz-display text-xs uppercase text-black flex items-center space-x-1.5 font-bold">
+                      <MapPin className="w-4 h-4 text-black/80" />
+                      <span>Shipping Address</span>
+                    </h4>
+                    <div className="space-y-1 text-[11px] uppercase text-black/80">
+                      <div className="font-extrabold text-black flex items-center space-x-1.5">
+                        <User className="w-3.5 h-3.5 text-black/60" />
+                        <span>{viewingOrder.shipping_name || viewingOrder.customer_name || 'Customer'}</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <Phone className="w-3.5 h-3.5 text-black/60" />
+                        <span>{viewingOrder.shipping_phone || viewingOrder.customer_phone || 'No phone'}</span>
+                      </div>
+                      <p className="pt-1 text-black/70 leading-relaxed">
+                        {viewingOrder.shipping_address ||
+                          `${viewingOrder.shipping_address1 || ''} ${viewingOrder.shipping_address2 || ''}, ${viewingOrder.shipping_city || ''}, ${viewingOrder.shipping_state || ''} ${viewingOrder.shipping_postal_code || ''}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Logistics / Courier Details */}
+                  <div className="p-4 bg-[#FAF8F5] border border-black/15 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="attiz-display text-xs uppercase text-black flex items-center space-x-1.5 font-bold">
+                        <Truck className="w-4 h-4 text-[#E63B2E]" />
+                        <span>Logistics & Courier</span>
+                      </h4>
+                      <button
+                        onClick={() => fetchLiveTrackingForOrder(viewingOrder.id)}
+                        disabled={isTrackingLoading}
+                        className="inline-flex items-center space-x-1 px-2.5 py-1 bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors text-[10px] font-bold uppercase cursor-pointer"
+                      >
+                        <RotateCw className={`w-3 h-3 ${isTrackingLoading ? 'animate-spin text-[#E63B2E]' : ''}`} />
+                        <span>{isTrackingLoading ? 'Fetching...' : liveTracking ? 'Refresh Track' : 'Live Tracking'}</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5 text-[11px] uppercase">
+                      {viewingOrder.courier_name && (
+                        <div>Courier: <strong className="text-black">{viewingOrder.courier_name}</strong></div>
+                      )}
+                      {viewingOrder.awb_code && (
+                        <div className="flex items-center gap-2">
+                          <span>AWB: <strong className="text-black">{viewingOrder.awb_code}</strong></span>
+                          {viewingOrder.tracking_url && (
+                            <a
+                              href={viewingOrder.tracking_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#E63B2E] font-bold flex items-center gap-0.5 underline"
+                            >
+                              <span>Courier Link</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          )}
+                        </div>
+                      )}
+                      {viewingOrder.shiprocket_order_id && (
+                        <div className="text-black/60 text-[10px]">
+                          Shiprocket Order ID: {viewingOrder.shiprocket_order_id}
+                          {viewingOrder.shiprocket_shipment_id && ` | Shipment ID: ${viewingOrder.shiprocket_shipment_id}`}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Live Tracking Checkpoints */}
+                    {liveTracking?.current_status && (
+                      <div className="pt-2 border-t border-black/10">
+                        <span className="text-[10px] font-bold text-black bg-[#FFCB05] px-2 py-0.5 uppercase border border-black inline-block mb-2">
+                          Live Status: {liveTracking.current_status}
+                        </span>
+                        {activities.length > 0 && (
+                          <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                            {activities.slice(0, 5).map((act: any, idx: number) => (
+                              <div key={idx} className="p-1.5 bg-white border border-black/10 text-[10px]">
+                                <div className="font-bold text-black">{act.activity || act.status}</div>
+                                {act.location && <div className="text-black/60">📍 {act.location}</div>}
+                                {act.date && <div className="text-black/40 text-[9px]">{act.date}</div>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ordered Items */}
+                  <div className="space-y-2">
+                    <h4 className="attiz-display text-xs uppercase text-black font-bold">
+                      Items Ordered ({items.length})
+                    </h4>
+                    <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                      {items.map((item, idx) => {
+                        const unitPrice = Number(item.unit_price ?? item.price ?? 0);
+                        const qty = Number(item.quantity || 1);
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-2.5 bg-[#FAF8F5] border border-black/10 text-xs"
+                          >
+                            <div className="flex items-center space-x-2.5">
+                              {item.image && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={item.image}
+                                  alt={item.title}
+                                  className="w-10 h-10 object-cover border border-black/10 bg-white"
+                                />
+                              )}
+                              <div>
+                                <h5 className="font-bold text-black uppercase leading-tight">{item.title}</h5>
+                                <div className="text-[10px] text-black/60 uppercase">
+                                  {item.selectedSize && `Size: ${item.selectedSize} · `}
+                                  {item.color && `Color: ${item.color} · `}
+                                  Qty: {qty}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="font-extrabold text-[#E63B2E] text-xs">
+                              ₹{(unitPrice * qty).toLocaleString('en-IN')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Payment Breakdown */}
+                  <div className="p-3 bg-[#FAF8F5] border border-black/15 space-y-1.5 text-xs">
+                    <div className="flex justify-between text-black/70">
+                      <span>Subtotal</span>
+                      <span>₹{itemsSubtotal.toLocaleString('en-IN')}</span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-[#E63B2E] font-bold">
+                        <span>Discount</span>
+                        <span>-₹{discountAmount.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-black/70">
+                      <span>Delivery Charges</span>
+                      <span>{shippingCharge === 0 ? 'FREE' : `₹${shippingCharge.toLocaleString('en-IN')}`}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-black/15 pt-1.5 font-black text-black text-sm">
+                      <span>Total Amount</span>
+                      <span className="text-[#E63B2E]">₹{grandTotal.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="p-4 bg-[#FAF8F5] border-t-2 border-black flex items-center justify-between gap-3">
+                  <button
+                    onClick={() => {
+                      const toEdit = viewingOrder;
+                      setViewingOrder(null);
+                      openEditModal(toEdit);
+                    }}
+                    className="px-4 py-2 border-2 border-black bg-black text-white hover:bg-[#E63B2E] attiz-mono text-xs font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    Edit This Order
+                  </button>
+                  <button
+                    onClick={() => setViewingOrder(null)}
+                    className="px-4 py-2 border-2 border-black bg-white text-black hover:bg-black hover:text-white attiz-mono text-xs font-bold uppercase transition-colors cursor-pointer"
+                  >
+                    Close Drawer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* EDIT ORDER MODAL */}
       {editingOrder && editForm && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -617,9 +967,19 @@ export default function OrdersManager({
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b-2 border-black pb-4">
               <div>
-                <span className="attiz-mono text-[9px] font-extrabold uppercase tracking-widest bg-black text-[#FFCB05] px-2 py-0.5">
-                  Admin Order Editor
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="attiz-mono text-[9px] font-extrabold uppercase tracking-widest bg-black text-[#FFCB05] px-2 py-0.5">
+                    Admin Order Editor
+                  </span>
+                  <Link
+                    href={`/orders/${editingOrder.id}`}
+                    className="inline-flex items-center space-x-1 attiz-mono text-[10px] font-bold text-black/70 hover:text-[#E63B2E] transition-colors uppercase underline"
+                    title="View Customer Order Details page"
+                  >
+                    <span>View Customer Page</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
                 <h3 className="attiz-display text-xl uppercase text-black mt-1">
                   Modify Order #{editingOrder.order_number || editingOrder.id.slice(0, 8)}
                 </h3>
