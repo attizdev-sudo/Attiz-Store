@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { SafeImage } from '@/app/components/SafeImage';
+import { triggerRouteProgress } from '@/app/components/RouteProgressBar';
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -25,33 +26,32 @@ export default function Navbar() {
   const [isCollectionsHovered, setIsCollectionsHovered] = useState(false);
   const [hoverTimeoutId, setHoverTimeoutId] = useState<any>(null);
 
-  const [isNavigatingOrders, setIsNavigatingOrders] = useState(false);
-  const [isNavigatingWishlist, setIsNavigatingWishlist] = useState(false);
-  const [isNavigatingAdmin, setIsNavigatingAdmin] = useState(false);
-
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    setIsNavigatingOrders(false);
-    setIsNavigatingWishlist(false);
-    setIsNavigatingAdmin(false);
     setIsMobileProfileOpen(false);
     setIsProfileDropdownOpen(false);
   }, [pathname]);
 
   const handleNavigateOrders = () => {
-    setIsNavigatingOrders(true);
+    setIsProfileDropdownOpen(false);
+    setIsMobileProfileOpen(false);
+    if (pathname !== '/orders') triggerRouteProgress();
     router.push('/orders');
   };
 
   const handleNavigateWishlist = () => {
-    setIsNavigatingWishlist(true);
+    setIsProfileDropdownOpen(false);
+    setIsMobileProfileOpen(false);
+    if (pathname !== '/wishlist') triggerRouteProgress();
     router.push('/wishlist');
   };
 
   const handleNavigateAdmin = () => {
-    setIsNavigatingAdmin(true);
+    setIsProfileDropdownOpen(false);
+    setIsMobileProfileOpen(false);
+    if (pathname !== '/admin') triggerRouteProgress();
     router.push('/admin');
   };
 
@@ -151,7 +151,7 @@ export default function Navbar() {
                   alt="ATTIZ Logo"
                   width={110}
                   height={40}
-                  style={{ width: 'auto', height: '2.2rem' }}
+                  style={{ width: 'auto', height: '2.2rem', aspectRatio: '110 / 40' }}
                   className="object-contain"
                   priority
                 />
@@ -167,7 +167,7 @@ export default function Navbar() {
                   alt="ATTIZ Logo"
                   width={120}
                   height={48}
-                  style={{ width: 'auto', height: '2.5rem' }}
+                  style={{ width: 'auto', height: '2.5rem', aspectRatio: '120 / 48' }}
                   className="object-contain hover:scale-105 transition-transform duration-300"
                   priority
                 />
@@ -267,50 +267,36 @@ export default function Navbar() {
                           <div className="py-1" onMouseLeave={() => setIsProfileDropdownOpen(false)}>
                             <button
                               onClick={handleNavigateOrders}
-                              disabled={isNavigatingOrders}
-                              className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer disabled:opacity-80"
+                              className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
                             >
                               <div className="flex items-center space-x-2">
                                 <ClipboardList className="w-3.5 h-3.5" />
                                 <span>My Orders</span>
                               </div>
-                              {isNavigatingOrders && (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E63B2E]" />
-                              )}
                             </button>
                             <button
                               onClick={handleNavigateWishlist}
-                              disabled={isNavigatingWishlist}
-                              className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer disabled:opacity-80"
+                              className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/75 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
                             >
                               <div className="flex items-center space-x-2">
                                 <Heart className="w-3.5 h-3.5 text-[#E63B2E]" />
                                 <span>My Wishlist</span>
                               </div>
-                              <div className="flex items-center space-x-1.5">
-                                {wishlistItems.length > 0 && (
-                                  <span className="bg-[#E63B2E] text-white text-[9px] px-1.5 py-0.5 rounded-full font-mono">
-                                    {wishlistItems.length}
-                                  </span>
-                                )}
-                                {isNavigatingWishlist && (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E63B2E]" />
-                                )}
-                              </div>
+                              {wishlistItems.length > 0 && (
+                                <span className="bg-[#E63B2E] text-white text-[9px] px-1.5 py-0.5 rounded-full font-mono">
+                                  {wishlistItems.length}
+                                </span>
+                              )}
                             </button>
                             {user.role === 'admin' && (
                               <button
                                 onClick={handleNavigateAdmin}
-                                disabled={isNavigatingAdmin}
-                                className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/95 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer disabled:opacity-80"
+                                className="w-full text-left flex items-center justify-between px-4 py-2.5 attiz-mono text-[11px] font-bold text-black/95 hover:bg-black/5 hover:text-black tracking-wider transition-colors cursor-pointer"
                               >
                                 <div className="flex items-center space-x-2">
                                   <Database className="w-3.5 h-3.5" />
                                   <span>Admin Panel</span>
                                 </div>
-                                {isNavigatingAdmin && (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E63B2E]" />
-                                )}
                               </button>
                             )}
                             <button
@@ -325,14 +311,18 @@ export default function Navbar() {
                       )}
                     </div>
                   ) : (
-                    <button
-                      onClick={() => router.push('/login')}
-                      className="text-black/95 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer"
+                    <Link
+                      href="/login"
+                      prefetch={true}
+                      onClick={() => {
+                        if (pathname !== '/login') triggerRouteProgress();
+                      }}
+                      className="text-black/95 hover:text-black hover:bg-black/5 transition-all duration-200 p-1.5 cursor-pointer flex items-center justify-center"
                       title="Sign In"
                       aria-label="Sign In"
                     >
                       <User className="w-4.5 h-4.5" />
-                    </button>
+                    </Link>
                   )}
                 </div>
 
@@ -387,24 +377,18 @@ export default function Navbar() {
                 <div className="divide-y divide-black/10 border-2 border-black bg-white shadow-[4px_4px_0_0_#111111]">
                   <button
                     onClick={handleNavigateOrders}
-                    disabled={isNavigatingOrders}
-                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left disabled:opacity-80"
+                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
                   >
                     <div className="flex items-center gap-3.5">
                       <ClipboardList className="w-4.5 h-4.5 shrink-0 text-black/60" />
                       <span>My Orders</span>
                     </div>
-                    {isNavigatingOrders ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-[#E63B2E] stroke-[2.5]" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-black/40" />
-                    )}
+                    <ChevronRight className="w-4 h-4 text-black/40" />
                   </button>
 
                   <button
                     onClick={handleNavigateWishlist}
-                    disabled={isNavigatingWishlist}
-                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left disabled:opacity-80"
+                    className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/85 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
                   >
                     <div className="flex items-center gap-3.5">
                       <Heart className="w-4.5 h-4.5 shrink-0 text-[#E63B2E]" />
@@ -416,29 +400,20 @@ export default function Navbar() {
                           {wishlistItems.length}
                         </span>
                       )}
-                      {isNavigatingWishlist ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-[#E63B2E] stroke-[2.5]" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-black/40" />
-                      )}
+                      <ChevronRight className="w-4 h-4 text-black/40" />
                     </div>
                   </button>
 
                   {user.role === 'admin' && (
                     <button
                       onClick={handleNavigateAdmin}
-                      disabled={isNavigatingAdmin}
-                      className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/95 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left disabled:opacity-80"
+                      className="w-full flex items-center justify-between px-4 py-3.5 attiz-mono text-xs font-bold tracking-wider text-black/95 hover:bg-black/5 hover:text-black transition-colors cursor-pointer uppercase text-left"
                     >
                       <div className="flex items-center gap-3.5">
                         <Database className="w-4.5 h-4.5 shrink-0 text-black/60" />
                         <span>Admin Panel</span>
                       </div>
-                      {isNavigatingAdmin ? (
-                        <Loader2 className="w-4 h-4 animate-spin text-[#E63B2E] stroke-[2.5]" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-black/40" />
-                      )}
+                      <ChevronRight className="w-4 h-4 text-black/40" />
                     </button>
                   )}
 
@@ -460,18 +435,28 @@ export default function Navbar() {
                   Sign in to manage your orders, wishlist, and profile preferences.
                 </p>
                 <div className="grid grid-cols-1 gap-3">
-                  <button
-                    onClick={() => { router.push('/login'); setIsMobileProfileOpen(false); }}
-                    className="w-full py-3.5 border-2 border-black bg-white text-black attiz-mono text-xs font-bold tracking-widest uppercase shadow-[4px_4px_0_0_#111111] hover:bg-black hover:text-white transition-all cursor-pointer"
+                  <Link
+                    href="/login"
+                    prefetch={true}
+                    onClick={() => {
+                      if (pathname !== '/login') triggerRouteProgress();
+                      setIsMobileProfileOpen(false);
+                    }}
+                    className="w-full py-3.5 border-2 border-black bg-white text-black attiz-mono text-xs font-bold tracking-widest uppercase shadow-[4px_4px_0_0_#111111] hover:bg-black hover:text-white transition-all text-center block"
                   >
                     Sign In
-                  </button>
-                  <button
-                    onClick={() => { router.push('/signup'); setIsMobileProfileOpen(false); }}
-                    className="w-full py-3.5 border-2 border-black bg-black text-[#FFCB05] attiz-mono text-xs font-bold tracking-widest uppercase shadow-[4px_4px_0_0_#E63B2E] hover:bg-white hover:text-black transition-all cursor-pointer"
+                  </Link>
+                  <Link
+                    href="/signup"
+                    prefetch={true}
+                    onClick={() => {
+                      if (pathname !== '/signup') triggerRouteProgress();
+                      setIsMobileProfileOpen(false);
+                    }}
+                    className="w-full py-3.5 border-2 border-black bg-black text-[#FFCB05] attiz-mono text-xs font-bold tracking-widest uppercase shadow-[4px_4px_0_0_#E63B2E] hover:bg-white hover:text-black transition-all text-center block"
                   >
                     Sign Up
-                  </button>
+                  </Link>
                 </div>
               </div>
             )}

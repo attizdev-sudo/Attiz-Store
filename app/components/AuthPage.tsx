@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Phone, Lock, ChevronRight, Check, Mail, RefreshCw, MailCheck, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import AttizLoader from '@/app/components/AttizLoader';
 
 // ── Google Brand Icon ─────────────────────────────────────────────────────────
 function GoogleIcon() {
@@ -292,13 +293,11 @@ export default function AuthPage({ defaultMode = 'login' }: { defaultMode?: 'log
               {googleLoading ? 'Google' : 'Loading'}
             </span>
           </div>
-          <div className="p-10 flex flex-col items-center justify-center gap-4">
-            <div className="w-12 h-12 border-[3px] border-black bg-black flex items-center justify-center shadow-[4px_4px_0_0_#FFCB05]">
-              <Loader2 className="w-6 h-6 text-[#FFCB05] animate-spin" />
-            </div>
-            <p className="attiz-mono text-[9px] font-bold tracking-widest text-black/85 uppercase text-center">
-              {googleLoading ? 'Signing you in with Google...' : 'Checking your session...'}
-            </p>
+          <div className="p-8 flex flex-col items-center justify-center">
+            <AttizLoader
+              label={googleLoading ? 'Signing you in with Google...' : 'Checking your session...'}
+              badge={googleLoading ? 'GOOGLE' : 'AUTH'}
+            />
           </div>
         </div>
       </div>

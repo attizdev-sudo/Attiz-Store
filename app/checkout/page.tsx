@@ -25,6 +25,7 @@ import {
 import { SafeImage } from '@/app/components/SafeImage';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import AttizLoader from '@/app/components/AttizLoader';
 import type { CartItem } from '@/lib/types';
 
 const INDIAN_STATES = [
@@ -529,11 +530,8 @@ export default function CheckoutPage() {
 
   if (sessionLoading || !isHydrated) {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center py-20">
-        <div className="w-8 h-8 border-3 border-black border-t-[#E63B2E] rounded-full animate-spin mb-3" />
-        <span className="attiz-mono text-xs font-bold uppercase tracking-widest text-black/85">
-          Loading checkout...
-        </span>
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center py-20">
+        <AttizLoader label="Loading checkout..." badge="CHECKOUT" />
       </div>
     );
   }

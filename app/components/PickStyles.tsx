@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
+import AttizLoader from '@/app/components/AttizLoader';
 
 export default function PickStyles() {
   const router = useRouter();
@@ -22,15 +23,7 @@ export default function PickStyles() {
     if (dbLoading) {
       return (
         <section className="py-14 sm:py-24 border-t border-b border-black/10 bg-[#FAF8F5] relative overflow-hidden flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-center">
-            <div className="relative w-12 h-12 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-2 border-dashed border-black/20 animate-spin" style={{ animationDuration: '6s' }} />
-              <div className="w-8 h-8 rounded-full border-[3px] border-black border-t-transparent animate-spin" />
-            </div>
-            <p className="attiz-mono text-[9px] font-bold text-black/85 tracking-[0.25em] uppercase animate-pulse">
-              Loading Lookbook...
-            </p>
-          </div>
+          <AttizLoader label="Loading Lookbook..." badge="LOOKBOOK" />
         </section>
       );
     }
@@ -72,6 +65,8 @@ export default function PickStyles() {
               <img
                 src={style.image}
                 alt={style.name}
+                loading="lazy"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
               />
 
@@ -142,6 +137,8 @@ export default function PickStyles() {
               <img
                 src={style.image}
                 alt={style.name}
+                loading="lazy"
+                decoding="async"
                 className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-102"
               />
 

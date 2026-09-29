@@ -108,7 +108,7 @@ export async function uploadImage(bucket: string, file: File): Promise<string> {
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   const { error } = await supabase.storage.from(bucket).upload(fileName, processedFile, {
-    cacheControl: '3600',
+    cacheControl: '31536000',
     upsert: false,
     contentType: processedFile.type,
   });

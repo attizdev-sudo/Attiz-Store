@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Heart } from 'lucide-react';
+import AttizLoader from '@/app/components/AttizLoader';
 
 export default function WishlistLoading() {
   return (
@@ -33,12 +34,9 @@ export default function WishlistLoading() {
           </div>
         </div>
 
-        {/* Skeleton loading grid */}
-        <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
-          <div className="w-10 h-10 rounded-full border-[3px] border-black border-t-[#E63B2E] animate-spin" />
-          <span className="attiz-mono text-[10px] font-bold tracking-[0.35em] uppercase text-black/70 animate-pulse">
-            Loading your wishlist…
-          </span>
+        {/* Loading indicator */}
+        <div className="py-20 flex items-center justify-center">
+          <AttizLoader label="Loading your wishlist…" badge="VAULT" />
         </div>
       </div>
     </div>

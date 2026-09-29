@@ -18,6 +18,7 @@ import { useWishlist } from '@/context/WishlistContext';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { SafeImage } from '@/app/components/SafeImage';
+import AttizLoader from '@/app/components/AttizLoader';
 
 export default function WishlistPage() {
   const { wishlistItems, loading, removeFromWishlist, clearWishlist } = useWishlist();
@@ -189,11 +190,8 @@ export default function WishlistPage() {
 
         {/* Loading State */}
         {(loading || sessionLoading) && wishlistItems.length === 0 ? (
-          <div className="py-24 flex flex-col items-center justify-center text-center">
-            <Loader2 className="w-10 h-10 animate-spin text-[#E63B2E] mb-4" />
-            <p className="attiz-mono text-xs font-bold tracking-widest text-black/70 uppercase">
-              Loading your wishlist...
-            </p>
+          <div className="py-24 flex items-center justify-center">
+            <AttizLoader label="Loading your wishlist..." badge="VAULT" />
           </div>
         ) : wishlistItems.length === 0 ? (
           /* Empty State */

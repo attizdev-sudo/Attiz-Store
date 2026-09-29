@@ -10,6 +10,7 @@ import { useStore } from '@/context/StoreContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
 import { SafeImage } from '@/app/components/SafeImage';
+import AttizLoader from '@/app/components/AttizLoader';
 import type { CartItem, Product } from '@/lib/types';
 
 const getProductImages = (product: Product) => {
@@ -395,9 +396,8 @@ function ProductDetailsInner() {
 
   if (dbLoading && !product) {
     return (
-      <div className="min-h-screen bg-[#FAF8F5] flex flex-col items-center justify-center space-y-4">
-        <div className="w-9 h-9 rounded-full border-[3px] border-black border-t-[#E63B2E] animate-spin" />
-        <span className="font-['Space_Mono'] text-[10px] font-bold tracking-[0.35em] uppercase text-black/85">Loading product details…</span>
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
+        <AttizLoader label="Loading product details…" badge="ATTIZ" />
       </div>
     );
   }
@@ -1353,7 +1353,7 @@ export default function ProductDetails() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin" />
+        <AttizLoader label="Loading product details…" badge="ATTIZ" />
       </div>
     }>
       <ProductDetailsInner />

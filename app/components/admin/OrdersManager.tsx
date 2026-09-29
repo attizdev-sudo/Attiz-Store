@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useStore } from '@/context/StoreContext';
 import { handlePrintInvoice } from '@/lib/invoice';
@@ -53,7 +53,11 @@ export default function OrdersManager({
   setErrorMsg,
   setSuccessMsg,
 }: OrdersManagerProps) {
-  const { orders, dbLoading, updateOrderStatus, updateOrderDetails, deleteOrder, refreshData } = useStore();
+  const { orders, dbLoading, updateOrderStatus, updateOrderDetails, deleteOrder, refreshData, fetchOrders } = useStore();
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
