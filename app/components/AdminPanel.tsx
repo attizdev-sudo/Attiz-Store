@@ -16,6 +16,7 @@ import OrdersManager from './admin/OrdersManager';
 import BannersManager from './admin/BannersManager';
 import EditorialBannersManager from './admin/EditorialBannersManager';
 import LookbookStylesManager from './admin/LookbookStylesManager';
+import AttizLoader from './AttizLoader';
 
 export default function AdminPanel() {
   const { user } = useAuth();
@@ -53,8 +54,8 @@ export default function AdminPanel() {
 
   if (!mounted) {
     return (
-      <div className="min-h-screen bg-brand-cream/10 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-brand-brown border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center">
+        <AttizLoader label="Loading Admin Console..." badge="ADMIN" />
       </div>
     );
   }

@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
+import AttizLoader from '@/app/components/AttizLoader';
 
 export default function EditorialHero() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -76,11 +77,8 @@ export default function EditorialHero() {
               <div className="lg:col-span-6 flex justify-center order-first lg:order-last">
                 <div className="relative w-full max-w-[280px] sm:max-w-[360px] aspect-3/4 bg-black/[0.02] border-[3px] border-black shadow-[6px_6px_0_0_#111111] lg:shadow-[8px_8px_0_0_#111111] rotate-[-1.5deg]">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full animate-shimmer pointer-events-none" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="relative w-8 h-8 flex items-center justify-center">
-                      <div className="absolute inset-0 rounded-full border-2 border-dashed border-black/25 animate-spin" style={{ animationDuration: '6s' }} />
-                      <div className="w-5 h-5 rounded-full border-2 border-black border-t-transparent animate-spin" />
-                    </div>
+                  <div className="absolute inset-0 flex items-center justify-center p-4">
+                    <AttizLoader label="Loading Editorial..." badge="ATTIZ" />
                   </div>
                 </div>
               </div>

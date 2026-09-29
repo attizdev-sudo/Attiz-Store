@@ -15,6 +15,7 @@ interface StoreContextValue {
   lookbookSettings: LookbookSettings;
   dbLoading: boolean;
   refreshData: () => Promise<void>;
+  fetchOrders: () => Promise<void>;
   addProduct: (data: Partial<Product>) => Promise<{ data: unknown; error: unknown }>;
   editProduct: (id: string, updates: Partial<Product>) => Promise<{ data: unknown; error: unknown }>;
   deleteProduct: (id: string) => Promise<{ data: unknown; error: unknown }>;
@@ -201,15 +202,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      const fetchOrders = async () => {
-        try {
-          const res = await fetch('/api/orders', { credentials: 'include', headers });
-          const data = await res.json();
-          setOrders(Array.isArray(data) ? data : []);
-        } catch (e) {
-          console.error('Error fetching orders:', e);
-        }
-      };
+      const shouldFetchOrders = typeof window !== 'undefined' && (
+        window.location.pathname.startsWith('/admin') ||
+        window.location.pathname.startsWith('/orders')
+      );
 
       await Promise.all([
         fetchBanners(),
@@ -217,14 +213,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         fetchLookbookStyles(),
         fetchLookbookSettings(),
         fetchCategories(),
-        fetchOrders(),
         fetchProductsOnly(),
+        ...(shouldFetchOrders ? [fetchOrdersOnly()] : []),
       ]);
     } catch (e) {
       console.error('Error fetching store data:', e);
     } finally {
       setDbLoading(false);
       isFetchingRef.current = false;
+    }
+  };
+
+  const fetchOrdersOnly = async () => {
+    try {
+      const sessionToken = getSessionToken();
+      const headers = new Headers();
+      if (sessionToken) headers.set('x-attiz-session', sessionToken);
+      const res = await fetch('/api/orders', { credentials: 'include', headers });
+      const data = await res.json();
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Error fetching orders:', e);
     }
   };
 
@@ -340,7 +349,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <StoreContext.Provider value={{
-      products, categories, orders, banners, editorialBanners, lookbookStyles, lookbookSettings, dbLoading, refreshData,
+      products, categories, orders, banners, editorialBanners, lookbookStyles, lookbookSettings, dbLoading, refreshData, fetchOrders: fetchOrdersOnly,
       addProduct, editProduct, deleteProduct,
       addCategory, updateCategory, deleteCategory,
       addBanner, updateBanner, deleteBanner,

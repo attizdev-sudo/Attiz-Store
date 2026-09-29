@@ -110,11 +110,8 @@ export default function OrdersPage() {
 
         {/* Loading state - shown during auth check & order fetch if cache is empty */}
         {(sessionLoading || isFetchingOrders) && userOrders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3">
-            <div className="w-8 h-8 rounded-full border-3 border-black border-t-[#E63B2E] animate-spin" />
-            <span className="attiz-mono text-xs font-bold tracking-widest uppercase text-black/70">
-              Loading your orders...
-            </span>
+          <div className="py-20 flex items-center justify-center">
+            <AttizLoader label="Loading your orders..." badge="ORDERS" />
           </div>
         ) : userOrders.length === 0 ? (
           /* Empty state */

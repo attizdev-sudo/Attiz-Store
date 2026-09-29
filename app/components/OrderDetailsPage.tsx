@@ -284,6 +284,7 @@ export default function OrderDetailsPage({ orderId: propOrderId }: OrderDetailsP
   const currentStep = currentStatusInfo.step;
   const isCancelled = currentStatusInfo.isCancelled;
   const progressPct = isCancelled ? 0 : Math.min(100, Math.max(0, ((currentStep - 1) / (TRACKING_STEPS.length - 1)) * 100));
+  const trackProgressPct = isCancelled ? 0 : Math.min(80, Math.max(0, ((currentStep - 1) / (TRACKING_STEPS.length - 1)) * 80));
 
   const effectiveEdd = order.edd || liveTracking?.edd;
   const expectedInfo = !isCancelled && currentStep !== 5 ? getExpectedDeliveryInfo(order.created_at, effectiveEdd) : null;
@@ -484,11 +485,11 @@ export default function OrderDetailsPage({ orderId: propOrderId }: OrderDetailsP
             <div className="p-4 sm:p-5 bg-white border border-black/15 space-y-4 shadow-xs">
               {/* Delivery Details & Tracking Links */}
               {order.tracking_url || order.awb_code ? (
-                <div className="p-3 bg-[#FAF8F5] border border-black/15 flex items-center justify-between gap-2 attiz-mono text-xs uppercase">
-                  <div className="flex items-center space-x-2">
+                <div className="p-3 bg-[#FAF8F5] border border-black/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3 attiz-mono text-xs uppercase overflow-hidden">
+                  <div className="flex items-center space-x-2.5 min-w-0">
                     <Truck className="w-4 h-4 text-[#E63B2E] shrink-0" />
-                    <div>
-                      <span className="font-extrabold text-black block">
+                    <div className="min-w-0">
+                      <span className="font-extrabold text-black block text-[11px] sm:text-xs">
                         {isAdmin && order.courier_name ? `${order.courier_name} Delivery` : 'Attiz Express Delivery'}
                       </span>
                       {isAdmin && order.awb_code && (
@@ -496,12 +497,12 @@ export default function OrderDetailsPage({ orderId: propOrderId }: OrderDetailsP
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center flex-wrap gap-2 shrink-0">
                     {!trackingFetched && (
                       <button
                         onClick={fetchLiveTrackingDetails}
                         disabled={isTrackingLoading}
-                        className="py-1.5 px-3 bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors font-bold text-[11px] uppercase cursor-pointer"
+                        className="py-1.5 px-3 bg-black text-[#FFCB05] hover:bg-[#E63B2E] hover:text-white transition-colors font-bold text-[10px] sm:text-[11px] uppercase cursor-pointer"
                       >
                         {isTrackingLoading ? 'Fetching...' : 'Tracking Details'}
                       </button>
@@ -511,7 +512,7 @@ export default function OrderDetailsPage({ orderId: propOrderId }: OrderDetailsP
                         href={order.tracking_url || `https://shiprocket.co/tracking/${order.awb_code}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="py-1.5 px-3 bg-[#E63B2E] text-white hover:bg-black transition-colors font-bold flex items-center gap-1.5 text-[11px] shadow-sm cursor-pointer"
+                        className="py-1.5 px-3 bg-[#E63B2E] text-white hover:bg-black transition-colors font-bold flex items-center gap-1.5 text-[10px] sm:text-[11px] shadow-sm cursor-pointer"
                         title="Direct Courier Tracking (Admin Only)"
                       >
                         <span>Courier Link</span>
@@ -521,12 +522,12 @@ export default function OrderDetailsPage({ orderId: propOrderId }: OrderDetailsP
                   </div>
                 </div>
               ) : (
-                <div className="p-2.5 bg-[#FAF8F5] border border-black/10 text-black/70 attiz-mono text-[11px] uppercase flex items-center justify-between">
+                <div className="p-2.5 bg-[#FAF8F5] border border-black/10 text-black/70 attiz-mono text-[11px] uppercase flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <span>Delivery Status: Dispatch In Progress</span>
                   <button
                     onClick={fetchLiveTrackingDetails}
                     disabled={isTrackingLoading}
-                    className="text-black font-bold hover:text-[#E63B2E] uppercase underline cursor-pointer"
+                    className="text-black font-bold hover:text-[#E63B2E] uppercase underline cursor-pointer text-left sm:text-right"
                   >
                     {isTrackingLoading ? 'Fetching...' : 'Check Tracking Details'}
                   </button>
@@ -540,14 +541,14 @@ export default function OrderDetailsPage({ orderId: propOrderId }: OrderDetailsP
                   <span>This order has been {order.status}.</span>
                 </div>
               ) : (
-                <div className="pt-3 pb-2 px-1 sm:px-4">
-                  <div className="relative flex items-center justify-between">
-                    {/* Background track line */}
-                    <div className="absolute top-[18px] left-[20px] right-[20px] h-[3px] bg-black/10 -z-0" />
-                    {/* Colored progress line */}
+                <div className="pt-3 pb-2 px-1 sm:px-4 w-full">
+                  <div className="relative flex items-start justify-between w-full">
+                    {/* Background track line: Starts at column 1 center (10%) and terminates strictly at column 5 center (90%), never extending past Delivered */}
+                    <div className="absolute top-[14px] sm:top-[20px] left-[10%] right-[10%] h-[2.5px] sm:h-[3px] bg-black/10 -z-0 pointer-events-none" />
+                    {/* Colored progress line: Progresses from column 1 center (10%) up to column 5 center (80% span) */}
                     <div
-                      className="absolute top-[18px] left-[20px] h-[3px] bg-[#E63B2E] transition-all duration-500 ease-in-out -z-0"
-                      style={{ width: `calc(${progressPct}% - ${progressPct === 100 ? 0 : 20}px)` }}
+                      className="absolute top-[14px] sm:top-[20px] left-[10%] h-[2.5px] sm:h-[3px] bg-[#E63B2E] transition-all duration-500 ease-in-out -z-0 pointer-events-none"
+                      style={{ width: `${trackProgressPct}%` }}
                     />
 
                     {TRACKING_STEPS.map((stepItem) => {
@@ -557,27 +558,27 @@ export default function OrderDetailsPage({ orderId: propOrderId }: OrderDetailsP
                       const IconComponent = stepItem.icon;
 
                       return (
-                        <div key={stepItem.key} className="flex flex-col items-center relative z-10 flex-1">
-                          {/* Node Circle */}
+                        <div key={stepItem.key} className="flex flex-col items-center relative z-10 flex-1 px-0.5 min-w-0">
+                          {/* Node Box */}
                           <div
-                            className={`w-9 h-9 sm:w-10 sm:h-10 border-2 flex items-center justify-center transition-all duration-300 ${isCompleted
+                            className={`w-7 h-7 sm:w-10 sm:h-10 border-2 flex items-center justify-center transition-all duration-300 shrink-0 ${isCompleted
                               ? 'bg-black border-black text-[#FFCB05]'
                               : isActive
-                                ? 'bg-[#E63B2E] border-[#E63B2E] text-white shadow-md shadow-[#E63B2E]/30 scale-110'
+                                ? 'bg-[#E63B2E] border-[#E63B2E] text-white shadow-md shadow-[#E63B2E]/30 scale-105'
                                 : 'bg-white border-black/20 text-black/30'
                               }`}
                           >
                             {isCompleted ? (
-                              <Check className="w-4 h-4 sm:w-5 sm:h-5 stroke-[3]" />
+                              <Check className="w-3.5 h-3.5 sm:w-5 sm:h-5 stroke-[3]" />
                             ) : (
-                              <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
+                              <IconComponent className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
                             )}
                           </div>
 
                           {/* Step Labels */}
-                          <div className="mt-2 text-center">
+                          <div className="mt-1.5 sm:mt-2 text-center w-full min-w-0">
                             <span
-                              className={`block attiz-mono text-[9px] sm:text-[10px] uppercase font-bold tracking-tight ${isActive
+                              className={`block attiz-mono text-[7px] xs:text-[8px] sm:text-[10px] uppercase font-bold tracking-tighter sm:tracking-tight leading-tight break-words px-0.5 ${isActive
                                 ? 'text-[#E63B2E] font-extrabold'
                                 : isCompleted
                                   ? 'text-black'

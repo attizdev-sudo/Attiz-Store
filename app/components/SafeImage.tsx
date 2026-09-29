@@ -92,6 +92,8 @@ export const SafeImage: React.FC<SafeImageProps> = ({
         alt={alt}
         fill={fill}
         priority={priority}
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
         sizes={sizes}
         unoptimized={baseUnoptimized || currentBaseSrc.endsWith('.svg')}
         onError={handleBaseError}
@@ -102,6 +104,9 @@ export const SafeImage: React.FC<SafeImageProps> = ({
       {hasWorkingHover && validHoverSrc && (
         <Image
           {...props}
+          priority={false}
+          loading="lazy"
+          decoding="async"
           src={validHoverSrc}
           alt={`${alt} Alternate`}
           fill={fill}

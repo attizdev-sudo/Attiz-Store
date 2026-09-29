@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '@/context/StoreContext';
+import AttizLoader from '@/app/components/AttizLoader';
 
 export default function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -38,6 +39,8 @@ export default function HeroCarousel() {
     }
   };
 
+  const [loadedIndices, setLoadedIndices] = useState<number[]>([0]);
+
   useEffect(() => {
     if (currentSlide >= slides.length) setCurrentSlide(0);
   }, [slides, currentSlide]);
@@ -50,6 +53,17 @@ export default function HeroCarousel() {
     const timer = setInterval(nextSlide, 6000);
     return () => clearInterval(timer);
   }, [slides.length]);
+
+  useEffect(() => {
+    if (slides.length === 0) return;
+    setLoadedIndices((prev) => {
+      const nextIdx = (currentSlide + 1) % slides.length;
+      if (!prev.includes(currentSlide) || !prev.includes(nextIdx)) {
+        return Array.from(new Set([...prev, currentSlide, nextIdx]));
+      }
+      return prev;
+    });
+  }, [currentSlide, slides.length]);
 
   if (slides.length === 0) {
     if (dbLoading) {
@@ -64,21 +78,8 @@ export default function HeroCarousel() {
           {/* Shimmer overlay */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/[0.02] to-transparent -translate-x-full animate-shimmer pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col items-center gap-3 text-center">
-            {/* Neobrutalist custom loading indicator */}
-            <div className="relative w-12 h-12 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border-2 border-dashed border-black/20 animate-spin" style={{ animationDuration: '6s' }} />
-              <div className="w-8 h-8 rounded-full border-[3px] border-black border-t-transparent animate-spin" />
-            </div>
-
-            <div className="flex flex-col items-center gap-1">
-              <span className="inline-flex items-center bg-black text-[#FFCB05] attiz-mono text-[9px] font-bold tracking-[0.3em] uppercase px-2 py-0.5 -skew-x-6">
-                <span className="skew-x-6">ATTIZ</span>
-              </span>
-              <p className="attiz-mono text-[9px] font-bold text-black/85 tracking-[0.25em] uppercase animate-pulse">
-                Loading Banners...
-              </p>
-            </div>
+          <div className="relative z-10 flex items-center justify-center">
+            <AttizLoader label="Loading Banners..." badge="ATTIZ" />
           </div>
         </section>
       );
@@ -119,15 +120,18 @@ export default function HeroCarousel() {
             >
               <div className="relative w-full h-full select-none bg-black overflow-hidden group">
                 {/* Banner Background Image with Smooth Subtle Scale/Ken Burns Motion */}
-                <Image
-                  src={slideImage}
-                  alt={mainTitle || 'ATTIZ Hero Banner'}
-                  fill
-                  className={`object-cover object-center transition-transform duration-[8000ms] ease-out ${isActive ? 'scale-105' : 'scale-100'
-                    }`}
-                  sizes="100vw"
-                  priority={idx === 0}
-                />
+                {loadedIndices.includes(idx) && (
+                  <Image
+                    src={slideImage}
+                    alt={mainTitle || 'ATTIZ Hero Banner'}
+                    fill
+                    className={`object-cover object-center transition-transform duration-[8000ms] ease-out ${isActive ? 'scale-105' : 'scale-100'
+                      }`}
+                    sizes="100vw"
+                    priority={idx === 0}
+                    loading={idx === 0 ? 'eager' : 'lazy'}
+                  />
+                )}
 
                 {/* Clean Content Overlay — ZERO Black Fade Background */}
                 <div
