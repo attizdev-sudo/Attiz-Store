@@ -66,3 +66,4 @@ When you are ready to switch back to automated tracking from Shiprocket's courie
    - Clicking **"Tracking Details"** on any order page will fetch live courier tracking, AWB checkpoint history, and courier EDD from Shiprocket.
    - Shiprocket webhooks (`/api/webhooks/shiprocket`) will resume syncing real-time courier scan events into the database automatically.
  
+  
