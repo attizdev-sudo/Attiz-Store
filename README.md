@@ -67,3 +67,4 @@ When you are ready to switch back to automated tracking from Shiprocket's courie
    - Shiprocket webhooks (`/api/webhooks/shiprocket`) will resume syncing real-time courier scan events into the database automatically.
  
   
+shiprocket flag was added
