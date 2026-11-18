@@ -42,6 +42,30 @@ export async function GET(_: Request, { params }: { params: Params }) {
       return NextResponse.json({ error: 'Forbidden. Access denied.' }, { status: 403 });
     }
 
+    // Check if live tracking from Shiprocket API is temporarily disabled
+    if (process.env.ENABLE_SHIPROCKET_TRACKING === 'false') {
+      return NextResponse.json({
+        success: true,
+        status: order.status,
+        edd: order.edd || null,
+        courier_name: order.courier_name || null,
+        awb_code: order.awb_code || null,
+        tracking_url: order.tracking_url || null,
+        tracking: {
+          success: true,
+          disabled: true,
+          current_status: order.status,
+          internal_status: order.status,
+          courier_name: order.courier_name || null,
+          awb_code: order.awb_code || null,
+          tracking_url: order.tracking_url || null,
+          edd: order.edd || null,
+          activities: [],
+          is_manual: true,
+        },
+      });
+    }
+
     // 2. Fetch live tracking info from Shiprocket
     const trackingRes = await trackShiprocketOrder({
       orderId: order.shiprocket_order_id || undefined,

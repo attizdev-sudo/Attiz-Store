@@ -34,6 +34,7 @@ const ORDER_STATUSES = [
   'Confirmed',
   'Processing',
   'Packed',
+  'Dispatched',
   'Shipped',
   'Out for Delivery',
   'Delivered',

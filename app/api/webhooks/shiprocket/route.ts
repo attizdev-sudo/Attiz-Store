@@ -21,6 +21,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Order identifier missing in webhook payload.' }, { status: 400 });
     }
 
+    // If Shiprocket tracking is disabled, do not let webhooks overwrite manual admin status
+    if (process.env.ENABLE_SHIPROCKET_TRACKING === 'false') {
+      console.log(`ℹ️ [SHIPROCKET WEBHOOK] Webhook update for order ${orderIdentifier} ignored because ENABLE_SHIPROCKET_TRACKING is set to false (manual admin mode active).`);
+      return NextResponse.json({
+        success: true,
+        message: 'Manual admin mode is active (ENABLE_SHIPROCKET_TRACKING=false). Status update ignored.',
+      });
+    }
+
     // Map Shiprocket status to ATTIZ internal status using numeric IDs & string fallback
     const internalStatus = rawStatus !== undefined && rawStatus !== null ? mapShiprocketStatusToInternal(rawStatus) : null;
 

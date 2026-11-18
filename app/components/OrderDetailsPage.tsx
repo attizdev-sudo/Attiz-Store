@@ -142,12 +142,14 @@ export default function OrderDetailsPage({ orderId: propOrderId }: OrderDetailsP
           setTrackingFetched(true);
         }
       }
+      // Re-fetch fresh order to ensure all fields (status, items, payments) stay in sync with admin updates
+      loadOrder(targetId);
     } catch (err) {
       console.error('Error fetching live tracking:', err);
     } finally {
       setIsTrackingLoading(false);
     }
-  }, [order?.id, resolvedOrderId]);
+  }, [order?.id, resolvedOrderId, loadOrder]);
 
   // Instant Hydration from Cache + Silent Fresh Data Fetch
   useEffect(() => {
@@ -472,7 +474,7 @@ export default function OrderDetailsPage({ orderId: propOrderId }: OrderDetailsP
               </button>
             </div>
 
-            {liveTracking?.current_status && (
+            {liveTracking?.current_status && !liveTracking?.is_manual && (
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 attiz-mono text-[10px] font-black bg-black text-[#FFCB05] px-2.5 py-1 border border-black uppercase tracking-wider">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#FFCB05] animate-ping" />

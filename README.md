@@ -35,4 +35,33 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-for Deployment test
+---
+
+## 📦 Order Tracking & Shiprocket API Controls
+
+ATTIZ Store supports two modes for order tracking and status updates:
+
+### 1. Manual Admin Tracking Mode (Currently Active)
+In this mode:
+- Live Shiprocket Tracking API calls are paused (`ENABLE_SHIPROCKET_TRACKING=false`).
+- External Shiprocket webhooks are blocked from overriding the order status.
+- Order tracking timeline (`Confirmed` → `Packed` → `Dispatched` → `Shipped / In Transit` → `Delivered`) is **100% controlled manually by the admin** from the Admin Panel (`/admin` → **Orders** tab).
+- Whenever an admin changes an order status in the Admin Panel dropdown, the customer's Order Details page (`/orders/[id]`) and Orders list (`/orders`) update immediately.
+
+### 2. How to Undo & Re-enable Live Shiprocket Tracking
+
+When you are ready to switch back to automated tracking from Shiprocket's courier API:
+
+1. Open your `.env` (or production environment variables on Vercel / hosting provider).
+2. Find `ENABLE_SHIPROCKET_TRACKING`:
+   ```env
+   ENABLE_SHIPROCKET_TRACKING=true
+   ```
+   *(Change `false` to `true`, or remove the line as it defaults to enabled)*.
+3. Restart your Next.js development server (or trigger a redeploy if in production):
+   ```bash
+   npm run dev
+   ```
+4. Once re-enabled:
+   - Clicking **"Tracking Details"** on any order page will fetch live courier tracking, AWB checkpoint history, and courier EDD from Shiprocket.
+   - Shiprocket webhooks (`/api/webhooks/shiprocket`) will resume syncing real-time courier scan events into the database automatically.

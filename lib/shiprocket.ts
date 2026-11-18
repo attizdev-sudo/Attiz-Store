@@ -422,6 +422,8 @@ export interface ShiprocketTrackingActivity {
 
 export interface ShiprocketTrackingResult {
   success: boolean;
+  disabled?: boolean;
+  is_manual?: boolean;
   error?: string;
   current_status?: string;
   internal_status?: string;
@@ -442,6 +444,16 @@ export async function trackShiprocketOrder(params: {
   awbCode?: string;
   orderNumber?: string;
 }): Promise<ShiprocketTrackingResult> {
+  // Check if live tracking from Shiprocket API is disabled (e.g. for manual admin status updates)
+  if (process.env.ENABLE_SHIPROCKET_TRACKING === 'false') {
+    console.log('ℹ️ [SHIPROCKET] Tracking API call skipped because ENABLE_SHIPROCKET_TRACKING is set to false.');
+    return {
+      success: false,
+      disabled: true,
+      error: 'Shiprocket live tracking is temporarily disabled. Status is updated manually by admin.',
+    };
+  }
+
   const token = await getShiprocketToken();
   if (!token) return { success: false, error: 'Shiprocket authentication failed or credentials missing.' };
 
